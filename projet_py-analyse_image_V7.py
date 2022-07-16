@@ -1,5 +1,5 @@
 # Cet algorythme permet de localiser les élements de couleur rouge, vert ou bleu présents sur la photo mise en entrée, fonctionne bien avec le format mp4
-
+# Test
 # Atention pour reconnaitre un objet ce programme utilise notamment un algorythme récursif, rendant impossible l'analyse d'image où l'objet intéressant couvre une partie trop importante de l'image (dû a la limite de taille de la pile de récurtion).
 
 # Import modules
