@@ -54,7 +54,7 @@ def prep (image) :
 
 # Frame manipulation tools
 
-def recherche_voisins (image, pixel:list) -> list :
+def get_neighbours (image, pixel:list) -> list :
     '''
     Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la recherche d'objet.
     image : image en N&B.
@@ -63,35 +63,35 @@ def recherche_voisins (image, pixel:list) -> list :
     y, x = pixel[0], pixel[1]
     L = len(image)
     l = len(image[0])
-    L_voisins_to_test = [[(y-1)%L,(x-1)%l],[(y-1)%L,x],[(y-1)%L,(x+1)%l],
+    L_neighours_to_test = [[(y-1)%L,(x-1)%l],[(y-1)%L,x],[(y-1)%L,(x+1)%l],
                          [ y,     (x-1)%l],            [ y,     (x+1)%l],
                          [(y+1)%L,(x-1)%l],[(y+1)%L,x],[(y+1)%L,(x+1)%l]]
-    L_voisins = []
-    for element in L_voisins_to_test :
+    L_neighours = []
+    for element in L_neighours_to_test :
         if image[element[0]][element[1]] == 255 :
-            L_voisins.append(element)
-    return L_voisins
+            L_neighours.append(element)
+    return L_neighours
 
 
-def visiter (image, depart:list, objet:list) -> list :
+def visiter (image, depart:list, object:list) -> list :
     '''
     Regroupe tous les pixels appartenant a un même objets (forme blanche ici) sous la forme d'une liste.
     image : image en N&B.
     depart : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
     objet : liste contenant tout les pixels appartenants au même objet.
     '''
-    if depart not in objet :
-        objet.append(depart)
-    for pixel in recherche_voisins(image, depart) :
-        if pixel not in objet :
-            visiter(image, pixel, objet)
-    return objet
+    if depart not in object :
+        object.append(depart)
+    for pixel in get_neighbours(image, depart) :
+        if pixel not in object :
+            visiter(image, pixel, object)
+    return object
 
 
-def parcours_graphe_profondeur (image, depart:list) -> list :
-    objet = [depart]
-    objet = visiter(image, depart, objet)
-    return objet
+def discovery (image, depart:list) -> list :
+    object = [depart]
+    object = visiter(image, depart, object)
+    return object
 
 
 def objects_identification (image) -> dict :
@@ -108,23 +108,24 @@ def objects_identification (image) -> dict :
             if image[j][i] == 255 :
                 element_in = False
                 for obj in objects :
-                    if [j,i] in objets[obj] :
+                    if [j,i] in objects[obj] :
                         element_in = True
                 if not element_in :
-                    objects[n] = parcours_graphe_profondeur(image, [j,i])
+                    objects[n] = discovery(image, [j,i])
                     n += 1
     return objects
 
 
-def objects_field (dico_objets:dict) -> dict :
+def objects_field (dico_objects:dict) -> dict :
     '''
     Récupère les quatres extremités de chaque objet.
     '''
     extremas = {}
-    for key in dico_objets :
-        xmin, ymin, xmax, ymax = dico_objets[key][0][1], dico_objets[key][0][0],dico_objets[key][0][1],dico_objets[key][0][0]
-        for i in range (len(dico_objets[key])) :
-            pixel = dico_objets[key][i]
+    for obj in dico_objects :
+        xmin, ymin, xmax, ymax = dico_objects[obj][0][1], dico_objects[obj][0][0],dico_objects[obj][0][1],dico_objects[obj][0][0]
+        # for i in range (len(dico_objets[key])) :
+        #     pixel = dico_objets[key][i]
+        for pixel in dico_objects[obj] :
             if pixel[1] < xmin :
                 xmin = pixel[1]
             if pixel[0] < ymin :
@@ -133,7 +134,7 @@ def objects_field (dico_objets:dict) -> dict :
                 xmax = pixel[1]
             if pixel[0] > ymax :
                 ymax = pixel[0]
-            extremas[key] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
+            extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
     return extremas
 
 
@@ -149,83 +150,26 @@ def position (extremas:dict) -> list :
     return position
 
 
-def rectifyer (objets:dict) -> dict :
+def rectifyer (objects:dict) -> dict :
     '''
     Rectifie quelques erreurs.
     '''
     # On supprime les objets trop petits, probablement issus d'erreurs.
     global minsize
     problematic_objects = []
-    for key in objets:
-        if len(objets[key]) < minsize :
-            problematic_objects.append(key)
-    for key in problematic_objects :
-        del objets[key]
+    for obj in objects:
+        if len(objects[obj]) < minsize :
+            problematic_objects.append(obj)
+    for obj in problematic_objects :
+        del objects[obj]
     # On renome nos objets.
     i = 0
     dico2 = {}
-    for key in objets :
-        dico2 [i] = objets[key]
+    for obj in objects :
+        dico2 [i] = objects[obj]
         i += 1
 
     return dico2
-
-
-# video treatement
-
-def getframes () :
-    '''
-    Récupère l'ensemble des frames qui composent la vidéo
-    '''
-    global videopath, frames
-    frames = {}
-    cam = cv2.VideoCapture(videopath)
-    currentframe = 0
-    while(True):
-        ret,frame = cam.read()
-        if ret:
-            frames[currentframe] = frame
-            currentframe += 1
-        else:
-            break
-    cam.release()
-    cv2.destroyAllWindows()
-    return None
-
-def frametreatement (frame) :
-    '''
-    Permet le traitement d'une unique frame
-    '''
-    global definition
-    isOK = False
-
-    while not isOK and definition <= 15 :
-        try :
-            NB_im = im_filter(reducer(frame))
-            objets = objects_identification(NB_im)
-            isOK = True
-        except RecursionError :
-            definition += 1
-            frametreatement(frame)
-
-    if isOK :
-        objets = rectifyer(objets)
-        return objets, NB_im
-    else :
-        return 'TolError'
-
-def videotreatement () :
-    '''
-    Permet de faire le traitement de la vidéo complète
-    '''
-    global video, frames, positions
-    currentframe = 0
-    positions = {}
-    for frame in frames :
-        treated = frametreatement(frames[frame])[0]
-        positions[frame] = position( objects_field(treated))
-    return None
-
 
 
 # Treatement fcts
@@ -311,7 +255,6 @@ def rectangle_NB (image, extremas) :
         for j in range (ymin-2,ymax+3):
             new_im[j%L][(xmin-2)%l], new_im[j%L][(xmax+2)%l] = 255, 255
     return new_im
-
 
 def rectangle_color (image, extremas) :
     global rectanglewidth
