@@ -60,15 +60,15 @@ def get_neighbours (image, pixel:list) -> list :
     image : image en N&B.
     pixel : sous la forme [j,i].
     '''
-    y, x = pixel[0], pixel[1]
-    L = len(image)
-    l = len(image[0])
-    L_neighours_to_test = [[(y-1)%L,(x-1)%l],[(y-1)%L,x],[(y-1)%L,(x+1)%l],
-                         [ y,     (x-1)%l],            [ y,     (x+1)%l],
-                         [(y+1)%L,(x-1)%l],[(y+1)%L,x],[(y+1)%L,(x+1)%l]]
+    x, y = pixel[0], pixel[1]
+    l = len(image)
+    L = len(image[0])
+    L_neighours_to_test = [[(x-1)%L,(y-1)%l],[(x-1)%L,y],[(x-1)%L,(y+1)%l],
+                           [ x,     (y-1)%l],            [ x,     (y+1)%l],
+                           [(x+1)%L,(y-1)%l],[(x+1)%L,y],[(x+1)%L,(y+1)%l]]
     L_neighours = []
     for element in L_neighours_to_test :
-        if image[element[0]][element[1]] == 255 :
+        if image[element[1]][element[0]] == 255 :
             L_neighours.append(element)
     return L_neighours
 
@@ -82,6 +82,7 @@ def visiter (image, depart:list, object:list) -> list :
     '''
     if depart not in object :
         object.append(depart)
+
     for pixel in get_neighbours(image, depart) :
         if pixel not in object :
             visiter(image, pixel, object)
@@ -99,19 +100,19 @@ def objects_identification (image) -> dict :
     Regroupe tout les objets de l'image dans un dictionnaire.
     image : image en N&B.
     '''
-    L = len(image)
-    l = len(image[0])
+    heigh = len(image)
+    width = len(image[0])
     objects = {}
     n = 0
-    for j in range (L) :
-        for i in range (l) :
+    for j in range (heigh) :
+        for i in range (width) :
             if image[j][i] == 255 :
                 element_in = False
                 for obj in objects :
-                    if [j,i] in objects[obj] :
+                    if [i,j] in objects[obj] :
                         element_in = True
                 if not element_in :
-                    objects[n] = discovery(image, [j,i])
+                    objects[n] = discovery(image, [i,j])
                     n += 1
     return objects
 
@@ -122,18 +123,18 @@ def objects_field (dico_objects:dict) -> dict :
     '''
     extremas = {}
     for obj in dico_objects :
-        xmin, ymin, xmax, ymax = dico_objects[obj][0][1], dico_objects[obj][0][0],dico_objects[obj][0][1],dico_objects[obj][0][0]
+        xmin, ymin, xmax, ymax = dico_objects[obj][0][0], dico_objects[obj][0][1],dico_objects[obj][0][0],dico_objects[obj][0][1]
         # for i in range (len(dico_objets[key])) :
         #     pixel = dico_objets[key][i]
         for pixel in dico_objects[obj] :
-            if pixel[1] < xmin :
-                xmin = pixel[1]
-            if pixel[0] < ymin :
-                ymin = pixel[0]
-            if pixel[1] > xmax :
-                xmax = pixel[1]
-            if pixel[0] > ymax :
-                ymax = pixel[0]
+            if pixel[0] < xmin :
+                xmin = pixel[0]
+            if pixel[1] < ymin :
+                ymin = pixel[1]
+            if pixel[0] > xmax :
+                xmax = pixel[0]
+            if pixel[1] > ymax :
+                ymax = pixel[1]
             extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
     return extremas
 
