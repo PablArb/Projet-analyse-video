@@ -201,10 +201,11 @@ def get_framerate () :
     return None
 
 def get_framessize () :
-    global video, width, height
+    global video, Framesize
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     video_tracks =  media_info.video_tracks[0]
     width, height = int(video_tracks.sampled_width), int(video_tracks.sampled_height)
+    Framesize = (height, width)
     return None
 
 def frametreatement (frame) :
@@ -244,7 +245,6 @@ def videotreatement () :
 # Rectangles/cross drawing tools
 
 def rectangle_NB (image, extremas) :
-    global definition
     new_im = []
     for line in image :
         new_line = []
@@ -254,8 +254,7 @@ def rectangle_NB (image, extremas) :
     L = len(image)
     l = len(image[0])
     for key in extremas :
-        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]
-        ), int(extremas[key][2]), int(extremas[key][3])
+        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(extremas[key][3])
         for i in range (xmin-2,xmax+3):
             new_im[(ymin-2)%L][i%l], new_im[(ymax+2)%L][i%l] = 255, 255
         for j in range (ymin-2,ymax+3):
@@ -308,7 +307,7 @@ def cross_color (image, positions) :
 # Calibration fcts
 
 def calibration () :
-    global video, frames, width, height
+    global video, frames, Framesize
     print ('Traitement en cours ...')
     first = frames[0]
     treated = frametreatement( first )
@@ -324,7 +323,7 @@ def calibration () :
     print ('Analyse ----------------------------------------------------------- OK')
 
     print(' ')
-    NB_im = cv2.resize(np.float32(treated[1]), (height, width))
+    NB_im = cv2.resize(np.float32(treated[1]), Framesize)
     treated_NB = np.float32(rectangle_NB(NB_im, extremas))
     treated_color = np.float32(cross_color(first, positions))
 
@@ -385,18 +384,26 @@ def framesdownload () :
     global video, frames, positions
     create_dir('non treated frames')
     create_dir('treated frames')
-
     for frame in frames :
-
         name = paths['non treated frames'] + '/frame' + str(frame) +'.jpg'
         cv2.imwrite(name, frames[frame])
         name = paths['treated frames'] + '/frame' + str(frame) +'.jpg'
         cv2.imwrite(name, np.float32(cross_color(frames[frame], positions[frame])))
-
         progression = round( (frame/(len(frames)-1))*100, 1)
         print('\rSauvegarde des frames en cours :', str(progression), '%', end='' )
-
     print ('\nSauvegarde des frames --------------------------------------------- Finit')
+    return None
+
+def create_video ():
+    global frames, Framerate, Framesize
+    out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4',cv2.VideoWriter_fourcc(*'mp4v'), Framerate, Framesize)
+    for frame in frames :
+        img = np.uint8(cross_color(frames[frame], positions[frame]))
+        out.write(img)
+        progression = round( (frame/(len(frames)-1))*100, 1)
+        print('\rSauvegarde de la vidéo en cours :', str(progression), '%', end='' )
+    out.release()
+    print ('\nSauvegarde de la vidéo -------------------------------------------- Finit')
     return None
 
 
@@ -530,7 +537,10 @@ def main ():
     print(' ')
 
     videotreatement()
+    print(' ')
+
     datadownload ()
+    create_video()
     print(' ')
 
     if yn_framesdl() :
