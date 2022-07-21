@@ -37,11 +37,11 @@ def prep (image) :
     assert 0 < definition
     assert type(definition) == int
     simplified_im = []
-    L = len(image)
-    l = len(image[0])
-    for i in range (int(L/definition)):
+    h = len(image)
+    w = len(image[0])
+    for i in range (int(h/definition)):
         line = []
-        for j in range (int(l/definition)):
+        for j in range (int(w/definition)):
             pixel = image[i*definition][j*definition]
             t = rate_rgb(pixel)
             if t < tol :
@@ -61,11 +61,11 @@ def get_neighbours (image, pixel:list) -> list :
     pixel : sous la forme [j,i].
     '''
     x, y = pixel[0], pixel[1]
-    l = len(image)
-    L = len(image[0])
-    L_neighours_to_test = [[(x-1)%L,(y-1)%l],[(x-1)%L,y],[(x-1)%L,(y+1)%l],
-                           [ x,     (y-1)%l],            [ x,     (y+1)%l],
-                           [(x+1)%L,(y-1)%l],[(x+1)%L,y],[(x+1)%L,(y+1)%l]]
+    h = len(image)
+    w = len(image[0])
+    L_neighours_to_test = [[(x-1)%w,(y-1)%h],[(x-1)%w,y],[(x-1)%w,(y+1)%h],
+                           [ x,     (y-1)%h],            [ x,     (y+1)%h],
+                           [(x+1)%w,(y-1)%h],[(x+1)%w,y],[(x+1)%w,(y+1)%h]]
     L_neighours = []
     for element in L_neighours_to_test :
         if image[element[1]][element[0]] == 255 :
@@ -100,12 +100,12 @@ def objects_identification (image) -> dict :
     Regroupe tout les objets de l'image dans un dictionnaire.
     image : image en N&B.
     '''
-    heigh = len(image)
-    width = len(image[0])
+    h = len(image)
+    w = len(image[0])
     objects = {}
     n = 0
-    for j in range (heigh) :
-        for i in range (width) :
+    for j in range (h) :
+        for i in range (w) :
             if image[j][i] == 255 :
                 element_in = False
                 for obj in objects :
@@ -124,8 +124,6 @@ def objects_field (dico_objects:dict) -> dict :
     extremas = {}
     for obj in dico_objects :
         xmin, ymin, xmax, ymax = dico_objects[obj][0][0], dico_objects[obj][0][1],dico_objects[obj][0][0],dico_objects[obj][0][1]
-        # for i in range (len(dico_objets[key])) :
-        #     pixel = dico_objets[key][i]
         for pixel in dico_objects[obj] :
             if pixel[0] < xmin :
                 xmin = pixel[0]
@@ -175,10 +173,10 @@ def rectifyer (objects:dict) -> dict :
 
 # Treatement fcts
 
-def getframes () :
+def get_frames () :
     global video, frames
     frames = {}
-    cam = cv2.VideoCapture('/Users/pabloarb/Desktop/bac/' + video + '.mp4')
+    cam = cv2.VideoCapture(paths['vidéoinput'])
     currentframe = 0
     print ('Récupération des frames en cours ...')
     while(True):
@@ -195,11 +193,18 @@ def getframes () :
 
 def get_framerate () :
     global video, Framerate
-    media_info = mi.MediaInfo.parse('Desktop/bac/' + video + '.mp4')
+    media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     tracks = media_info.tracks
     for i in tracks :
         if i.track_type == 'Video' :
             Framerate = float(i.frame_rate)
+    return None
+
+def get_framessize () :
+    global video, width, height
+    media_info = mi.MediaInfo.parse(paths['vidéoinput'])
+    video_tracks =  media_info.video_tracks[0]
+    width, height = int(video_tracks.sampled_width), int(video_tracks.sampled_height)
     return None
 
 def frametreatement (frame) :
@@ -226,7 +231,6 @@ def videotreatement () :
     global video, frames, positions
     currentframe = 0
     positions = {}
-    # frames = getframes()
     for frame in frames :
         treated = frametreatement(frames[frame])[0]
         positions[frame] = position( objects_field(treated))
@@ -250,7 +254,8 @@ def rectangle_NB (image, extremas) :
     L = len(image)
     l = len(image[0])
     for key in extremas :
-        xmin, ymin, xmax, ymax = int(extremas[key][0]/definition), int(extremas[key][1]/definition), int(extremas[key][2]/definition), int(extremas[key][3]/definition)
+        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]
+        ), int(extremas[key][2]), int(extremas[key][3])
         for i in range (xmin-2,xmax+3):
             new_im[(ymin-2)%L][i%l], new_im[(ymax+2)%L][i%l] = 255, 255
         for j in range (ymin-2,ymax+3):
@@ -303,7 +308,7 @@ def cross_color (image, positions) :
 # Calibration fcts
 
 def calibration () :
-    global video, frames
+    global video, frames, width, height
     print ('Traitement en cours ...')
     first = frames[0]
     treated = frametreatement( first )
@@ -319,7 +324,7 @@ def calibration () :
     print ('Analyse ----------------------------------------------------------- OK')
 
     print(' ')
-    NB_im = np.float32(treated[1])
+    NB_im = cv2.resize(np.float32(treated[1]), (height, width))
     treated_NB = np.float32(rectangle_NB(NB_im, extremas))
     treated_color = np.float32(cross_color(first, positions))
 
@@ -344,12 +349,13 @@ def config_show (L:dict) :
     sht.rmtree(paths['config'])
     return None
 
+
 # Data download fcts
 
 def videodownload () :
     global video
     source = "/Users/pabloarb/Desktop/bac/" + video + '.mp4'
-    destination = paths['vidéo'] + '/vidéo' + '.mp4'
+    destination = paths['vidéodl'] + '/vidéo' + '.mp4'
     sht.copy2(source, destination)
     return None
 
@@ -459,8 +465,9 @@ paths['config'] = 'Desktop/##configdir##'
 
 def add_subdata_dirs ():
     global video
+    paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
     paths['csv'] = paths['data'] + '/' + video + '/csv'
-    paths['vidéo'] = paths['data'] + '/' + video + '/vidéo'
+    paths['vidéodl'] = paths['data'] + '/' + video + '/vidéo'
     paths['frames'] = paths['data'] + '/' + video + '/frames'
     paths['treated frames'] = paths['frames'] + '/treated'
     paths['non treated frames'] = paths['frames'] + '/non treated'
@@ -498,11 +505,12 @@ def main ():
     videoinput()
     print(' ')
 
-    get_framerate()
-    getframes()
-
     add_subdata_dirs()
-    create_dir('vidéo')
+    get_framerate()
+    get_frames()
+    get_framessize()
+
+    create_dir('vidéodl')
     videodownload()
 
     delete_dir('bac')
