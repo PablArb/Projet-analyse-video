@@ -245,51 +245,33 @@ def videotreatement () :
 # Rectangles/cross drawing tools
 
 def rectangle_NB (image, extremas) :
-    new_im = []
-    for line in image :
-        new_line = []
-        for pixel in line :
-            new_line.append(pixel)
-        new_im.append(new_line)
     L = len(image)
     l = len(image[0])
     for key in extremas :
         xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(extremas[key][3])
         for i in range (xmin-2,xmax+3):
-            new_im[(ymin-2)%L][i%l], new_im[(ymax+2)%L][i%l] = 255, 255
+            image[(ymin-2)%L][i%l], image[(ymax+2)%L][i%l] = 255, 255
         for j in range (ymin-2,ymax+3):
-            new_im[j%L][(xmin-2)%l], new_im[j%L][(xmax+2)%l] = 255, 255
-    return new_im
+            image[j%L][(xmin-2)%l], image[j%L][(xmax+2)%l] = 255, 255
+    return image
 
 def rectangle_color (image, extremas) :
     global rectanglewidth
-    new_im = []
-    for line in image:
-        new_line = []
-        for pixel in line :
-            new_line.append(pixel)
-        new_im.append(new_line)
-    L = len(new_im)
-    l = len(new_im[0])
+    L = len(image)
+    l = len(image[0])
     for key in extremas.keys() :
         xmin, ymin, xmax, ymax = extremas[key][0], extremas[key][1], extremas[key][2], extremas[key][3]
         for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
             for n in range (rectanglewidth+1):
-                new_im[(ymin-n)%L][i%l], new_im[(ymax+n)%L][i%l] = [0, 255, 0], [0, 255, 0]
+                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = [0, 255, 0], [0, 255, 0]
         for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
             for n in range (rectanglewidth+1):
-                new_im[j%L][(xmin-n)%l], new_im[j%L][(xmax+n)%l] = [0, 255, 0], [0, 255, 0]
-    return new_im
+                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = [0, 255, 0], [0, 255, 0]
+    return image
 
 
 def cross_color (image, positions) :
     global crosswidth
-    new_im = []
-    for line in image:
-        new_line = []
-        for pixel in line :
-            new_line.append(pixel)
-        new_im.append(new_line)
     L = len(image)
     l = len(image[0])
     for obj in positions :
@@ -297,11 +279,11 @@ def cross_color (image, positions) :
         y = int(positions[obj][1])
         for i in range (x-crosswidth*10, x+crosswidth*10+1 ) :
             for n in range (y-int(crosswidth/2), y+int(crosswidth/2)+1):
-                new_im[n%L][i%l] = [0, 255, 0]
+                image[n%L][i%l] = [0, 255, 0]
         for j in range (y-crosswidth*10, y+crosswidth*10+1) :
             for n in range (x-int(crosswidth/2), x+int(crosswidth/2)+1):
-                new_im[j%L][n%l] = [0, 255, 0]
-    return new_im
+                image[j%L][n%l] = [0, 255, 0]
+    return image
 
 
 # Calibration fcts
@@ -321,28 +303,40 @@ def calibration () :
     extremas = objects_field(objets)
     positions = position(extremas)
     print ('Analyse ----------------------------------------------------------- OK')
-
     print(' ')
-    NB_im = cv2.resize(np.float32(treated[1]), Framesize)
-    treated_NB = np.float32(rectangle_NB(NB_im, extremas))
-    treated_color = np.float32(cross_color(first, positions))
+
+    images_names = []
+    create_dir('config')
+
+    color_im = first
+    images_names.append('color_im')
+    fill_configdir(color_im, 'color_im')
+
+    NB_im = cv2.resize(np.uint8(treated[1]), Framesize)
+    images_names.append('NB_im')
+    fill_configdir(NB_im, 'NB_im')
+
+    treated_NB = np.uint8(rectangle_NB(NB_im, extremas))
+    images_names.append('treated_NB')
+    fill_configdir(treated_NB, 'treated_NB')
+
+    treated_color = np.uint8(cross_color(color_im, positions))
+    images_names.append('treated_color')
+    fill_configdir(treated_color, 'treated_color')
 
     print ('Affichage du résultat, veuillez checker sa correction')
-    config_show ({'first' : first, 'NB' : NB_im, 'treated NB' : treated_NB, 'treated color': treated_color})
+    config_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
     return None
 
-def fill_configdir (L:dict) :
-    for img in L :
-        cv2.imwrite(paths['config'] + '/' + img + '.jpg', L[img])
+def fill_configdir (image, image_name) :
+    cv2.imwrite(paths['config'] + '/' + image_name + '.jpg', image)
     return None
 
-def config_show (L:dict) :
-    create_dir('config')
-    fill_configdir(L)
-    for img in L :
-        cv2.imshow('Config Window - ' + img, cv2.imread(paths['config'] + '/' + img + '.jpg'))
+def config_show (images_names:list) :
+    for i in range(len(images_names)):
+        cv2.imshow('Config Window - ' + images_names[i], cv2.imread(paths['config'] + '/' + images_names[i] + '.jpg'))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
     sht.rmtree(paths['config'])
@@ -388,7 +382,7 @@ def framesdownload () :
         name = paths['non treated frames'] + '/frame' + str(frame) +'.jpg'
         cv2.imwrite(name, frames[frame])
         name = paths['treated frames'] + '/frame' + str(frame) +'.jpg'
-        cv2.imwrite(name, np.float32(cross_color(frames[frame], positions[frame])))
+        cv2.imwrite(name, np.uint8(cross_color(frames[frame], positions[frame])))
         progression = round( (frame/(len(frames)-1))*100, 1)
         print('\rSauvegarde des frames en cours :', str(progression), '%', end='' )
     print ('\nSauvegarde des frames --------------------------------------------- Finit')
