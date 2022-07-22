@@ -174,11 +174,15 @@ def rectifyer (objects:dict) -> dict :
 # Treatement fcts
 
 def get_frames () :
+    '''
+    Récupère l'ensembe des frames.
+    Renoie un dictionaire où les clés sont les numéros de frames et le valeurs des tableau de type uint8
+    '''
     global video, frames
     frames = {}
     cam = cv2.VideoCapture(paths['vidéoinput'])
     currentframe = 0
-    print ('Récupération des frames en cours ...')
+    print ('\nRécupération des frames en cours ...')
     while(True):
         ret,frame = cam.read()
         if ret:
@@ -232,6 +236,7 @@ def videotreatement () :
     global video, frames, positions
     currentframe = 0
     positions = {}
+    print('')
     for frame in frames :
         treated = frametreatement(frames[frame])[0]
         positions[frame] = position( objects_field(treated))
@@ -290,20 +295,19 @@ def cross_color (image, positions) :
 
 def calibration () :
     global video, frames, Framesize
-    print ('Traitement en cours ...')
+    print ('\nTraitement en cours ...')
     first = frames[0]
     treated = frametreatement( first )
     if treated == 'TolError' :
-        print ('\nLa tolérance doit être mal réglée, vérifiez le réglage\n')
+        print ('\nLa tolérance doit être mal réglée, vérifiez le réglage')
         return None
-    print ('\nTraitement -------------------------------------------------------- OK\n')
+    print ('\nTraitement -------------------------------------------------------- OK')
 
-    print ('Analyse en cours ...')
+    print ('\nAnalyse en cours ...')
     objets = treated[0]
     extremas = objects_field(objets)
     positions = position(extremas)
     print ('Analyse ----------------------------------------------------------- OK')
-    print(' ')
 
     images_names = []
     create_dir('config')
@@ -324,7 +328,7 @@ def calibration () :
     images_names.append('treated_color')
     fill_configdir(treated_color, 'treated_color')
 
-    print ('Affichage du résultat, veuillez checker sa correction')
+    print ('\nAffichage du résultat, veuillez checker sa correction')
     config_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
@@ -347,6 +351,7 @@ def config_show (images_names:list) :
 
 def videodownload () :
     global video
+    create_dir('vidéodl')
     source = "/Users/pabloarb/Desktop/bac/" + video + '.mp4'
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
     sht.copy2(source, destination)
@@ -355,6 +360,7 @@ def videodownload () :
 def datadownload () :
     global video, positions, Framerate
     create_dir('csv')
+    print('\nSauvegarde de la data en cours ...')
     nom_colonnes = ['frame', 'time']
     objects = []
     for frame in positions :
@@ -372,32 +378,30 @@ def datadownload () :
             dico['Y'+str(obj)] = positions[frame][obj][1]
         array.writerow(dico)
     dos.close()
+    print('Sauvegarde de la data --------------------------------------------- OK')
     return None
 
 def framesdownload () :
     global video, frames, positions
     create_dir('non treated frames')
     create_dir('treated frames')
+    print ('\nSauvegarde des frames en cours ...')
     for frame in frames :
         name = paths['non treated frames'] + '/frame' + str(frame) +'.jpg'
         cv2.imwrite(name, frames[frame])
         name = paths['treated frames'] + '/frame' + str(frame) +'.jpg'
         cv2.imwrite(name, np.uint8(cross_color(frames[frame], positions[frame])))
-        progression = round( (frame/(len(frames)-1))*100, 1)
-        print('\rSauvegarde des frames en cours :', str(progression), '%', end='' )
-    print ('\nSauvegarde des frames --------------------------------------------- Finit')
+    print ('Sauvegarde des frames --------------------------------------------- OK')
     return None
 
 def create_video ():
     global frames, Framerate, Framesize
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4',cv2.VideoWriter_fourcc(*'mp4v'), Framerate, Framesize)
+    print ('\nSauvegarde de la vidéo en cours ...')
     for frame in frames :
         img = np.uint8(cross_color(frames[frame], positions[frame]))
         out.write(img)
-        progression = round( (frame/(len(frames)-1))*100, 1)
-        print('\rSauvegarde de la vidéo en cours :', str(progression), '%', end='' )
-    out.release()
-    print ('\nSauvegarde de la vidéo -------------------------------------------- Finit')
+    print ('Sauvegarde de la vidéo -------------------------------------------- OK')
     return None
 
 
@@ -407,7 +411,7 @@ def videoinput () :
     global video
     create_dir('bac')
     isempty = True
-    print ('Placez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
+    print ('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
     while isempty :
         if len(os.listdir(paths['bac'])) != 0 :
             isempty = False
@@ -427,16 +431,17 @@ def videoinput () :
 def cinput () :
     global c
     while True :
-        c = input('Couleur des repères à étudier (0=bleu, 1=vert, 2=rouge) : ')
+        c = input('\nCouleur des repères à étudier (0=bleu, 1=vert, 2=rouge) : ')
         if c in ['0', '1', '2'] :
             c = int(c)
             return None
         else :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-def yn_calib () :
+def yn (question) :
+    assert type(question) == str
     while True :
-        yn = input ('\nLe traitement est-il bon ?\n[y]/n : ')
+        yn = input ('\n' + question + '\n[y]/n : ')
         if yn in ['y', '', 'n']:
             if yn == 'y' or yn == '' :
                 return True
@@ -444,17 +449,6 @@ def yn_calib () :
                 return False
         else :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-def yn_framesdl () :
-    while True :
-        yn = input ("\nTélécharger l'ensemble des frames ?\n[y]/n : ")
-        if yn in ['y', '', 'n']:
-            if yn == 'y' or yn == '' :
-                return True
-            else :
-                return False
-        else :
-            print('Vous devez avoir fait une erreur, veuillez rééssayer')
 
 
 # paths gestion
@@ -501,45 +495,37 @@ def main ():
     crosswidth = 2
     rectanglewidth = 5
 
-    print ('\nInitialisation de la procédure\n')
+    print ('\nInitialisation de la procédure')
 
     videoinput()
-    print(' ')
 
     add_subdata_dirs()
-    get_framerate()
     get_frames()
+    get_framerate()
     get_framessize()
-
-    create_dir('vidéodl')
     videodownload()
 
     delete_dir('bac')
-    print(' ')
 
     cinput()
-    print(' ')
 
     isOK = False
     while not isOK :
         calibration()
-        if yn_calib() :
+        if yn('Le traitement est-il bon ?') :
             isOK = True
         else :
             i = input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : ')
             tol += float(i)
-    print(' ')
 
     videotreatement()
-    print(' ')
 
-    datadownload ()
-    create_video()
-    print(' ')
+    if yn("Voulez vous télécharger les résultats de l'étude ?") :
+        datadownload ()
+        create_video()
 
-    if yn_framesdl() :
-        print(' ')
-        framesdownload()
+        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
+            framesdownload()
 
     print ('\nProcédure terminée')
 
@@ -547,5 +533,5 @@ def main ():
 
 # execution
 
-if __name__ == '__main__':
-    sys.exit(main())
+# if __name__ == '__main__':
+#     sys.exit(main())
