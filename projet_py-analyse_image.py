@@ -73,7 +73,7 @@ def get_neighbours (image, pixel:list) -> list :
     return L_neighours
 
 
-def visiter (image, depart:list, object:list) -> list :
+def visiter (image, depart:list, object:list, extr:list) -> list :
     '''
     Regroupe tous les pixels appartenant a un même objets (forme blanche ici) sous la forme d'une liste.
     image : image en N&B.
@@ -82,17 +82,28 @@ def visiter (image, depart:list, object:list) -> list :
     '''
     if depart not in object :
         object.append(depart)
-
+        # xmin, ymin, xmax, ymax = extr[0], extr[1], extr[2], extr[3]
+        if depart[0] < extr[0] :
+            extr[0] = depart[0]
+        if depart[1] < extr[1] :
+            extr[1] = depart[1]
+        if depart[0] > extr[2] :
+            extr[2] = depart[0]
+        if depart[1] > extr[3] :
+            extr[3] = depart[1]
     for pixel in get_neighbours(image, depart) :
         if pixel not in object :
-            visiter(image, pixel, object)
-    return object
+            visiter(image, pixel, object, extr)
+    return object, extr
 
 
 def discovery (image, depart:list) -> list :
     object = [depart]
-    object = visiter(image, depart, object)
-    return object
+    init_extr = [depart[0], depart[1], depart[0], depart[1]] #
+    infos = visiter(image, depart, object, init_extr) #
+    object = infos[0]
+    extr = infos[1]
+    return object, extr
 
 
 def objects_identification (image) -> dict :
@@ -103,6 +114,7 @@ def objects_identification (image) -> dict :
     h = len(image)
     w = len(image[0])
     objects = {}
+    extremas = {}
     n = 0
     for j in range (h) :
         for i in range (w) :
@@ -112,29 +124,13 @@ def objects_identification (image) -> dict :
                     if [i,j] in objects[obj] :
                         element_in = True
                 if not element_in :
-                    objects[n] = discovery(image, [i,j])
+                    infos = discovery(image, [i,j])
+                    objects[n] = infos[0]
+                    extremas[n] = infos[1]
                     n += 1
-    return objects
-
-
-def objects_field (dico_objects:dict) -> dict :
-    '''
-    Récupère les quatres extremités de chaque objet.
-    Renvoie un dictionnaire où les clefs sont les noms des différents objets détectés sur la frame étudiée et les valeurs sont les xmin, ymin, xmax, ymax.
-    '''
-    extremas = {}
-    for obj in dico_objects :
-        xmin, ymin, xmax, ymax = dico_objects[obj][0][0], dico_objects[obj][0][1],dico_objects[obj][0][0],dico_objects[obj][0][1]
-        for pixel in dico_objects[obj] :
-            if pixel[0] < xmin :
-                xmin = pixel[0]
-            if pixel[1] < ymin :
-                ymin = pixel[1]
-            if pixel[0] > xmax :
-                xmax = pixel[0]
-            if pixel[1] > ymax :
-                ymax = pixel[1]
-            extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
+    for obj in extremas :
+        xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3] #
+        extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]            #
     return extremas
 
 
@@ -151,23 +147,23 @@ def position (extremas:dict) -> list :
     return position
 
 
-def rectifyer (objects:dict) -> dict :
+def rectifyer (extremas:dict) -> dict :
     '''
     Rectifie quelques erreurs.
     '''
     # On supprime les objets trop petits, probablement issus d'erreurs.
     global minsize
     problematic_objects = []
-    for obj in objects:
-        if len(objects[obj]) < minsize :
+    for obj in extremas:
+        if extremas[obj][2]-extremas[obj][0] < minsize or extremas[obj][3]-extremas[obj][1] < minsize :
             problematic_objects.append(obj)
     for obj in problematic_objects :
-        del objects[obj]
+        del extremas[obj]
     # On renome nos objets.
     i = 0
     dico2 = {}
-    for obj in objects :
-        dico2 [i] = objects[obj]
+    for obj in extremas :
+        dico2 [i] = extremas[obj]
         i += 1
 
     return dico2
@@ -227,11 +223,10 @@ def frametreatement (frame) :
     '''
     global definition
     isOK = False
-
     while not isOK and definition <= 15 :
         try :
             NB_im = prep(frame)
-            objects = objects_identification(NB_im)
+            extremas = objects_identification(NB_im)
             isOK = True
         except RecursionError :
             print ('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
@@ -239,8 +234,8 @@ def frametreatement (frame) :
             frametreatement (frame)
 
     if isOK :
-        objects = rectifyer(objects)
-        return objects, NB_im
+        extremas = rectifyer(extremas)
+        return extremas, NB_im
     else :
         return 'TolError'
 
@@ -254,7 +249,7 @@ def videotreatement () :
     print('')
     for frame in frames :
         treated = frametreatement(frames[frame])[0]
-        positions[frame] = position( objects_field(treated))
+        positions[frame] = position(treated)
         progression = round( (frame/(len(frames)-1))*100, 1)
         print('\rTraitement de la vidéo en cours :', str(progression), '%', end='')
         t.sleep (.05)
@@ -322,8 +317,7 @@ def calibration () :
     print ('\nTraitement -------------------------------------------------------- OK')
 
     print ('\nAnalyse en cours ...')
-    objets = treated[0]
-    extremas = objects_field(objets)
+    extremas = treated[0]
     positions = position(extremas)
     print ('Analyse ----------------------------------------------------------- OK')
 
@@ -350,6 +344,7 @@ def calibration () :
     calib_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
+    sht.rmtree(paths['calib'])
     return None
 
 def fill_calibdir (image, image_name) :
@@ -361,7 +356,6 @@ def calib_show (images_names:list) :
         cv2.imshow('Config Window - ' + images_names[i], cv2.imread(paths['calib'] + '/' + images_names[i] + '.jpg'))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    sht.rmtree(paths['calib'])
     return None
 
 
@@ -508,7 +502,7 @@ def main ():
     # Réglages de rapidité/précision/sensibilité par défault.
     definition = 1
     tol = 0.4
-    minsize = 10
+    minsize = 5
     # Largeur des bordures des rectangles/croix.
     crosswidth = 2
     rectanglewidth = 5
