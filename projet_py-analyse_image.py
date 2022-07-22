@@ -98,7 +98,7 @@ def discovery (image, depart:list) -> list :
 def objects_identification (image) -> dict :
     '''
     Regroupe tout les objets de l'image dans un dictionnaire.
-    image : image en N&B.
+    image : image en N&B sous la forme d'un array de 0 et 255.
     '''
     h = len(image)
     w = len(image[0])
@@ -120,6 +120,7 @@ def objects_identification (image) -> dict :
 def objects_field (dico_objects:dict) -> dict :
     '''
     Récupère les quatres extremités de chaque objet.
+    Renvoie un dictionnaire où les clefs sont les noms des différents objets détectés sur la frame étudiée et les valeurs sont les xmin, ymin, xmax, ymax.
     '''
     extremas = {}
     for obj in dico_objects :
@@ -140,6 +141,7 @@ def objects_field (dico_objects:dict) -> dict :
 def position (extremas:dict) -> list :
     '''
     Récupère la position d'un objet à partir des extremas.
+    Renvoie un dictionnaire où les clefs sont les noms des ifférents objets détectés sur la frame étudiée et les valeurs sont les coordonées du 'centre' de l'objet.
     '''
     position = {}
     for obj in extremas :
@@ -176,7 +178,7 @@ def rectifyer (objects:dict) -> dict :
 def get_frames () :
     '''
     Récupère l'ensembe des frames.
-    Renoie un dictionaire où les clés sont les numéros de frames et le valeurs des tableau de type uint8
+    Renvoie un dictionaire où les clés sont les numéros de frames et le valeurs des tableau de type uint8.
     '''
     global video, frames
     frames = {}
@@ -196,6 +198,9 @@ def get_frames () :
     return None
 
 def get_framerate () :
+    '''
+    Renvoie dans le spectre global un dictionaire avec en clefs les numéros des frames et en valeurs des tableau de type uint8.
+    '''
     global video, Framerate
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     tracks = media_info.tracks
@@ -205,6 +210,9 @@ def get_framerate () :
     return None
 
 def get_framessize () :
+    '''
+    Renvoie dans le spectre global un tuple de deux valeurs : la hauteur et largeur des frames de la video.
+    '''
     global video, Framesize
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     video_tracks =  media_info.video_tracks[0]
@@ -213,6 +221,10 @@ def get_framessize () :
     return None
 
 def frametreatement (frame) :
+    '''
+    Permet le traitement de la frame passée en argument.
+    frame : tableau uint8.
+    '''
     global definition
     isOK = False
 
@@ -233,6 +245,9 @@ def frametreatement (frame) :
         return 'TolError'
 
 def videotreatement () :
+    '''
+    Permet le traitement de l'ensemble des frames qui constituent la vidéo.
+    '''
     global video, frames, positions
     currentframe = 0
     positions = {}
@@ -294,6 +309,9 @@ def cross_color (image, positions) :
 # Calibration fcts
 
 def calibration () :
+    '''
+    À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
+    '''
     global video, frames, Framesize
     print ('\nTraitement en cours ...')
     first = frames[0]
@@ -310,40 +328,40 @@ def calibration () :
     print ('Analyse ----------------------------------------------------------- OK')
 
     images_names = []
-    create_dir('config')
+    create_dir('calib')
 
     color_im = first
     images_names.append('color_im')
-    fill_configdir(color_im, 'color_im')
+    fill_calibdir(color_im, 'color_im')
 
     NB_im = cv2.resize(np.uint8(treated[1]), Framesize)
     images_names.append('NB_im')
-    fill_configdir(NB_im, 'NB_im')
+    fill_calibdir(NB_im, 'NB_im')
 
     treated_NB = np.uint8(rectangle_NB(NB_im, extremas))
     images_names.append('treated_NB')
-    fill_configdir(treated_NB, 'treated_NB')
+    fill_calibdir(treated_NB, 'treated_NB')
 
     treated_color = np.uint8(cross_color(color_im, positions))
     images_names.append('treated_color')
-    fill_configdir(treated_color, 'treated_color')
+    fill_calibdir(treated_color, 'treated_color')
 
     print ('\nAffichage du résultat, veuillez checker sa correction')
-    config_show (images_names)
+    calib_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
     return None
 
-def fill_configdir (image, image_name) :
-    cv2.imwrite(paths['config'] + '/' + image_name + '.jpg', image)
+def fill_calibdir (image, image_name) :
+    cv2.imwrite(paths['calib'] + '/' + image_name + '.jpg', image)
     return None
 
-def config_show (images_names:list) :
+def calib_show (images_names:list) :
     for i in range(len(images_names)):
-        cv2.imshow('Config Window - ' + images_names[i], cv2.imread(paths['config'] + '/' + images_names[i] + '.jpg'))
+        cv2.imshow('Config Window - ' + images_names[i], cv2.imread(paths['calib'] + '/' + images_names[i] + '.jpg'))
         cv2.waitKey(0)
         cv2.destroyAllWindows()
-    sht.rmtree(paths['config'])
+    sht.rmtree(paths['calib'])
     return None
 
 
@@ -456,7 +474,7 @@ def yn (question) :
 paths = {}
 paths['data'] = 'Desktop/data'
 paths['bac'] = 'Desktop/bac'
-paths['config'] = 'Desktop/##configdir##'
+paths['calib'] = 'Desktop/##calibdir##'
 
 def add_subdata_dirs ():
     global video
