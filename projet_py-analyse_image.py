@@ -5,6 +5,7 @@
 
 # Import modules
 
+import getpass as gp
 import pymediainfo as mi
 import numpy as np
 import cv2
@@ -464,10 +465,12 @@ def yn (question) :
 
 # paths gestion
 
+user = gp.getuser()
+
 paths = {}
-paths['data'] = 'Desktop/data'
-paths['bac'] = 'Desktop/bac'
-paths['calib'] = 'Desktop/##calibdir##'
+paths['data'] = '/Users/' + user + '/Desktop/data'
+paths['bac'] = '/Users/' + user + '/Desktop/bac'
+paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
 
 def add_subdata_dirs ():
     global video
@@ -496,7 +499,7 @@ def delete_dir (dir:str) :
 
 def main ():
 
-    sys.setrecursionlimit(1000)
+    # sys.setrecursionlimit(1000)
 
     global definition, tol, minsize, crosswidth, rectanglewidth
 
@@ -508,9 +511,9 @@ def main ():
     crosswidth = 2
     rectanglewidth = 5
 
-    recursion_limit = int(input('\nprécision : '))
-    sys.setrecursionlimit(recursion_limit)
-    print(sys.getrecursionlimit())
+    # recursion_limit = int(input('\nprécision : '))
+    # sys.setrecursionlimit(recursion_limit)
+    # print(sys.getrecursionlimit())
 
     print ('\nInitialisation de la procédure')
 
