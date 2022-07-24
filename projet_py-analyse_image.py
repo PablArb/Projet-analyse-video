@@ -1,6 +1,6 @@
 # Cet algorythme permet de localiser les repères de couleur rouge, vert ou bleu présents sur la vidéo mise en entrée, fonctionne avec le format mp4.
 
-# Foncyion sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 innstallés
+# Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 innstallés
 
 
 # Import modules
