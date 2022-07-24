@@ -99,8 +99,8 @@ def visiter (image, depart:list, object:list, extr:list) -> list :
 
 def discovery (image, depart:list) -> list :
     object = [depart]
-    init_extr = [depart[0], depart[1], depart[0], depart[1]] #
-    infos = visiter(image, depart, object, init_extr) #
+    init_extr = [depart[0], depart[1], depart[0], depart[1]]
+    infos = visiter(image, depart, object, init_extr)
     object = infos[0]
     extr = infos[1]
     return object, extr
@@ -165,7 +165,6 @@ def rectifyer (extremas:dict) -> dict :
     for obj in extremas :
         dico2 [i] = extremas[obj]
         i += 1
-
     return dico2
 
 
@@ -183,7 +182,7 @@ def get_frames () :
     print ('\nRécupération des frames en cours ...')
     while(True):
         ret,frame = cam.read()
-        if ret:
+        if ret :
             frames[currentframe] = frame
             currentframe += 1
         else:
@@ -364,7 +363,7 @@ def calib_show (images_names:list) :
 def videodownload () :
     global video
     create_dir('vidéodl')
-    source = "/Users/pabloarb/Desktop/bac/" + video + '.mp4'
+    source = paths['vidéoinput']
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
     sht.copy2(source, destination)
     return None
@@ -497,6 +496,8 @@ def delete_dir (dir:str) :
 
 def main ():
 
+    sys.setrecursionlimit(1000)
+
     global definition, tol, minsize, crosswidth, rectanglewidth
 
     # Réglages de rapidité/précision/sensibilité par défault.
@@ -506,6 +507,10 @@ def main ():
     # Largeur des bordures des rectangles/croix.
     crosswidth = 2
     rectanglewidth = 5
+
+    recursion_limit = int(input('\nprécision : '))
+    sys.setrecursionlimit(recursion_limit)
+    print(sys.getrecursionlimit())
 
     print ('\nInitialisation de la procédure')
 
@@ -545,5 +550,5 @@ def main ():
 
 # execution
 
-# if __name__ == '__main__':
-#     sys.exit(main())
+if __name__ == '__main__':
+    sys.exit(main())
