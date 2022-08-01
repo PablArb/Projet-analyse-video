@@ -538,14 +538,14 @@ def main ():
             i = input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : ')
             tol += float(i)
 
-    # videotreatement()
-    #
-    # if yn("Voulez vous télécharger les résultats de l'étude ?") :
-    #     datadownload ()
-    #     create_video()
-    #
-    #     if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
-    #         framesdownload()
+    videotreatement()
+
+    if yn("Voulez vous télécharger les résultats de l'étude ?") :
+        datadownload ()
+        create_video()
+
+        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
+            framesdownload()
 
     print ('\nProcédure terminée')
 
