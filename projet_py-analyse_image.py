@@ -1,6 +1,6 @@
 # Cet algorythme permet de localiser les repères de couleur rouge, vert ou bleu présents sur la vidéo mise en entrée, fonctionne avec le format mp4.
 
-# Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 innstallés
+# Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 installés
 
 
 # Import modules
@@ -26,7 +26,8 @@ def rate_rgb (pixel:list) -> float :
     '''
     global c
     assert c in [0,1,2]
-    return int(pixel[c]) / (int(pixel[0])+int(pixel[1])+int(pixel[2])+1)
+    # la rédaction ci-dessous n'est pas idéale mais l'utilisation du np.sum rend le traitement trop long
+    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
 
 def prep (image) :
     '''
@@ -44,8 +45,7 @@ def prep (image) :
         line = []
         for j in range (int(w/definition)):
             pixel = image[i*definition][j*definition]
-            t = rate_rgb(pixel)
-            if t < tol :
+            if rate_rgb(pixel) < tol :
                 line.append(0)
             else:
                 line.append(255)
@@ -264,10 +264,12 @@ def rectangle_NB (image, extremas) :
     l = len(image[0])
     for key in extremas :
         xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(extremas[key][3])
-        for i in range (xmin-2,xmax+3):
-            image[(ymin-2)%L][i%l], image[(ymax+2)%L][i%l] = 255, 255
-        for j in range (ymin-2,ymax+3):
-            image[j%L][(xmin-2)%l], image[j%L][(xmax+2)%l] = 255, 255
+        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
+            for n in range (rectanglewidth+1):
+                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = 255, 255
+        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
+            for n in range (rectanglewidth+1):
+                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = 255, 255
     return image
 
 def rectangle_color (image, extremas) :
@@ -435,7 +437,7 @@ def videoinput () :
         print('Veuillez fournir une vidéo au format mp4')
         delete_dir('bac')
         videoinput()
-    if len(os.listdir(paths['bac'])) >= 1 :
+    if len(os.listdir(paths['bac'])) > 1 :
         print ("Veuillez ne placer qu'un document dans le bac")
         delete_dir('bac')
         videoinput()
@@ -505,15 +507,9 @@ def main ():
 
     # Réglages de rapidité/précision/sensibilité par défault.
     definition = 1
-    tol = 0.4
-    minsize = 5
-    # Largeur des bordures des rectangles/croix.
-    crosswidth = 2
-    rectanglewidth = 5
+    # sys.setrecursionlimit(1000)
 
-    # recursion_limit = int(input('\nprécision : '))
-    # sys.setrecursionlimit(recursion_limit)
-    # print(sys.getrecursionlimit())
+    tol = 0.4
 
     print ('\nInitialisation de la procédure')
 
@@ -525,7 +521,11 @@ def main ():
     get_framessize()
     videodownload()
 
-    delete_dir('bac')
+    crosswidth = int(Framesize[1]/500)
+    rectanglewidth = int(Framesize[1]/1250)
+    minsize = int(Framesize[1]/1250)
+
+    # delete_dir('bac')
 
     cinput()
 
@@ -538,20 +538,20 @@ def main ():
             i = input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : ')
             tol += float(i)
 
-    videotreatement()
-
-    if yn("Voulez vous télécharger les résultats de l'étude ?") :
-        datadownload ()
-        create_video()
-
-        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
-            framesdownload()
+    # videotreatement()
+    #
+    # if yn("Voulez vous télécharger les résultats de l'étude ?") :
+    #     datadownload ()
+    #     create_video()
+    #
+    #     if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
+    #         framesdownload()
 
     print ('\nProcédure terminée')
 
     return None
 
 # execution
-
-if __name__ == '__main__':
-    sys.exit(main())
+#
+# if __name__ == '__main__':
+#     sys.exit(main())
