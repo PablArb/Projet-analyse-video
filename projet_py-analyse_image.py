@@ -5,15 +5,15 @@
 
 # Import modules
 
-import getpass as gp
-import pymediainfo as mi
-import numpy as np
-import cv2
-import csv
-import os
-import sys
-import shutil as sht
-import time as t
+import pymediainfo  as mi
+import numpy        as np
+import cv2          as cv2
+import csv          as csv
+import getpass      as gp   # intégré à python par default
+import os           as os   # intégré à python par default
+import sys          as sys  # intégré à python par default
+import shutil       as sht  # intégré à python par default
+import time         as t    # intégré à python par default
 
 
 # Frame preparation tools
@@ -180,7 +180,7 @@ def get_frames () :
     frames = {}
     cam = cv2.VideoCapture(paths['vidéoinput'])
     currentframe = 0
-    print ('\nRécupération des frames en cours ...')
+    print ('\nRécupération de la vidéo en cours ...')
     while(True):
         ret,frame = cam.read()
         if ret :
@@ -190,7 +190,7 @@ def get_frames () :
             break
     cam.release()
     cv2.destroyAllWindows()
-    print ('\rRécupération des frames ------------------------------------------- OK')
+    print ('\rRécupération de la vidéo ------------------------------------------ OK')
     return None
 
 def get_framerate () :
@@ -374,6 +374,7 @@ def videodownload () :
 def datadownload () :
     global video, positions, Framerate
     create_dir('csv')
+    # print(positions)
     print('\nSauvegarde de la data en cours ...')
     nom_colonnes = ['frame', 'time']
     objects = []
@@ -523,9 +524,9 @@ def main ():
 
     crosswidth = int(Framesize[1]/500)
     rectanglewidth = int(Framesize[1]/1250)
-    minsize = int(Framesize[1]/1250)
+    minsize = int(Framesize[1]/1500)
 
-    # delete_dir('bac')
+    delete_dir('bac')
 
     cinput()
 
