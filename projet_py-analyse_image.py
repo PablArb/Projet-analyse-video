@@ -309,7 +309,6 @@ def get_neighbours (image, pixel:list) -> list :
             L_neighours.append(element)
     return L_neighours
 
-
 def visiter (image, depart:list, object:list, extr:list) -> list :
     '''
     Regroupe tous les pixels appartenant a un même objets (forme blanche ici) sous la forme d'une liste.
@@ -399,6 +398,52 @@ def rectifyer (extremas:dict) -> dict :
         dico2 [i] = extremas[obj]
         i += 1
     return dico2
+
+
+
+# Rectangles/cross drawing tools
+
+def rectangle_NB (image, extremas) :
+    L = len(image)
+    l = len(image[0])
+    for key in extremas :
+        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(extremas[key][3])
+        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
+            for n in range (rectanglewidth+1):
+                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = 255, 255
+        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
+            for n in range (rectanglewidth+1):
+                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = 255, 255
+    return image
+
+def rectangle_color (image, extremas) :
+    global rectanglewidth
+    L = len(image)
+    l = len(image[0])
+    for key in extremas.keys() :
+        xmin, ymin, xmax, ymax = extremas[key][0], extremas[key][1], extremas[key][2], extremas[key][3]
+        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
+            for n in range (rectanglewidth+1):
+                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = [0, 255, 0], [0, 255, 0]
+        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
+            for n in range (rectanglewidth+1):
+                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = [0, 255, 0], [0, 255, 0]
+    return image
+
+def cross_color (image, positions) :
+    global crosswidth
+    L = len(image)
+    l = len(image[0])
+    for obj in positions :
+        x = int(positions[obj][0])
+        y = int(positions[obj][1])
+        for i in range (x-crosswidth*10, x+crosswidth*10+1 ) :
+            for n in range (y-int(crosswidth/2), y+int(crosswidth/2)+1):
+                image[n%L][i%l] = [0, 255, 0]
+        for j in range (y-crosswidth*10, y+crosswidth*10+1) :
+            for n in range (x-int(crosswidth/2), x+int(crosswidth/2)+1):
+                image[j%L][n%l] = [0, 255, 0]
+    return image
 
 
 
@@ -514,5 +559,4 @@ def create_video ():
 
 # execution
 
-if __name__ == '__main__':
-    main()
+main()
