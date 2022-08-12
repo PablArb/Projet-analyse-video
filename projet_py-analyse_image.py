@@ -3,6 +3,7 @@
 # Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 installés
 
 
+
 # Import modules
 
 import pymediainfo  as mi
@@ -14,6 +15,58 @@ import os           as os   # intégré à python par default
 import sys          as sys  # intégré à python par default
 import shutil       as sht  # intégré à python par default
 import time         as t    # intégré à python par default
+
+
+def main ():
+
+    # sys.setrecursionlimit(1000)
+
+    global definition, tol, minsize, crosswidth, rectanglewidth
+
+    # Réglages de rapidité/précision/sensibilité par défault.
+    definition = 1
+    # sys.setrecursionlimit(1000)
+
+    tol = 0.4
+
+    print ('\nInitialisation de la procédure')
+
+    videoinput()
+
+    get_frames()
+    get_framerate()
+    get_framessize()
+    videodownload()
+
+    crosswidth = int(Framesize[1]/500)
+    rectanglewidth = int(Framesize[1]/1250)
+    minsize = int(Framesize[1]/800)
+
+    # delete_dir('bac')
+
+    cinput()
+
+    isOK = False
+    while not isOK :
+        calibration()
+        if yn('Le traitement est-il bon ?') :
+            isOK = True
+        else :
+            i = input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : ')
+            tol += float(i)
+
+    videotreatement()
+
+    if yn("Voulez vous télécharger les résultats de l'étude ?") :
+        datadownload ()
+        create_video()
+
+        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
+            framesdownload()
+
+    print ('\nProcédure terminée')
+
+    return None
 
 
 # Frame preparation tools
@@ -97,7 +150,6 @@ def visiter (image, depart:list, object:list, extr:list) -> list :
             visiter(image, pixel, object, extr)
     return object, extr
 
-
 def discovery (image, depart:list) -> list :
     object = [depart]
     init_extr = [depart[0], depart[1], depart[0], depart[1]]
@@ -105,7 +157,6 @@ def discovery (image, depart:list) -> list :
     object = infos[0]
     extr = infos[1]
     return object, extr
-
 
 def objects_identification (image) -> dict :
     '''
@@ -134,7 +185,6 @@ def objects_identification (image) -> dict :
         extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]            #
     return extremas
 
-
 def position (extremas:dict) -> list :
     '''
     Récupère la position d'un objet à partir des extremas.
@@ -146,7 +196,6 @@ def position (extremas:dict) -> list :
         y = ( extremas[obj][1] + extremas[obj][3] )/2
         position[obj] = [x,y]
     return position
-
 
 def rectifyer (extremas:dict) -> dict :
     '''
@@ -178,6 +227,7 @@ def get_frames () :
     '''
     global video, frames
     frames = {}
+    add_subdata_dirs()
     cam = cv2.VideoCapture(paths['vidéoinput'])
     currentframe = 0
     print ('\nRécupération de la vidéo en cours ...')
@@ -365,6 +415,7 @@ def calib_show (images_names:list) :
 
 def videodownload () :
     global video
+    add_subdata_dirs()
     create_dir('vidéodl')
     source = paths['vidéoinput']
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
@@ -498,61 +549,7 @@ def delete_dir (dir:str) :
     return None
 
 
-# Main
-
-def main ():
-
-    # sys.setrecursionlimit(1000)
-
-    global definition, tol, minsize, crosswidth, rectanglewidth
-
-    # Réglages de rapidité/précision/sensibilité par défault.
-    definition = 1
-    # sys.setrecursionlimit(1000)
-
-    tol = 0.4
-
-    print ('\nInitialisation de la procédure')
-
-    videoinput()
-
-    add_subdata_dirs()
-    get_frames()
-    get_framerate()
-    get_framessize()
-    videodownload()
-
-    crosswidth = int(Framesize[1]/500)
-    rectanglewidth = int(Framesize[1]/1250)
-    minsize = int(Framesize[1]/1500)
-
-    delete_dir('bac')
-
-    cinput()
-
-    isOK = False
-    while not isOK :
-        calibration()
-        if yn('Le traitement est-il bon ?') :
-            isOK = True
-        else :
-            i = input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : ')
-            tol += float(i)
-
-    videotreatement()
-
-    if yn("Voulez vous télécharger les résultats de l'étude ?") :
-        datadownload ()
-        create_video()
-
-        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
-            framesdownload()
-
-    print ('\nProcédure terminée')
-
-    return None
-
 # execution
-#
-# if __name__ == '__main__':
-#     sys.exit(main())
+
+if __name__ == '__main__':
+    main()
