@@ -19,8 +19,6 @@ import time         as t    # intégré à python par default
 
 def main ():
 
-    # sys.setrecursionlimit(1000)
-
     global definition, tol, minsize, crosswidth, rectanglewidth
 
     # Réglages de rapidité/précision/sensibilité par défault.
@@ -32,11 +30,11 @@ def main ():
     print ('\nInitialisation de la procédure')
 
     videoinput()
+    videodownload()
 
     get_frames()
     get_framerate()
     get_framessize()
-    videodownload()
 
     crosswidth = int(Framesize[1]/500)
     rectanglewidth = int(Framesize[1]/1250)
@@ -67,6 +65,146 @@ def main ():
     print ('\nProcédure terminée')
 
     return None
+
+
+
+# paths gestion
+
+user = gp.getuser()
+
+paths = {}
+paths['data'] = '/Users/' + user + '/Desktop/data'
+paths['bac'] = '/Users/' + user + '/Desktop/bac'
+paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
+
+def add_subdata_dirs ():
+    global video
+    paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
+    paths['csv'] = paths['data'] + '/' + video + '/csv'
+    paths['vidéodl'] = paths['data'] + '/' + video + '/vidéo'
+    paths['frames'] = paths['data'] + '/' + video + '/frames'
+    paths['treated frames'] = paths['frames'] + '/treated'
+    paths['non treated frames'] = paths['frames'] + '/non treated'
+
+def create_dir (dir:str) :
+    p = paths[dir]
+    try:
+        if not os.path.exists(p) :
+            os.makedirs(p)
+    except OSError:
+        print ('Error: Creating directory of data')
+    return None
+
+def delete_dir (dir:str) :
+    sht.rmtree(paths[dir])
+    return None
+
+
+
+# IHM
+
+def videoinput () :
+    global video
+    create_dir('bac')
+    isempty = True
+    print ('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
+    while isempty :
+        if len(os.listdir(paths['bac'])) != 0 :
+            isempty = False
+        t.sleep(0.5)
+    bac = os.listdir(paths['bac'])
+    if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
+        video = bac[0].split('.')[0]
+        return None
+    elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
+        print('Veuillez fournir une vidéo au format mp4')
+        delete_dir('bac')
+        videoinput()
+    elif len(bac) > 1 :
+        print ("Veuillez ne placer qu'un document dans le bac")
+        delete_dir('bac')
+        videoinput()
+
+def cinput () :
+    global c
+    while True :
+        c = input('\nCouleur des repères à étudier (0=bleu, 1=vert, 2=rouge) : ')
+        if c in ['0', '1', '2'] :
+            c = int(c)
+            return None
+        else :
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
+def yn (question) :
+    assert type(question) == str
+    while True :
+        yn = input ('\n' + question + '\n[y]/n : ')
+        if yn in ['y', '', 'n']:
+            if yn == 'y' or yn == '' :
+                return True
+            else :
+                return False
+        else :
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
+
+
+# Informations recuperation tools
+
+def videodownload () :
+    global video
+    add_subdata_dirs()
+    create_dir('vidéodl')
+    source = paths['vidéoinput']
+    destination = paths['vidéodl'] + '/vidéo' + '.mp4'
+    sht.copy2(source, destination)
+    return None
+
+def get_frames () :
+    '''
+    Récupère l'ensembe des frames.
+    Renvoie un dictionaire où les clés sont les numéros de frames et le valeurs des tableau de type uint8.
+    '''
+    global video, frames
+    frames = {}
+    cam = cv2.VideoCapture(paths['vidéoinput'])
+    currentframe = 0
+    print ('\nRécupération de la vidéo en cours ...')
+    while(True):
+        ret,frame = cam.read()
+        if ret :
+            frames[currentframe] = frame
+            currentframe += 1
+        else:
+            break
+    cam.release()
+    cv2.destroyAllWindows()
+    print ('\rRécupération de la vidéo ------------------------------------------ OK')
+    return None
+
+def get_framerate () :
+    '''
+    Renvoie dans le spectre global un dictionaire avec en clefs les numéros des frames et en valeurs des tableau de type uint8.
+    '''
+    global video, Framerate
+    media_info = mi.MediaInfo.parse(paths['vidéoinput'])
+    tracks = media_info.tracks
+    for i in tracks :
+        if i.track_type == 'Video' :
+            Framerate = float(i.frame_rate)
+    return None
+
+def get_framessize () :
+    '''
+    Renvoie dans le spectre global un tuple de deux valeurs : la hauteur et largeur des frames de la video.
+    '''
+    global video, Framesize
+    media_info = mi.MediaInfo.parse(paths['vidéoinput'])
+    video_tracks =  media_info.video_tracks[0]
+    width, height = int(video_tracks.sampled_width), int(video_tracks.sampled_height)
+    Framesize = (height, width)
+    return None
+
 
 
 # Frame preparation tools
@@ -104,6 +242,51 @@ def prep (image) :
                 line.append(255)
         simplified_im.append(line)
     return simplified_im
+
+
+
+# Treatement tools
+
+def frametreatement (frame) :
+    '''
+    Permet le traitement de la frame passée en argument.
+    frame : tableau uint8.
+    '''
+    global definition
+    isOK = False
+    while not isOK and definition <= 15 :
+        try :
+            NB_im = prep(frame)
+            extremas = objects_identification(NB_im)
+            isOK = True
+        except RecursionError :
+            print ('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
+            definition += 1
+            frametreatement (frame)
+
+    if isOK :
+        extremas = rectifyer(extremas)
+        return extremas, NB_im
+    else :
+        return 'TolError'
+
+def videotreatement () :
+    '''
+    Permet le traitement de l'ensemble des frames qui constituent la vidéo.
+    '''
+    global video, frames, positions
+    currentframe = 0
+    positions = {}
+    print('')
+    for frame in frames :
+        treated = frametreatement(frames[frame])[0]
+        positions[frame] = position(treated)
+        progression = round( (frame/(len(frames)-1))*100, 1)
+        print('\rTraitement de la vidéo en cours :', str(progression), '%', end='')
+        t.sleep (.05)
+    print ('\nTraitement de la vidéo -------------------------------------------- Finit')
+    return None
+
 
 
 # Frame manipulation tools
@@ -181,8 +364,8 @@ def objects_identification (image) -> dict :
                     extremas[n] = infos[1]
                     n += 1
     for obj in extremas :
-        xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3] #
-        extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]            #
+        xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3]
+        extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
     return extremas
 
 def position (extremas:dict) -> list :
@@ -217,140 +400,6 @@ def rectifyer (extremas:dict) -> dict :
         i += 1
     return dico2
 
-
-# Treatement fcts
-
-def get_frames () :
-    '''
-    Récupère l'ensembe des frames.
-    Renvoie un dictionaire où les clés sont les numéros de frames et le valeurs des tableau de type uint8.
-    '''
-    global video, frames
-    frames = {}
-    add_subdata_dirs()
-    cam = cv2.VideoCapture(paths['vidéoinput'])
-    currentframe = 0
-    print ('\nRécupération de la vidéo en cours ...')
-    while(True):
-        ret,frame = cam.read()
-        if ret :
-            frames[currentframe] = frame
-            currentframe += 1
-        else:
-            break
-    cam.release()
-    cv2.destroyAllWindows()
-    print ('\rRécupération de la vidéo ------------------------------------------ OK')
-    return None
-
-def get_framerate () :
-    '''
-    Renvoie dans le spectre global un dictionaire avec en clefs les numéros des frames et en valeurs des tableau de type uint8.
-    '''
-    global video, Framerate
-    media_info = mi.MediaInfo.parse(paths['vidéoinput'])
-    tracks = media_info.tracks
-    for i in tracks :
-        if i.track_type == 'Video' :
-            Framerate = float(i.frame_rate)
-    return None
-
-def get_framessize () :
-    '''
-    Renvoie dans le spectre global un tuple de deux valeurs : la hauteur et largeur des frames de la video.
-    '''
-    global video, Framesize
-    media_info = mi.MediaInfo.parse(paths['vidéoinput'])
-    video_tracks =  media_info.video_tracks[0]
-    width, height = int(video_tracks.sampled_width), int(video_tracks.sampled_height)
-    Framesize = (height, width)
-    return None
-
-def frametreatement (frame) :
-    '''
-    Permet le traitement de la frame passée en argument.
-    frame : tableau uint8.
-    '''
-    global definition
-    isOK = False
-    while not isOK and definition <= 15 :
-        try :
-            NB_im = prep(frame)
-            extremas = objects_identification(NB_im)
-            isOK = True
-        except RecursionError :
-            print ('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
-            definition += 1
-            frametreatement (frame)
-
-    if isOK :
-        extremas = rectifyer(extremas)
-        return extremas, NB_im
-    else :
-        return 'TolError'
-
-def videotreatement () :
-    '''
-    Permet le traitement de l'ensemble des frames qui constituent la vidéo.
-    '''
-    global video, frames, positions
-    currentframe = 0
-    positions = {}
-    print('')
-    for frame in frames :
-        treated = frametreatement(frames[frame])[0]
-        positions[frame] = position(treated)
-        progression = round( (frame/(len(frames)-1))*100, 1)
-        print('\rTraitement de la vidéo en cours :', str(progression), '%', end='')
-        t.sleep (.05)
-    print ('\nTraitement de la vidéo -------------------------------------------- Finit')
-    return None
-
-
-# Rectangles/cross drawing tools
-
-def rectangle_NB (image, extremas) :
-    L = len(image)
-    l = len(image[0])
-    for key in extremas :
-        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(extremas[key][3])
-        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = 255, 255
-        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = 255, 255
-    return image
-
-def rectangle_color (image, extremas) :
-    global rectanglewidth
-    L = len(image)
-    l = len(image[0])
-    for key in extremas.keys() :
-        xmin, ymin, xmax, ymax = extremas[key][0], extremas[key][1], extremas[key][2], extremas[key][3]
-        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = [0, 255, 0], [0, 255, 0]
-        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = [0, 255, 0], [0, 255, 0]
-    return image
-
-
-def cross_color (image, positions) :
-    global crosswidth
-    L = len(image)
-    l = len(image[0])
-    for obj in positions :
-        x = int(positions[obj][0])
-        y = int(positions[obj][1])
-        for i in range (x-crosswidth*10, x+crosswidth*10+1 ) :
-            for n in range (y-int(crosswidth/2), y+int(crosswidth/2)+1):
-                image[n%L][i%l] = [0, 255, 0]
-        for j in range (y-crosswidth*10, y+crosswidth*10+1) :
-            for n in range (x-int(crosswidth/2), x+int(crosswidth/2)+1):
-                image[j%L][n%l] = [0, 255, 0]
-    return image
 
 
 # Calibration fcts
@@ -411,15 +460,8 @@ def calib_show (images_names:list) :
     return None
 
 
-# Data download fcts
 
-def videodownload () :
-    global video
-    create_dir('vidéodl')
-    source = paths['vidéoinput']
-    destination = paths['vidéodl'] + '/vidéo' + '.mp4'
-    sht.copy2(source, destination)
-    return None
+# Data download fcts
 
 def datadownload () :
     global video, positions, Framerate
@@ -467,84 +509,6 @@ def create_video ():
         img = np.uint8(cross_color(frames[frame], positions[frame]))
         out.write(img)
     print ('Sauvegarde de la vidéo -------------------------------------------- OK')
-    return None
-
-
-# IHM
-
-def videoinput () :
-    global video
-    create_dir('bac')
-    isempty = True
-    print ('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
-    while isempty :
-        if len(os.listdir(paths['bac'])) != 0 :
-            isempty = False
-        t.sleep(0.5)
-    if len(os.listdir(paths['bac'])) == 1 and os.listdir(paths['bac'])[0].split('.')[1] == 'mp4':
-        video = os.listdir(paths['bac'])[0].split('.')[0]
-        return None
-    if len(os.listdir(paths['bac'])) == 1 and os.listdir(paths['bac'])[0].split('.')[1] != 'mp4':
-        print('Veuillez fournir une vidéo au format mp4')
-        delete_dir('bac')
-        videoinput()
-    if len(os.listdir(paths['bac'])) > 1 :
-        print ("Veuillez ne placer qu'un document dans le bac")
-        delete_dir('bac')
-        videoinput()
-
-def cinput () :
-    global c
-    while True :
-        c = input('\nCouleur des repères à étudier (0=bleu, 1=vert, 2=rouge) : ')
-        if c in ['0', '1', '2'] :
-            c = int(c)
-            return None
-        else :
-            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-def yn (question) :
-    assert type(question) == str
-    while True :
-        yn = input ('\n' + question + '\n[y]/n : ')
-        if yn in ['y', '', 'n']:
-            if yn == 'y' or yn == '' :
-                return True
-            else :
-                return False
-        else :
-            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-
-# paths gestion
-
-user = gp.getuser()
-
-paths = {}
-paths['data'] = '/Users/' + user + '/Desktop/data'
-paths['bac'] = '/Users/' + user + '/Desktop/bac'
-paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
-
-def add_subdata_dirs ():
-    global video
-    paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
-    paths['csv'] = paths['data'] + '/' + video + '/csv'
-    paths['vidéodl'] = paths['data'] + '/' + video + '/vidéo'
-    paths['frames'] = paths['data'] + '/' + video + '/frames'
-    paths['treated frames'] = paths['frames'] + '/treated'
-    paths['non treated frames'] = paths['frames'] + '/non treated'
-
-def create_dir (dir:str) :
-    p = paths[dir]
-    try:
-        if not os.path.exists(p) :
-            os.makedirs(p)
-    except OSError:
-        print ('Error: Creating directory of data')
-    return None
-
-def delete_dir (dir:str) :
-    sht.rmtree(paths[dir])
     return None
 
 
