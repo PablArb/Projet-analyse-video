@@ -415,7 +415,6 @@ def calib_show (images_names:list) :
 
 def videodownload () :
     global video
-    add_subdata_dirs()
     create_dir('vidéodl')
     source = paths['vidéoinput']
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
