@@ -10,53 +10,64 @@ import pymediainfo  as mi
 import numpy        as np
 import cv2          as cv2
 import csv          as csv
-import getpass      as gp   # intégré à python par default
-import os           as os   # intégré à python par default
-import sys          as sys  # intégré à python par default
-import shutil       as sht  # intégré à python par default
-import time         as t    # intégré à python par default
+import getpass      as gp   # intégré à python par défaut
+import os           as os   # intégré à python par défaut
+import sys          as sys  # intégré à python par défaut
+import shutil       as sht  # intégré à python par défaut
+import time         as t    # intégré à python par défaut
 
 
 def main ():
 
-    global definition, tol, minsize, crosswidth, rectanglewidth
+    global definition, tol, minsize, crosswidth, rectanglewidth, c
 
     # Réglages de rapidité/précision/sensibilité par défault.
     definition = 1
     # sys.setrecursionlimit(1000)
-
     tol = 0.4
 
     print ('\nInitialisation de la procédure')
 
-    videoinput()
-    videodownload()
+    # create_dir('bac')
+    # add_subbac_dirs()
+    #
+    # # On récupère notre vidéo
+    # videoinput()
+    #
+    # # On récupère des infos supplémentaires
+    # get_frames()
+    # get_framerate()
+    # get_framessize()
+    # cinput()
+    #
+    # # delete_dir('bac')
+    #
+    # # On définit la taille des indicateurs visuels par rapport à la taille de l'image
+    # crosswidth = int(Framesize[1]/500)
+    # rectanglewidth = int(Framesize[1]/1250)
+    # minsize = int(Framesize[1]/800)
+    #
+    # # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
+    # isOK = False
+    # while not isOK :
+    #     calibration()
+    #     if yn('Le traitement est-il bon ?') :
+    #         isOK = True
+    #     else :
+    #         if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?') :
+    #             cinput()
+    #         else :
+    #             tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
 
-    get_frames()
-    get_framerate()
-    get_framessize()
-
-    crosswidth = int(Framesize[1]/500)
-    rectanglewidth = int(Framesize[1]/1250)
-    minsize = int(Framesize[1]/800)
-
-    # delete_dir('bac')
-
-    cinput()
-
-    isOK = False
-    while not isOK :
-        calibration()
-        if yn('Le traitement est-il bon ?') :
-            isOK = True
-        else :
-            i = input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : ')
-            tol += float(i)
-
+    # Une fois que tout est bon on traite la vidéo
     videotreatement()
 
+    # On télécharge les données
     if yn("Voulez vous télécharger les résultats de l'étude ?") :
-        datadownload ()
+        reboot()
+        add_subdata_dirs()
+        videodownload()
+        datadownload()
         create_video()
 
         if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
@@ -73,18 +84,24 @@ def main ():
 user = gp.getuser()
 
 paths = {}
-paths['data'] = '/Users/' + user + '/Desktop/data'
-paths['bac'] = '/Users/' + user + '/Desktop/bac'
-paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
 
-def add_subdata_dirs ():
+paths['bac'] = '/Users/' + user + '/Desktop/bac'
+def add_subbac_dirs ():
     global video
     paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
+    return None
+
+paths['data'] = '/Users/' + user + '/Desktop/data'
+def add_subdata_dirs ():
+    global video
     paths['csv'] = paths['data'] + '/' + video + '/csv'
     paths['vidéodl'] = paths['data'] + '/' + video + '/vidéo'
     paths['frames'] = paths['data'] + '/' + video + '/frames'
     paths['treated frames'] = paths['frames'] + '/treated'
     paths['non treated frames'] = paths['frames'] + '/non treated'
+    return None
+
+paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
 
 def create_dir (dir:str) :
     p = paths[dir]
@@ -96,7 +113,12 @@ def create_dir (dir:str) :
     return None
 
 def delete_dir (dir:str) :
-    sht.rmtree(paths[dir])
+    p = paths[dir]
+    try:
+        if os.path.exists(p) :
+            sht.rmtree(p)
+    except OSError:
+        print ('Error: Creating directory of data')
     return None
 
 
@@ -105,7 +127,6 @@ def delete_dir (dir:str) :
 
 def videoinput () :
     global video
-    create_dir('bac')
     isempty = True
     print ('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
     while isempty :
@@ -151,15 +172,6 @@ def yn (question) :
 
 # Informations recuperation tools
 
-def videodownload () :
-    global video
-    add_subdata_dirs()
-    create_dir('vidéodl')
-    source = paths['vidéoinput']
-    destination = paths['vidéodl'] + '/vidéo' + '.mp4'
-    sht.copy2(source, destination)
-    return None
-
 def get_frames () :
     '''
     Récupère l'ensembe des frames.
@@ -168,13 +180,13 @@ def get_frames () :
     global video, frames
     frames = {}
     cam = cv2.VideoCapture(paths['vidéoinput'])
-    currentframe = 0
+    frame_number = 0
     print ('\nRécupération de la vidéo en cours ...')
     while(True):
         ret,frame = cam.read()
         if ret :
-            frames[currentframe] = frame
-            currentframe += 1
+            frames['frame.' + str(frame_number)] = frame
+            frame_number += 1
         else:
             break
     cam.release()
@@ -224,7 +236,7 @@ def prep (image) :
     '''
     Renvoie une image en noir et blanc
     image : image de depart.
-    definition : l'image finale contiendra 1/definition² pixels de l'image initiale.
+    definition : l'image finale contiendra 1/definition² pixels de l'image initiale. Attention les dimensions de 'image sont donc modifiées.
     '''
     global definition
     assert 0 < definition
@@ -281,7 +293,7 @@ def videotreatement () :
     for frame in frames :
         treated = frametreatement(frames[frame])[0]
         positions[frame] = position(treated)
-        progression = round( (frame/(len(frames)-1))*100, 1)
+        progression = round( (int(frame.split('.')[1])/(len(frames)-1))*100, 1)
         print('\rTraitement de la vidéo en cours :', str(progression), '%', end='')
         t.sleep (.05)
     print ('\nTraitement de la vidéo -------------------------------------------- Finit')
@@ -318,7 +330,7 @@ def visiter (image, depart:list, object:list, extr:list) -> list :
     '''
     if depart not in object :
         object.append(depart)
-        # xmin, ymin, xmax, ymax = extr[0], extr[1], extr[2], extr[3]
+        # xmin, ymin, xmax, ymax = extr[0], extr[1], extr[2], extr[3] (pour info)
         if depart[0] < extr[0] :
             extr[0] = depart[0]
         if depart[1] < extr[1] :
@@ -395,7 +407,7 @@ def rectifyer (extremas:dict) -> dict :
     i = 0
     dico2 = {}
     for obj in extremas :
-        dico2 [i] = extremas[obj]
+        dico2 ['obj-' + str(i)] = extremas[obj]
         i += 1
     return dico2
 
@@ -455,7 +467,7 @@ def calibration () :
     '''
     global video, frames, Framesize
     print ('\nTraitement en cours ...')
-    first = frames[0]
+    first = frames['frame.0']
     treated = frametreatement( first )
     if treated == 'TolError' :
         print ('\nLa tolérance doit être mal réglée, vérifiez le réglage')
@@ -508,6 +520,14 @@ def calib_show (images_names:list) :
 
 # Data download fcts
 
+def videodownload () :
+    global video
+    create_dir('vidéodl')
+    source = paths['vidéoinput']
+    destination = paths['vidéodl'] + '/vidéo' + '.mp4'
+    sht.copy2(source, destination)
+    return None
+
 def datadownload () :
     global video, positions, Framerate
     create_dir('csv')
@@ -524,7 +544,7 @@ def datadownload () :
     array = csv.DictWriter(dos, fieldnames=nom_colonnes)
     array.writeheader()
     for frame in positions :
-        dico = {'frame' : frame, 'time' : round(frame/Framerate, 3)}
+        dico = {'frame' : frame, 'time' : round(int(frame.split('.')[1])/Framerate, 3)}
         for obj in positions[frame] :
             dico['X'+str(obj)] = positions[frame][obj][0]
             dico['Y'+str(obj)] = positions[frame][obj][1]
@@ -539,9 +559,9 @@ def framesdownload () :
     create_dir('treated frames')
     print ('\nSauvegarde des frames en cours ...')
     for frame in frames :
-        name = paths['non treated frames'] + '/frame' + str(frame) +'.jpg'
+        name = paths['non treated frames'] + '/frame' + str(int(frame.split('.')[1])) +'.jpg'
         cv2.imwrite(name, frames[frame])
-        name = paths['treated frames'] + '/frame' + str(frame) +'.jpg'
+        name = paths['treated frames'] + '/frame' + str(int(frame.split('.')[1])) +'.jpg'
         cv2.imwrite(name, np.uint8(cross_color(frames[frame], positions[frame])))
     print ('Sauvegarde des frames --------------------------------------------- OK')
     return None
@@ -556,7 +576,17 @@ def create_video ():
     print ('Sauvegarde de la vidéo -------------------------------------------- OK')
     return None
 
+# Reboot
 
-# execution
+def reboot ():
+    try :
+        delete_dir('csv')
+        delete_dir('frames')
+        delete_dir('vidéodl')
+    except KeyError :
+        pass
+    return None
+
+# Execution
 
 main()
