@@ -28,38 +28,38 @@ def main ():
 
     print ('\nInitialisation de la procédure')
 
-    # create_dir('bac')
-    # add_subbac_dirs()
-    #
-    # # On récupère notre vidéo
-    # videoinput()
-    #
-    # # On récupère des infos supplémentaires
-    # get_frames()
-    # get_framerate()
-    # get_framessize()
-    # cinput()
-    #
-    # # delete_dir('bac')
-    #
-    # # On définit la taille des indicateurs visuels par rapport à la taille de l'image
-    # crosswidth = int(Framesize[1]/500)
-    # rectanglewidth = int(Framesize[1]/1250)
-    # minsize = int(Framesize[1]/800)
-    #
-    # # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
-    # isOK = False
-    # while not isOK :
-    #     calibration()
-    #     if yn('Le traitement est-il bon ?') :
-    #         isOK = True
-    #     else :
-    #         if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?') :
-    #             cinput()
-    #         else :
-    #             tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
+    create_dir('bac')
+    add_subbac_dirs()
 
-    # Une fois que tout est bon on traite la vidéo
+    # On récupère notre vidéo
+    videoinput()
+
+    # On récupère des infos supplémentaires
+    get_frames()
+    get_framerate()
+    get_framessize()
+    cinput()
+
+    # delete_dir('bac')
+
+    # On définit la taille des indicateurs visuels par rapport à la taille de l'image
+    crosswidth = int(Framesize[1]/500)
+    rectanglewidth = int(Framesize[1]/1250)
+    minsize = int(Framesize[1]/800)
+
+    # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
+    isOK = False
+    while not isOK :
+        calibration()
+        if yn('Le traitement est-il bon ?') :
+            isOK = True
+        else :
+            if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?') :
+                cinput()
+            else :
+                tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
+
+    Une fois que tout est bon on traite la vidéo
     videotreatement()
 
     # On télécharge les données
