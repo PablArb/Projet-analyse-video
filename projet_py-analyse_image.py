@@ -7,7 +7,11 @@
 # positions         : (dictionaire dont chaque clé correspond à une frame et la valeure associée est un dictionaire comprends les positions des objets détectés) positions des repères détectés à chacune des frames de la vidéo.
 # tracked_objects   : idem que positions seulement désormais les objets sont suivis et non plus identifiés par leur ordre de découverte.
 
+
+
 ## main
+
+
 
 # Import modules
 
@@ -38,14 +42,16 @@ def main ():
 
     # On récupère notre vidéo
     videoinput()
+    modeinput()
 
     # On récupère des infos supplémentaires
     get_frames()
     get_framerate()
     get_framessize()
-    cinput()
 
-    # delete_dir('bac')y
+    delete_dir('bac')
+
+    cinput()
 
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
     minsize         = int(Framesize[1]/300)
@@ -93,8 +99,8 @@ user = gp.getuser()
 paths = {}
 
 paths['bac'] = '/Users/' + user + '/Desktop/bac'
-paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
-
+paths['calib'] = '/Users/' + user + '/Documents/##calibdir##'
+paths['video storage'] = '/Users/' + user + '/Documents/temporary storage.mp4'
 paths['data'] = '/Users/' + user + '/Desktop/data'
 def add_subdata_dirs ():
     global video
@@ -139,6 +145,7 @@ def videoinput () :
     if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
         video = bac[0].split('.')[0]
         paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
+        sht.copy2(paths['vidéoinput'], paths['video storage'])
         return None
     elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
         print('Veuillez fournir une vidéo au format mp4')
@@ -155,6 +162,15 @@ def cinput () :
         c = input('\nCouleur des repères à étudier (0=bleu, 1=vert, 2=rouge) : ')
         if c in ['0', '1', '2'] :
             c = int(c)
+            return None
+        else :
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
+def modeinput () :
+    global mode
+    while True :
+        mode = input('\nLa vidéo est en mode (p=portrait, l=landscape) : ')
+        if mode in ['p', 'l'] :
             return None
         else :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
@@ -217,9 +233,13 @@ def get_framessize () :
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     video_tracks =  media_info.video_tracks[0]
     dim = [ int(video_tracks.sampled_width), int(video_tracks.sampled_height) ]
-    height = max(dim)
-    width = min(dim)
-    Framesize = (height, width)
+    if mode == 'l' :
+        height = min(dim)
+        width = max(dim)
+    elif mode == 'p' :
+        height = max(dim)
+        width = min(dim)
+    Framesize = (width, height)
     return None
 
 
@@ -571,9 +591,10 @@ def calib_show (images_names:list) :
 def videodownload () :
     global video
     create_dir('vidéodl')
-    source = paths['vidéoinput']
+    source = paths['video storage']
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
     sht.copy2(source, destination)
+    os.remove(paths['video storage'])
     return None
 
 def datadownload () :
