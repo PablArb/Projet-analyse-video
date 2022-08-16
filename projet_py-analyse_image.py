@@ -1,8 +1,13 @@
 # Cet algorythme permet de localiser les repères de couleur rouge, vert ou bleu présents sur la vidéo mise en entrée, fonctionne avec le format mp4.
 
-# Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 installés
+# Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 installés.
 
+# listes des variables :
+# c                 : (entier) couleur des repères étudiés.
+# positions         : (dictionaire dont chaque clé correspond à une frame et la valeure associée est un dictionaire comprends les positions des objets détectés) positions des repères détectés à chacune des frames de la vidéo.
+# tracked_objects   : idem que positions seulement désormais les objets sont suivis et non plus identifiés par leur ordre de découverte.
 
+## main
 
 # Import modules
 
@@ -19,7 +24,7 @@ import time         as t    # intégré à python par défaut
 
 def main ():
 
-    global definition, tol, minsize, crosswidth, rectanglewidth
+    global definition, tol, minsize, maxdist, bordure_size, crosswidth, rectanglewidth
 
     # Réglages de rapidité/précision/sensibilité par défault.
     # sys.setrecursionlimit(1000)
@@ -40,14 +45,14 @@ def main ():
     get_framessize()
     cinput()
 
-    # delete_dir('bac')
+    # delete_dir('bac')y
 
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
+    minsize         = int(Framesize[1]/300)
+    maxdist         = int(Framesize[1]/10)
+    bordure_size    = int(Framesize[1]/70)
     crosswidth      = int(Framesize[1]/500)
     rectanglewidth  = int(Framesize[1]/1250)
-    mindist         = int(Framesize[1]/800)
-    minsize         = int(Framesize[1]/800)
-    bordure_size    = int(Framesize[1]/1000)
 
     # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
     isOK = False
@@ -211,7 +216,9 @@ def get_framessize () :
     global video, Framesize
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     video_tracks =  media_info.video_tracks[0]
-    width, height = int(video_tracks.sampled_width), int(video_tracks.sampled_height)
+    dim = [ int(video_tracks.sampled_width), int(video_tracks.sampled_height) ]
+    height = max(dim)
+    width = min(dim)
     Framesize = (height, width)
     return None
 
@@ -282,22 +289,58 @@ def frametreatement (frame) :
 
 def videotreatement () :
     '''
-    Permet le traitement de l'ensemble des frames qui constituent la vidéo.
+    Permet le traitement de l'ensemble des frames qui constituent la vidéo ainsi que le suivi des objets
     '''
-    global video, frames, positions, mindist
-    positions = {}
+    global video, frames, positions, maxdist, bordure_size, tracked_objects
+    # positions = {}
     tracked_objects = {}
     obj_compteur = 0
-    frames_keys = list(positions.keys())
-
+    frames_keys = list(frames.keys())
 
     print('')
-    for frame in frames :
-        treated = frametreatement(frames[frame])[0]
-        positions[frame] = position(treated)
-        progression = round( (int(frame.split('.')[1])/(len(frames)-1))*100, 1)
+
+    # Initialisation
+    tracked_objects [frames_keys[0]] = {}
+    for obj in positions[frames_keys[0]] :
+        tracked_objects [frames_keys[0]]['obj-' + str(obj_compteur)] = positions[frames_keys[0]][obj]
+        obj_compteur += 1
+
+    for i in range (1,len(frames_keys)) :
+        tracked_objects [frames_keys[i]] = {}
+
+        treated = frametreatement( frames[ frames_keys[i] ] )[0]
+        positions[ frames_keys[i] ] = position(treated)
+
+        for obj1 in positions[ frames_keys[i] ] :
+
+            identified = False
+            distances_list = {}
+            x1, y1 = positions[frames_keys[i]][obj1][0], positions[frames_keys[i]][obj1][1]
+
+            for obj2 in tracked_objects[ frames_keys[i-1] ] :
+                x2, y2 = tracked_objects[frames_keys[i-1]][obj2][0], tracked_objects[frames_keys[i-1]][obj2][1]
+                d = round( ( (x1-x2)**2 + (y1-y2)**2  )**(1/2), 2)
+                distances_list[obj2] = d
+
+            if len(distances_list) != 0 :
+                min_key = min(distances_list, key = distances_list.get)
+                distance = distances_list[min_key]
+                if distance < maxdist :
+                    identified = True
+                    tracked_objects [frames_keys[i]][min_key] = positions[frames_keys[i]][obj1]
+
+            if not identified :
+                if x1 in [x for x in range(0,bordure_size+1)] or x1 in [x for x in range(Framesize[1]-bordure_size, Framesize[1]+1)] :
+                    tracked_objects [frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
+                    obj_compteur += 1
+                if y1 in [y for y in range(0,bordure_size+1)] or y1 in [y for y in range(Framesize[0]-bordure_size, Framesize[0]+1)] :
+                    tracked_objects [frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
+                    obj_compteur += 1
+
+        progression = round( (int(frames_keys[i].split('.')[1])/(len(frames)-1))*100, 1)
         print('\rTraitement de la vidéo en cours :', str(progression), '%', end='')
-        t.sleep (.05)
+        t.sleep (.02)
+
     print ('\nTraitement de la vidéo -------------------------------------------- Finit')
     return None
 
@@ -467,19 +510,22 @@ def calibration () :
     '''
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
     '''
-    global video, frames, Framesize
+    global video, frames, Framesize, positions
+    positions = {}
+
     print ('\nTraitement en cours ...')
-    first = frames[list(frames.keys())[0]]
+    first_key = list(frames.keys())[0]
+    first = frames[first_key]
     detected = frametreatement( first )
+
     if detected == 'TolError' :
         print ('\nLa tolérance doit être mal réglée, vérifiez le réglage')
         return None
-    print ('\nTraitement -------------------------------------------------------- OK')
 
-    print ('\nAnalyse en cours ...')
     extremas = detected[0]
-    positions = position(detected[0])
-    print ('Analyse ----------------------------------------------------------- OK')
+    positions[first_key] = position(rectifyer(detected[0]))
+
+    print ('\nTraitement -------------------------------------------------------- OK')
 
     images_names = []
     create_dir('calib')
@@ -496,11 +542,11 @@ def calibration () :
     images_names.append('treated_NB')
     fill_calibdir(treated_NB, 'treated_NB')
 
-    treated_color = np.uint8(cross_color(color_im, positions))
+    treated_color = np.uint8(cross_color(color_im, positions[first_key]))
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print ("\nAffichage du résultat, veuillez checker sa correction (une fenêtre à dû s'ouvrir")
+    print ("\nAffichage du résultat, veuillez checker sa correction (une fenêtre à dû s'ouvrir)")
     calib_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
@@ -531,32 +577,31 @@ def videodownload () :
     return None
 
 def datadownload () :
-    global video, positions, Framerate
+    global video, tracked_objects, Framerate
     create_dir('csv')
-    # print(positions)
     print('\nSauvegarde de la data en cours ...')
     nom_colonnes = ['frame', 'time']
     objects = []
-    for frame in positions :
-        for obj in positions[frame] :
+    for frame in tracked_objects :
+        for obj in tracked_objects[frame] :
             if obj not in objects :
                 objects.append(obj)
                 nom_colonnes += ['X'+str(obj), 'Y'+str(obj)]
     dos = open(paths['csv'] + '/positions objets.csv', 'w')
     array = csv.DictWriter(dos, fieldnames=nom_colonnes)
     array.writeheader()
-    for frame in positions :
+    for frame in tracked_objects :
         dico = {'frame' : frame, 'time' : round(int(frame.split('.')[1])/Framerate, 3)}
-        for obj in positions[frame] :
-            dico['X'+str(obj)] = positions[frame][obj][0]
-            dico['Y'+str(obj)] = positions[frame][obj][1]
+        for obj in tracked_objects[frame] :
+            dico['X'+str(obj)] = tracked_objects[frame][obj][0]
+            dico['Y'+str(obj)] = tracked_objects[frame][obj][1]
         array.writerow(dico)
     dos.close()
     print('Sauvegarde de la data --------------------------------------------- OK')
     return None
 
 def framesdownload () :
-    global video, frames, positions
+    global video, frames, tracked_objects
     create_dir('non treated frames')
     create_dir('treated frames')
     print ('\nSauvegarde des frames en cours ...')
@@ -564,16 +609,16 @@ def framesdownload () :
         name = paths['non treated frames'] + '/frame' + str(int(frame.split('.')[1])) +'.jpg'
         cv2.imwrite(name, frames[frame])
         name = paths['treated frames'] + '/frame' + str(int(frame.split('.')[1])) +'.jpg'
-        cv2.imwrite(name, np.uint8(cross_color(frames[frame], positions[frame])))
+        cv2.imwrite(name, np.uint8(cross_color(frames[frame], tracked_objects[frame])))
     print ('Sauvegarde des frames --------------------------------------------- OK')
     return None
 
 def create_video ():
-    global frames, Framerate, Framesize
+    global frames, Framerate, Framesize, tracked_objects
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4',cv2.VideoWriter_fourcc(*'mp4v'), Framerate, Framesize)
     print ('\nSauvegarde de la vidéo en cours ...')
     for frame in frames :
-        img = np.uint8(cross_color(frames[frame], positions[frame]))
+        img = np.uint8(cross_color(frames[frame], tracked_objects[frame]))
         out.write(img)
     print ('Sauvegarde de la vidéo -------------------------------------------- OK')
     return None
