@@ -19,17 +19,17 @@ import time         as t    # intégré à python par défaut
 
 def main ():
 
-    global definition, tol, minsize, crosswidth, rectanglewidth, c
+    global definition, tol, minsize, crosswidth, rectanglewidth
 
     # Réglages de rapidité/précision/sensibilité par défault.
-    definition = 1
     # sys.setrecursionlimit(1000)
-    tol = 0.4
+    definition  = 1
+    tol         = 0.4
+
 
     print ('\nInitialisation de la procédure')
 
     create_dir('bac')
-    add_subbac_dirs()
 
     # On récupère notre vidéo
     videoinput()
@@ -43,9 +43,11 @@ def main ():
     # delete_dir('bac')
 
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
-    crosswidth = int(Framesize[1]/500)
-    rectanglewidth = int(Framesize[1]/1250)
-    minsize = int(Framesize[1]/800)
+    crosswidth      = int(Framesize[1]/500)
+    rectanglewidth  = int(Framesize[1]/1250)
+    mindist         = int(Framesize[1]/800)
+    minsize         = int(Framesize[1]/800)
+    bordure_size    = int(Framesize[1]/1000)
 
     # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
     isOK = False
@@ -59,7 +61,7 @@ def main ():
             else :
                 tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
 
-    Une fois que tout est bon on traite la vidéo
+    # Une fois que tout est bon on traite la vidéo
     videotreatement()
 
     # On télécharge les données
@@ -86,10 +88,7 @@ user = gp.getuser()
 paths = {}
 
 paths['bac'] = '/Users/' + user + '/Desktop/bac'
-def add_subbac_dirs ():
-    global video
-    paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
-    return None
+paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
 
 paths['data'] = '/Users/' + user + '/Desktop/data'
 def add_subdata_dirs ():
@@ -100,8 +99,6 @@ def add_subdata_dirs ():
     paths['treated frames'] = paths['frames'] + '/treated'
     paths['non treated frames'] = paths['frames'] + '/non treated'
     return None
-
-paths['calib'] = '/Users/' + user + '/Desktop/##calibdir##'
 
 def create_dir (dir:str) :
     p = paths[dir]
@@ -136,6 +133,7 @@ def videoinput () :
     bac = os.listdir(paths['bac'])
     if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
         video = bac[0].split('.')[0]
+        paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
         return None
     elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
         print('Veuillez fournir une vidéo au format mp4')
@@ -286,9 +284,13 @@ def videotreatement () :
     '''
     Permet le traitement de l'ensemble des frames qui constituent la vidéo.
     '''
-    global video, frames, positions
-    currentframe = 0
+    global video, frames, positions, mindist
     positions = {}
+    tracked_objects = {}
+    obj_compteur = 0
+    frames_keys = list(positions.keys())
+
+
     print('')
     for frame in frames :
         treated = frametreatement(frames[frame])[0]
@@ -467,16 +469,16 @@ def calibration () :
     '''
     global video, frames, Framesize
     print ('\nTraitement en cours ...')
-    first = frames['frame.0']
-    treated = frametreatement( first )
-    if treated == 'TolError' :
+    first = frames[list(frames.keys())[0]]
+    detected = frametreatement( first )
+    if detected == 'TolError' :
         print ('\nLa tolérance doit être mal réglée, vérifiez le réglage')
         return None
     print ('\nTraitement -------------------------------------------------------- OK')
 
     print ('\nAnalyse en cours ...')
-    extremas = treated[0]
-    positions = position(extremas)
+    extremas = detected[0]
+    positions = position(detected[0])
     print ('Analyse ----------------------------------------------------------- OK')
 
     images_names = []
@@ -486,7 +488,7 @@ def calibration () :
     images_names.append('color_im')
     fill_calibdir(color_im, 'color_im')
 
-    NB_im = cv2.resize(np.uint8(treated[1]), Framesize)
+    NB_im = cv2.resize(np.uint8(detected[1]), Framesize)
     images_names.append('NB_im')
     fill_calibdir(NB_im, 'NB_im')
 
@@ -498,7 +500,7 @@ def calibration () :
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print ('\nAffichage du résultat, veuillez checker sa correction')
+    print ("\nAffichage du résultat, veuillez checker sa correction (une fenêtre à dû s'ouvrir")
     calib_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
