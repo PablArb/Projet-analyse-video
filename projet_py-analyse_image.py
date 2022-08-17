@@ -56,7 +56,7 @@ def main ():
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
     minsize         = int(Framesize[1]/300)
     maxdist         = int(Framesize[1]/10)
-    bordure_size    = int(Framesize[1]/70)
+    bordure_size    = int(Framesize[1]/30)
     crosswidth      = int(Framesize[1]/500)
     rectanglewidth  = int(Framesize[1]/1250)
 
@@ -325,6 +325,10 @@ def videotreatement () :
         tracked_objects [frames_keys[0]]['obj-' + str(obj_compteur)] = positions[frames_keys[0]][obj]
         obj_compteur += 1
 
+    bande1 = [i for i in range(0,bordure_size+1)]
+    bande2 = [i for i in range(Framesize[1]-bordure_size, Framesize[1]+1)]
+
+
     for i in range (1,len(frames_keys)) :
         tracked_objects [frames_keys[i]] = {}
 
@@ -350,18 +354,18 @@ def videotreatement () :
                     tracked_objects [frames_keys[i]][min_key] = positions[frames_keys[i]][obj1]
 
             if not identified :
-                if x1 in [x for x in range(0,bordure_size+1)] or x1 in [x for x in range(Framesize[1]-bordure_size, Framesize[1]+1)] :
+                if x1 in bande1 or x1 in bande2 :
                     tracked_objects [frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
                     obj_compteur += 1
-                if y1 in [y for y in range(0,bordure_size+1)] or y1 in [y for y in range(Framesize[0]-bordure_size, Framesize[0]+1)] :
+                if y1 in bande1 or y1 in bande2 :
                     tracked_objects [frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
                     obj_compteur += 1
 
         progression = round( (int(frames_keys[i].split('.')[1])/(len(frames)-1))*100, 1)
-        print('\rTraitement de la vidéo en cours :', str(progression), '%', end='')
+        print('\rTraitement de ' + video + ' en cours :', str(progression), '%', end='')
         t.sleep (.02)
 
-    print ('\nTraitement de la vidéo -------------------------------------------- Finit')
+    print ('\nTraitement de ' + video + ' -------------------------------------------- Finit')
     return None
 
 
@@ -566,7 +570,7 @@ def calibration () :
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print ("\nAffichage du résultat, veuillez checker sa correction (une fenêtre à dû s'ouvrir)")
+    print ("\nAffichage du résultat, veuillez checker sa correction\n(une fenêtre a dû s'ouvrir)")
     calib_show (images_names)
     print ('Validation du résultat -------------------------------------------- OK')
 
