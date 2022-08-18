@@ -1,52 +1,46 @@
-# Cet algorythme permet de localiser les repères de couleur rouge, vert ou bleu présents sur la vidéo mise en entrée, fonctionne avec le format mp4.
+# Cet algorythme permet de localiser les repères de couleur rouge, vert ou bleu présents sur la vidéo mise en entrée,
+# fonctionne avec le format mp4.
 
 # Fonctionne sur mac avec python v3.9 avec les modules pymediainfo, numpy et cv2 installés.
 
-# listes des variables :
+# Listes des variables :
 # c                 : (entier) couleur des repères étudiés.
-# positions         : (dictionaire dont chaque clé correspond à une frame et la valeure associée est un dictionaire comprends les positions des objets détectés) positions des repères détectés à chacune des frames de la vidéo.
-# tracked_objects   : idem que positions seulement désormais les objets sont suivis et non plus identifiés par leur ordre de découverte.
-
-
-
-## main
-
-
+# positions         : (dictionaire dont chaque clé correspond à une frame et la valeure associée est un dictionaire
+# comprends les positions des objets détectés) positions des repères détectés à chacune des frames de la vidéo.
+# tracked_objects : idem que positions seulement désormais les objets sont suivis et non plus identifiés par leur
+# ordre de découverte.
 
 # Import modules
+import pymediainfo as mi
+import numpy as np
+import cv2 as cv2
+import csv as csv
+import getpass as gp  # intégré à python par défaut
+import os as os  # intégré à python par défaut
+import sys as sys  # intégré à python par défaut
+import shutil as sht  # intégré à python par défaut
+import time as t  # intégré à python par défaut
 
-import pymediainfo  as mi
-import numpy        as np
-import cv2          as cv2
-import csv          as csv
-import getpass      as gp   # intégré à python par défaut
-import os           as os   # intégré à python par défaut
-import sys          as sys  # intégré à python par défaut
-import shutil       as sht  # intégré à python par défaut
-import time         as t    # intégré à python par défaut
 
-
-def main ():
-
+def main():
     global definition, tol, minsize, maxdist, bordure_size, crosswidth, rectanglewidth
 
     # Réglages de rapidité/précision/sensibilité par défault.
     # sys.setrecursionlimit(1000)
-    definition  = 1
-    tol         = 0.4
+    definition = 1
+    tol = 0.4
 
-
-    print ('\nInitialisation de la procédure')
+    print('\nInitialisation de la procédure')
 
     create_dir('bac')
 
     # On récupère notre vidéo
     videoinput()
-    modeinput()
 
     # On récupère des infos supplémentaires
     get_frames()
     get_framerate()
+    modeinput()
     get_framessize()
 
     delete_dir('bac')
@@ -54,42 +48,41 @@ def main ():
     cinput()
 
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
-    minsize         = int(Framesize[1]/300)
-    maxdist         = int(Framesize[1]/10)
-    bordure_size    = int(Framesize[1]/30)
-    crosswidth      = int(Framesize[1]/500)
-    rectanglewidth  = int(Framesize[1]/1250)
+    minsize = int(Framesize[1] / 300)
+    maxdist = int(Framesize[1] / 10)
+    bordure_size = int(Framesize[1] / 30)
+    crosswidth = int(Framesize[1] / 500)
+    rectanglewidth = int(Framesize[1] / 1250)
 
     # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
     isOK = False
-    while not isOK :
+    while not isOK:
         calibration()
-        if yn('Le traitement est-il bon ?') :
+        if yn('Le traitement est-il bon ?'):
             isOK = True
-        else :
-            if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?') :
+        else:
+            if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?'):
                 cinput()
-            else :
+            else:
                 tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
 
     # Une fois que tout est bon on traite la vidéo
     videotreatement()
 
     # On télécharge les données
-    if yn("Voulez vous télécharger les résultats de l'étude ?") :
+    if yn("Voulez vous télécharger les résultats de l'étude ?"):
         reboot()
         add_subdata_dirs()
         videodownload()
         datadownload()
         create_video()
 
-        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?") :
+        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?"):
             framesdownload()
 
-    print ('\nProcédure terminée')
+    print('\nProcédure terminée')
 
     return None
-
 
 
 # paths gestion
@@ -102,7 +95,9 @@ paths['bac'] = '/Users/' + user + '/Desktop/bac'
 paths['calib'] = '/Users/' + user + '/Documents/##calibdir##'
 paths['video storage'] = '/Users/' + user + '/Documents/temporary storage.mp4'
 paths['data'] = '/Users/' + user + '/Desktop/data'
-def add_subdata_dirs ():
+
+
+def add_subdata_dirs():
     global video
     paths['csv'] = paths['data'] + '/' + video + '/csv'
     paths['vidéodl'] = paths['data'] + '/' + video + '/vidéo'
@@ -111,34 +106,35 @@ def add_subdata_dirs ():
     paths['non treated frames'] = paths['frames'] + '/non treated'
     return None
 
-def create_dir (dir:str) :
+
+def create_dir(dir: str):
     p = paths[dir]
     try:
-        if not os.path.exists(p) :
+        if not os.path.exists(p):
             os.makedirs(p)
     except OSError:
-        print ('Error: Creating directory of data')
+        print('Error: Creating directory of data')
     return None
 
-def delete_dir (dir:str) :
+
+def delete_dir(dir: str):
     p = paths[dir]
     try:
-        if os.path.exists(p) :
+        if os.path.exists(p):
             sht.rmtree(p)
     except OSError:
-        print ('Error: Creating directory of data')
+        print('Error: Creating directory of data')
     return None
-
 
 
 # IHM
 
-def videoinput () :
+def videoinput():
     global video
     isempty = True
-    print ('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
-    while isempty :
-        if len(os.listdir(paths['bac'])) != 0 :
+    print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
+    while isempty:
+        if len(os.listdir(paths['bac'])) != 0:
             isempty = False
         t.sleep(0.5)
     bac = os.listdir(paths['bac'])
@@ -151,129 +147,135 @@ def videoinput () :
         print('Veuillez fournir une vidéo au format mp4')
         delete_dir('bac')
         videoinput()
-    elif len(bac) > 1 :
-        print ("Veuillez ne placer qu'un document dans le bac")
+    elif len(bac) > 1:
+        print("Veuillez ne placer qu'un document dans le bac")
         delete_dir('bac')
         videoinput()
 
-def cinput () :
+
+def cinput():
     global c
-    while True :
+    while True:
         c = input('\nCouleur des repères à étudier (0=bleu, 1=vert, 2=rouge) : ')
-        if c in ['0', '1', '2'] :
+        if c in ['0', '1', '2']:
             c = int(c)
             return None
-        else :
+        else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-def modeinput () :
+
+def modeinput():
     global mode
-    while True :
+    while True:
         mode = input('\nLa vidéo est en mode (p=portrait, l=landscape) : ')
-        if mode in ['p', 'l'] :
+        if mode in ['p', 'l']:
             return None
-        else :
+        else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-def yn (question) :
+
+def yn(question):
     assert type(question) == str
-    while True :
-        yn = input ('\n' + question + '\n[y]/n : ')
+    while True:
+        yn = input('\n' + question + '\n[y]/n : ')
         if yn in ['y', '', 'n']:
-            if yn == 'y' or yn == '' :
+            if yn == 'y' or yn == '':
                 return True
-            else :
+            else:
                 return False
-        else :
+        else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 
+# Information recuperation tools
 
-# Informations recuperation tools
-
-def get_frames () :
-    '''
+def get_frames():
+    """
     Récupère l'ensembe des frames.
-    Renvoie un dictionaire où les clés sont les numéros de frames et le valeurs des tableau de type uint8.
-    '''
+    Renvoie un dictionaire où les clés sont les numéros de frames et les valeurs des tableaux de type uint8.
+    """
     global video, frames
     frames = {}
     cam = cv2.VideoCapture(paths['vidéoinput'])
     frame_number = 0
-    print ('\nRécupération de la vidéo en cours ...')
-    while(True):
-        ret,frame = cam.read()
-        if ret :
+    print('\nRécupération de la vidéo en cours ...')
+    while True:
+        ret, frame = cam.read()
+        if ret:
             frames['frame.' + str(frame_number)] = frame
             frame_number += 1
         else:
             break
     cam.release()
     cv2.destroyAllWindows()
-    print ('\rRécupération de la vidéo ------------------------------------------ OK')
+    print('\rRécupération de la vidéo ------------------------------------------ OK')
     return None
 
-def get_framerate () :
-    '''
-    Renvoie dans le spectre global un dictionaire avec en clefs les numéros des frames et en valeurs des tableau de type uint8.
-    '''
+
+def get_framerate():
+    """
+    Renvoie dans le spectre global un dictionaire avec en clefs les numéros des frames et en valeurs des tableaux de
+    type uint8.
+    """
     global video, Framerate
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     tracks = media_info.tracks
-    for i in tracks :
-        if i.track_type == 'Video' :
+    for i in tracks:
+        if i.track_type == 'Video':
             Framerate = float(i.frame_rate)
     return None
 
-def get_framessize () :
-    '''
+
+def get_framessize():
+    """
     Renvoie dans le spectre global un tuple de deux valeurs : la hauteur et largeur des frames de la video.
-    '''
+    """
     global video, Framesize
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
-    video_tracks =  media_info.video_tracks[0]
-    dim = [ int(video_tracks.sampled_width), int(video_tracks.sampled_height) ]
-    if mode == 'l' :
+    video_tracks = media_info.video_tracks[0]
+    dim = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
+    if mode == 'l':
         height = min(dim)
         width = max(dim)
-    elif mode == 'p' :
+    elif mode == 'p':
         height = max(dim)
         width = min(dim)
     Framesize = (width, height)
     return None
 
 
-
 # Frame preparation tools
 
-def rate_rgb (pixel:list) -> float :
-    '''
-    Calcul le poids relatif de la composante c du pixel pixel parmis les composantes rgb qui le  définissent.
+def rate_rgb(pixel: list) -> float:
+    """
+    Calcul le poids relatif de la composante c du pixel pixel parmis les composantes rgb qui le définissent.
     pixel : élement de l'image d'origine sous la forme [r, g, b].
     c = 0(rouge), 1(vert) ou 2(bleu).
-    '''
+    """
     global c
-    assert c in [0,1,2]
-    # la rédaction ci-dessous n'est pas idéale mais l'utilisation du np.sum rend le traitement trop long
+    assert c in [0, 1, 2]
+    # la rédaction ci-dessous n'est pas idéale, mais l'utilisation du np.sum rend le traitement trop long
     return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
 
-def prep (image) :
-    '''
+
+def prep(image):
+    """
     Renvoie une image en noir et blanc
     image : image de depart.
-    definition : l'image finale contiendra 1/definition² pixels de l'image initiale. Attention les dimensions de 'image sont donc modifiées.
-    '''
+    Definition : l'image finale contiendra 1/definition² pixels de l'image initiale. Attention les dimensions de l'image
+    sont donc modifiées.
+    """
     global definition
     assert 0 < definition
     assert type(definition) == int
     simplified_im = []
     h = len(image)
     w = len(image[0])
-    for i in range (int(h/definition)):
+    for i in range(int(h / definition)):
         line = []
-        for j in range (int(w/definition)):
-            pixel = image[i*definition][j*definition]
-            if rate_rgb(pixel) < tol :
+        for j in range(int(w / definition)):
+            pixel = image[i * definition][j * definition]
+            if rate_rgb(pixel) < tol:
                 line.append(0)
             else:
                 line.append(255)
@@ -281,36 +283,36 @@ def prep (image) :
     return simplified_im
 
 
-
 # Treatement tools
 
-def frametreatement (frame) :
-    '''
+def frametreatement(frame):
+    """
     Permet le traitement de la frame passée en argument.
     frame : tableau uint8.
-    '''
+    """
     global definition
     isOK = False
-    while not isOK and definition <= 15 :
-        try :
+    while not isOK and definition <= 15:
+        try:
             NB_im = prep(frame)
             extremas = objects_identification(NB_im)
             isOK = True
-        except RecursionError :
-            print ('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
+        except RecursionError:
+            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
             definition += 1
-            frametreatement (frame)
+            frametreatement(frame)
 
-    if isOK :
+    if isOK:
         extremas = rectifyer(extremas)
         return extremas, NB_im
-    else :
+    else:
         return 'TolError'
 
-def videotreatement () :
-    '''
+
+def videotreatement():
+    """
     Permet le traitement de l'ensemble des frames qui constituent la vidéo ainsi que le suivi des objets
-    '''
+    """
     global video, frames, positions, maxdist, bordure_size, tracked_objects
     # positions = {}
     tracked_objects = {}
@@ -320,100 +322,100 @@ def videotreatement () :
     print('')
 
     # Initialisation
-    tracked_objects [frames_keys[0]] = {}
-    for obj in positions[frames_keys[0]] :
-        tracked_objects [frames_keys[0]]['obj-' + str(obj_compteur)] = positions[frames_keys[0]][obj]
+    tracked_objects[frames_keys[0]] = {}
+    for obj in positions[frames_keys[0]]:
+        tracked_objects[frames_keys[0]]['obj-' + str(obj_compteur)] = positions[frames_keys[0]][obj]
         obj_compteur += 1
 
-    bande1 = [i for i in range(0,bordure_size+1)]
-    bande2 = [i for i in range(Framesize[1]-bordure_size, Framesize[1]+1)]
+    bande1 = [i for i in range(0, bordure_size + 1)]
+    bande2 = [i for i in range(Framesize[1] - bordure_size, Framesize[1] + 1)]
 
+    for i in range(1, len(frames_keys)):
+        tracked_objects[frames_keys[i]] = {}
 
-    for i in range (1,len(frames_keys)) :
-        tracked_objects [frames_keys[i]] = {}
+        treated = frametreatement(frames[frames_keys[i]])[0]
+        positions[frames_keys[i]] = position(treated)
 
-        treated = frametreatement( frames[ frames_keys[i] ] )[0]
-        positions[ frames_keys[i] ] = position(treated)
-
-        for obj1 in positions[ frames_keys[i] ] :
+        for obj1 in positions[frames_keys[i]]:
 
             identified = False
             distances_list = {}
             x1, y1 = positions[frames_keys[i]][obj1][0], positions[frames_keys[i]][obj1][1]
 
-            for obj2 in tracked_objects[ frames_keys[i-1] ] :
-                x2, y2 = tracked_objects[frames_keys[i-1]][obj2][0], tracked_objects[frames_keys[i-1]][obj2][1]
-                d = round( ( (x1-x2)**2 + (y1-y2)**2  )**(1/2), 2)
+            for obj2 in tracked_objects[frames_keys[i - 1]]:
+                x2, y2 = tracked_objects[frames_keys[i - 1]][obj2][0], tracked_objects[frames_keys[i - 1]][obj2][1]
+                d = round(((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1 / 2), 2)
                 distances_list[obj2] = d
 
-            if len(distances_list) != 0 :
-                min_key = min(distances_list, key = distances_list.get)
+            if len(distances_list) != 0:
+                min_key = min(distances_list, key=distances_list.get)
                 distance = distances_list[min_key]
-                if distance < maxdist :
+                if distance < maxdist:
                     identified = True
-                    tracked_objects [frames_keys[i]][min_key] = positions[frames_keys[i]][obj1]
+                    tracked_objects[frames_keys[i]][min_key] = positions[frames_keys[i]][obj1]
 
-            if not identified :
-                if x1 in bande1 or x1 in bande2 :
-                    tracked_objects [frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
+            if not identified:
+                if x1 in bande1 or x1 in bande2:
+                    tracked_objects[frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
                     obj_compteur += 1
-                if y1 in bande1 or y1 in bande2 :
-                    tracked_objects [frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
+                if y1 in bande1 or y1 in bande2:
+                    tracked_objects[frames_keys[i]]['obj-' + str(obj_compteur)] = [x1, y1]
                     obj_compteur += 1
 
-        progression = round( (int(frames_keys[i].split('.')[1])/(len(frames)-1))*100, 1)
+        progression = round((int(frames_keys[i].split('.')[1]) / (len(frames) - 1)) * 100, 1)
         print('\rTraitement de ' + video + ' en cours :', str(progression), '%', end='')
-        t.sleep (.02)
+        t.sleep(.02)
 
-    print ('\nTraitement de ' + video + ' -------------------------------------------- Finit')
+    print('\nTraitement de ' + video + ' -------------------------------------------- Finit')
     return None
-
 
 
 # Frame manipulation tools
 
-def get_neighbours (image, pixel:list) -> list :
-    '''
+def get_neighbours(image, pixel: list) -> list:
+    """
     Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la recherche d'objet.
     image : image en N&B.
     pixel : sous la forme [j,i].
-    '''
+    """
     x, y = pixel[0], pixel[1]
     h = len(image)
     w = len(image[0])
-    L_neighours_to_test = [[(x-1)%w,(y-1)%h],[(x-1)%w,y],[(x-1)%w,(y+1)%h],
-                           [ x,     (y-1)%h],            [ x,     (y+1)%h],
-                           [(x+1)%w,(y-1)%h],[(x+1)%w,y],[(x+1)%w,(y+1)%h]]
+    L_neighours_to_test = [[(x - 1) % w, (y - 1) % h], [(x - 1) % w, y], [(x - 1) % w, (y + 1) % h],
+                           [x, (y - 1) % h], [x, (y + 1) % h],
+                           [(x + 1) % w, (y - 1) % h], [(x + 1) % w, y], [(x + 1) % w, (y + 1) % h]]
     L_neighours = []
-    for element in L_neighours_to_test :
-        if image[element[1]][element[0]] == 255 :
+    for element in L_neighours_to_test:
+        if image[element[1]][element[0]] == 255:
             L_neighours.append(element)
     return L_neighours
 
-def visiter (image, depart:list, object:list, extr:list) -> list :
-    '''
+
+def visiter(image, depart: list, object: list, extr: list) -> list:
+    """
     Regroupe tous les pixels appartenant a un même objets (forme blanche ici) sous la forme d'une liste.
     image : image en N&B.
     depart : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
     objet : liste contenant tout les pixels appartenants au même objet.
-    '''
-    if depart not in object :
+    """
+    if depart not in object:
         object.append(depart)
         # xmin, ymin, xmax, ymax = extr[0], extr[1], extr[2], extr[3] (pour info)
-        if depart[0] < extr[0] :
+        if depart[0] < extr[0]:
             extr[0] = depart[0]
-        if depart[1] < extr[1] :
+        if depart[1] < extr[1]:
             extr[1] = depart[1]
-        if depart[0] > extr[2] :
+        if depart[0] > extr[2]:
             extr[2] = depart[0]
-        if depart[1] > extr[3] :
+        if depart[1] > extr[3]:
             extr[3] = depart[1]
-    for pixel in get_neighbours(image, depart) :
-        if pixel not in object :
+    for pixel in get_neighbours(image, depart):
+        if pixel not in object:
             visiter(image, pixel, object, extr)
     return object, extr
 
-def discovery (image, depart:list) -> list :
+
+def discovery(image, depart: list) -> list:
     object = [depart]
     init_extr = [depart[0], depart[1], depart[0], depart[1]]
     infos = visiter(image, depart, object, init_extr)
@@ -421,135 +423,140 @@ def discovery (image, depart:list) -> list :
     extr = infos[1]
     return object, extr
 
-def objects_identification (image) -> dict :
-    '''
+
+def objects_identification(image) -> dict:
+    """
     Regroupe tout les objets de l'image dans un dictionnaire.
     image : image en N&B sous la forme d'un array de 0 et 255.
-    '''
+    """
     h = len(image)
     w = len(image[0])
     objects = {}
     extremas = {}
     n = 0
-    for j in range (h) :
-        for i in range (w) :
-            if image[j][i] == 255 :
+    for j in range(h):
+        for i in range(w):
+            if image[j][i] == 255:
                 element_in = False
-                for obj in objects :
-                    if [i,j] in objects[obj] :
+                for obj in objects:
+                    if [i, j] in objects[obj]:
                         element_in = True
-                if not element_in :
-                    infos = discovery(image, [i,j])
+                if not element_in:
+                    infos = discovery(image, [i, j])
                     objects[n] = infos[0]
                     extremas[n] = infos[1]
                     n += 1
-    for obj in extremas :
+    for obj in extremas:
         xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3]
-        extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
+        extremas[obj] = [xmin * definition, ymin * definition, xmax * definition, ymax * definition]
     return extremas
 
-def position (extremas:dict) -> list :
-    '''
+
+def position(extremas: dict) -> list:
+    """
     Récupère la position d'un objet à partir des extremas.
-    Renvoie un dictionnaire où les clefs sont les noms des ifférents objets détectés sur la frame étudiée et les valeurs sont les coordonées du 'centre' de l'objet.
-    '''
+    Renvoie un dictionnaire où les clefs sont les noms des ifférents objets détectés sur la frame étudiée et les valeurs
+    sont les coordonées du 'centre' de l'objet.
+    """
     position = {}
-    for obj in extremas :
-        x = ( extremas[obj][0] + extremas[obj][2] )/2
-        y = ( extremas[obj][1] + extremas[obj][3] )/2
-        position[obj] = [x,y]
+    for obj in extremas:
+        x = (extremas[obj][0] + extremas[obj][2]) / 2
+        y = (extremas[obj][1] + extremas[obj][3]) / 2
+        position[obj] = [x, y]
     return position
 
-def rectifyer (extremas:dict) -> dict :
-    '''
+
+def rectifyer(extremas: dict) -> dict:
+    """
     Rectifie quelques erreurs.
-    '''
+    """
     # On supprime les objets trop petits, probablement issus d'erreurs.
     global minsize
     problematic_objects = []
     for obj in extremas:
-        if extremas[obj][2]-extremas[obj][0] < minsize or extremas[obj][3]-extremas[obj][1] < minsize :
+        if extremas[obj][2] - extremas[obj][0] < minsize or extremas[obj][3] - extremas[obj][1] < minsize:
             problematic_objects.append(obj)
-    for obj in problematic_objects :
+    for obj in problematic_objects:
         del extremas[obj]
     # On renome nos objets.
     i = 0
     dico2 = {}
-    for obj in extremas :
-        dico2 ['obj-' + str(i)] = extremas[obj]
+    for obj in extremas:
+        dico2['obj-' + str(i)] = extremas[obj]
         i += 1
     return dico2
 
 
-
 # Rectangles/cross drawing tools
 
-def rectangle_NB (image, extremas) :
+def rectangle_NB(image, extremas):
     L = len(image)
     l = len(image[0])
-    for key in extremas :
-        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(extremas[key][3])
-        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = 255, 255
-        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = 255, 255
+    for key in extremas:
+        xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(
+            extremas[key][3])
+        for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
+            for n in range(rectanglewidth + 1):
+                image[(ymin - n) % L][i % l], image[(ymax + n) % L][i % l] = 255, 255
+        for j in range(ymin - rectanglewidth, ymax + rectanglewidth + 1):
+            for n in range(rectanglewidth + 1):
+                image[j % L][(xmin - n) % l], image[j % L][(xmax + n) % l] = 255, 255
     return image
 
-def rectangle_color (image, extremas) :
+
+def rectangle_color(image, extremas):
     global rectanglewidth
     L = len(image)
     l = len(image[0])
-    for key in extremas.keys() :
+    for key in extremas.keys():
         xmin, ymin, xmax, ymax = extremas[key][0], extremas[key][1], extremas[key][2], extremas[key][3]
-        for i in range (xmin-rectanglewidth, xmax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[(ymin-n)%L][i%l], image[(ymax+n)%L][i%l] = [0, 255, 0], [0, 255, 0]
-        for j in range (ymin-rectanglewidth, ymax+rectanglewidth+1):
-            for n in range (rectanglewidth+1):
-                image[j%L][(xmin-n)%l], image[j%L][(xmax+n)%l] = [0, 255, 0], [0, 255, 0]
+        for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
+            for n in range(rectanglewidth + 1):
+                image[(ymin - n) % L][i % l], image[(ymax + n) % L][i % l] = [0, 255, 0], [0, 255, 0]
+        for j in range(ymin - rectanglewidth, ymax + rectanglewidth + 1):
+            for n in range(rectanglewidth + 1):
+                image[j % L][(xmin - n) % l], image[j % L][(xmax + n) % l] = [0, 255, 0], [0, 255, 0]
     return image
 
-def cross_color (image, positions) :
+
+def cross_color(image, positions):
     global crosswidth
     L = len(image)
     l = len(image[0])
-    for obj in positions :
+    for obj in positions:
         x = int(positions[obj][0])
         y = int(positions[obj][1])
-        for i in range (x-crosswidth*10, x+crosswidth*10+1 ) :
-            for n in range (y-int(crosswidth/2), y+int(crosswidth/2)+1):
-                image[n%L][i%l] = [0, 255, 0]
-        for j in range (y-crosswidth*10, y+crosswidth*10+1) :
-            for n in range (x-int(crosswidth/2), x+int(crosswidth/2)+1):
-                image[j%L][n%l] = [0, 255, 0]
+        for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
+            for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
+                image[n % L][i % l] = [0, 255, 0]
+        for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
+            for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
+                image[j % L][n % l] = [0, 255, 0]
     return image
-
 
 
 # Calibration fcts
 
-def calibration () :
-    '''
+def calibration():
+    """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
-    '''
+    """
     global video, frames, Framesize, positions
     positions = {}
 
-    print ('\nTraitement en cours ...')
+    print('\nTraitement en cours ...')
     first_key = list(frames.keys())[0]
     first = frames[first_key]
-    detected = frametreatement( first )
+    detected = frametreatement(first)
 
-    if detected == 'TolError' :
-        print ('\nLa tolérance doit être mal réglée, vérifiez le réglage')
+    if detected == 'TolError':
+        print('\nLa tolérance doit être mal réglée, vérifiez le réglage')
         return None
 
     extremas = detected[0]
     positions[first_key] = position(rectifyer(detected[0]))
 
-    print ('\nTraitement -------------------------------------------------------- OK')
+    print('\nTraitement -------------------------------------------------------- OK')
 
     images_names = []
     create_dir('calib')
@@ -570,18 +577,20 @@ def calibration () :
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print ("\nAffichage du résultat, veuillez checker sa correction\n(une fenêtre a dû s'ouvrir)")
-    calib_show (images_names)
-    print ('Validation du résultat -------------------------------------------- OK')
+    print("\nAffichage du résultat, veuillez checker sa correction\n(une fenêtre a dû s'ouvrir)")
+    calib_show(images_names)
+    print('Validation du résultat -------------------------------------------- OK')
 
     sht.rmtree(paths['calib'])
     return None
 
-def fill_calibdir (image, image_name) :
+
+def fill_calibdir(image, image_name):
     cv2.imwrite(paths['calib'] + '/' + image_name + '.jpg', image)
     return None
 
-def calib_show (images_names:list) :
+
+def calib_show(images_names: list):
     for i in range(len(images_names)):
         cv2.imshow('Config Window - ' + images_names[i], cv2.imread(paths['calib'] + '/' + images_names[i] + '.jpg'))
         cv2.waitKey(0)
@@ -589,10 +598,9 @@ def calib_show (images_names:list) :
     return None
 
 
-
 # Data download fcts
 
-def videodownload () :
+def videodownload():
     global video
     create_dir('vidéodl')
     source = paths['video storage']
@@ -601,63 +609,69 @@ def videodownload () :
     os.remove(paths['video storage'])
     return None
 
-def datadownload () :
+
+def datadownload():
     global video, tracked_objects, Framerate
     create_dir('csv')
     print('\nSauvegarde de la data en cours ...')
     nom_colonnes = ['frame', 'time']
     objects = []
-    for frame in tracked_objects :
-        for obj in tracked_objects[frame] :
-            if obj not in objects :
+    for frame in tracked_objects:
+        for obj in tracked_objects[frame]:
+            if obj not in objects:
                 objects.append(obj)
-                nom_colonnes += ['X'+str(obj), 'Y'+str(obj)]
+                nom_colonnes += ['X' + str(obj), 'Y' + str(obj)]
     dos = open(paths['csv'] + '/positions objets.csv', 'w')
     array = csv.DictWriter(dos, fieldnames=nom_colonnes)
     array.writeheader()
-    for frame in tracked_objects :
-        dico = {'frame' : frame, 'time' : round(int(frame.split('.')[1])/Framerate, 3)}
-        for obj in tracked_objects[frame] :
-            dico['X'+str(obj)] = tracked_objects[frame][obj][0]
-            dico['Y'+str(obj)] = tracked_objects[frame][obj][1]
+    for frame in tracked_objects:
+        dico = {'frame': frame, 'time': round(int(frame.split('.')[1]) / Framerate, 3)}
+        for obj in tracked_objects[frame]:
+            dico['X' + str(obj)] = tracked_objects[frame][obj][0]
+            dico['Y' + str(obj)] = tracked_objects[frame][obj][1]
         array.writerow(dico)
     dos.close()
     print('Sauvegarde de la data --------------------------------------------- OK')
     return None
 
-def framesdownload () :
+
+def framesdownload():
     global video, frames, tracked_objects
     create_dir('non treated frames')
     create_dir('treated frames')
-    print ('\nSauvegarde des frames en cours ...')
-    for frame in frames :
-        name = paths['non treated frames'] + '/frame' + str(int(frame.split('.')[1])) +'.jpg'
+    print('\nSauvegarde des frames en cours ...')
+    for frame in frames:
+        name = paths['non treated frames'] + '/frame' + str(int(frame.split('.')[1])) + '.jpg'
         cv2.imwrite(name, frames[frame])
-        name = paths['treated frames'] + '/frame' + str(int(frame.split('.')[1])) +'.jpg'
+        name = paths['treated frames'] + '/frame' + str(int(frame.split('.')[1])) + '.jpg'
         cv2.imwrite(name, np.uint8(cross_color(frames[frame], tracked_objects[frame])))
-    print ('Sauvegarde des frames --------------------------------------------- OK')
+    print('Sauvegarde des frames --------------------------------------------- OK')
     return None
 
-def create_video ():
+
+def create_video():
     global frames, Framerate, Framesize, tracked_objects
-    out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4',cv2.VideoWriter_fourcc(*'mp4v'), Framerate, Framesize)
-    print ('\nSauvegarde de la vidéo en cours ...')
-    for frame in frames :
+    out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), Framerate,
+                          Framesize)
+    print('\nSauvegarde de la vidéo en cours ...')
+    for frame in frames:
         img = np.uint8(cross_color(frames[frame], tracked_objects[frame]))
         out.write(img)
-    print ('Sauvegarde de la vidéo -------------------------------------------- OK')
+    print('Sauvegarde de la vidéo -------------------------------------------- OK')
     return None
+
 
 # Reboot
 
-def reboot ():
-    try :
+def reboot():
+    try:
         delete_dir('csv')
         delete_dir('frames')
         delete_dir('vidéodl')
-    except KeyError :
+    except KeyError:
         pass
     return None
+
 
 # Execution
 
