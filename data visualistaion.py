@@ -7,7 +7,7 @@ def str2float(N:str):
     else :
         return float(N)
 
-dos = open('Desktop/data/test 3/csv/positions objets.csv', 'r')
+dos = open('Desktop/data/test/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
 T = []
@@ -36,14 +36,25 @@ for line in lines[1:] :
 Xrel = [ X0[i]-X1[i] for i in range( len(X0) ) ]
 Yrel = [ Y0[i]-Y1[i] for i in range( len(Y0) ) ]
 
+## rel
 
-plt.figure('position')
+plt.figure("relatif")
 plt.clf()
 ax = plt.axes(projection='3d')
 
 ax.plot(T, Xrel, Yrel, label='obj0')
-# ax.plot(T, X1, Y1, label='obj1')
-# ax.plot(T, X2, Y2, label='obj2')
+
+plt.legend()
+plt.show()
+
+## normal
+
+plt.figure("normal")
+plt.clf()
+ax = plt.axes(projection='3d')
+
+ax.plot(T, X1, Y1, label='obj1')
+ax.plot(T, X0, Y0, label='obj2')
 
 plt.legend()
 plt.show()
