@@ -1,13 +1,12 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-
 def str2float(N:str):
     if N == '' or N == '\n':
         return 0.0
     else :
         return float(N)
 
-dos = open('Desktop/data/test/csv/positions objets.csv', 'r')
+dos = open('/Users/pabloarb/Desktop/data/test pycharm/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
 T = []
