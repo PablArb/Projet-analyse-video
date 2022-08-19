@@ -66,10 +66,8 @@ def main():
         add_subdata_dirs()
         videodownload()
         datadownload()
+        framesdownload()
         create_video()
-
-        if yn("Voulez vous, de plus, télécharger l'ensemble des frames ?"):
-            framesdownload()
 
     print('\nProcédure terminée')
 
@@ -233,7 +231,7 @@ def get_framerate():
     tracks = media_info.tracks
     for i in tracks:
         if i.track_type == 'Video':
-            Framerate = float(i.frame_rate)
+            Framerate = round(float(i.frame_rate))
     return None
 
 
@@ -499,10 +497,22 @@ def rectifyer(extremas: dict) -> dict:
 
 
 # Rectangles/cross drawing tools
-
-def rectangle_NB(image, extremas):
+def copy_im (image):
     L = len(image)
     l = len(image[0])
+    newIm = []
+    for y in range (L):
+        newLine = []
+        for x in range(l):
+            newLine.append(image[y][x])
+        newIm.append(newLine)
+    return newIm
+
+def rectangle_NB(image, extremas):
+    global rectanglewidth
+    L = len(image)
+    l = len(image[0])
+#    NewIm = copy_im(image)
     for key in extremas:
         xmin, ymin, xmax, ymax = int(extremas[key][0]), int(extremas[key][1]), int(extremas[key][2]), int(
             extremas[key][3])
@@ -514,26 +524,11 @@ def rectangle_NB(image, extremas):
                 image[j % L][(xmin - n) % l], image[j % L][(xmax + n) % l] = 255, 255
     return image
 
-
-def rectangle_color(image, extremas):
-    global rectanglewidth
-    L = len(image)
-    l = len(image[0])
-    for key in extremas.keys():
-        xmin, ymin, xmax, ymax = extremas[key][0], extremas[key][1], extremas[key][2], extremas[key][3]
-        for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
-            for n in range(rectanglewidth + 1):
-                image[(ymin - n) % L][i % l], image[(ymax + n) % L][i % l] = [0, 255, 0], [0, 255, 0]
-        for j in range(ymin - rectanglewidth, ymax + rectanglewidth + 1):
-            for n in range(rectanglewidth + 1):
-                image[j % L][(xmin - n) % l], image[j % L][(xmax + n) % l] = [0, 255, 0], [0, 255, 0]
-    return image
-
-
 def cross_color(image, positions):
     global crosswidth
     L = len(image)
     l = len(image[0])
+#    NewIm = copy_im(image)
     for obj in positions:
         x = int(positions[obj][0])
         y = int(positions[obj][1])
