@@ -9,6 +9,8 @@ import sys as sys  # intégré à python par défaut
 import shutil as sht  # intégré à python par défaut
 import time as t  # intégré à python par défaut
 
+class SettingError (Exception) :
+    pass
 
 def main():
     global definition, tol, minsize, maxdist, bordure_size, crosswidth, rectanglewidth
@@ -49,10 +51,11 @@ def main():
         if yn('Le traitement est-il bon ?'):
             isOK = True
         else:
-            if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?'):
-                cinput()
-            else:
-                tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
+#            if not yn('les repères sont bien de couleur ' + ['bleue', 'verte', 'rouge'][c] + ' ?'):
+#                cinput()
+#            else:
+#                tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
+            verif_settings()
 
     # Une fois que tout est bon on traite la vidéo
     videotreatement()
@@ -155,11 +158,31 @@ def cinput():
 def modeinput():
     global mode
     while True:
-        mode = input('\nLa vidéo est en mode (p=portrait, l=landscape) : ')
-        if mode in ['p', 'l']:
+        mode = input('\nLa vidéo est en mode (1=portrait, 0=landscape) : ')
+        if mode in ['1', '0']:
+            mode = int(mode)
             return None
         else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
+def verif_settings ():
+    global tol
+    print('1 orientation de la vidéo :', ['landscape', 'portrait'][mode])
+    print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
+    print('3 tolérance : ', tol)
+    which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3) ? ')
+    try :
+        assert which in ['0', '1', '2', '3']
+    except AssertionError :
+        print ('vous devez avoir fait une erreur, veuillez réessayer')
+    if which == '0' :
+        pass
+    elif which == '1' :
+        modeinput()
+    elif which == '2' :
+        cinput()
+    else :
+        tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
 
 
 def yn(question):
@@ -222,10 +245,10 @@ def get_framessize():
     media_info = mi.MediaInfo.parse(paths['vidéoinput'])
     video_tracks = media_info.video_tracks[0]
     dim = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
-    if mode == 'l':
+    if mode == 0:
         height = min(dim)
         width = max(dim)
-    elif mode == 'p':
+    elif mode == 1:
         height = max(dim)
         width = min(dim)
     Framesize = (width, height)
@@ -294,7 +317,7 @@ def frametreatement(frame):
         extremas = rectifyer(extremas)
         return extremas, NB_im
     else:
-        return 'TolError'
+        raise SettingError
 
 
 def videotreatement():
@@ -535,9 +558,10 @@ def calibration():
     print('\nTraitement en cours ...')
     first_key = list(frames.keys())[0]
     first = frames[first_key]
-    detected = frametreatement(first)
 
-    if detected == 'TolError':
+    try :
+        detected = frametreatement(first)
+    except SettingError :
         print('\nLa tolérance doit être mal réglée, vérifiez le réglage')
         return None
 
