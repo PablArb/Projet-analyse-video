@@ -16,7 +16,7 @@ def main():
     global definition, tol, minsize, maxdist, bordure_size, crosswidth, rectanglewidth
 
     # Réglages de rapidité/précision/sensibilité par défault.
-    # sys.setrecursionlimit(1000)
+    sys.setrecursionlimit(1000)
     definition = 1
     tol = 0.4
 
@@ -33,9 +33,9 @@ def main():
     modeinput()
     get_framessize()
 
-    delete_dir('bac')
-
+    # delete_dir('bac')
     cinput()
+    refinput()
 
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
     minsize = int(Framesize[1] / 300)
@@ -152,6 +152,16 @@ def cinput():
         else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
+def refinput ():
+    global lenscale
+    while True:
+        l = input('\nlongueur entre les deux premiers repères(cm) : ')
+        try :
+            lenscale = int(l)
+            return None
+        except ValueError :
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
 
 def modeinput():
     global mode
@@ -250,6 +260,15 @@ def get_framessize():
         height = max(dim)
         width = min(dim)
     Framesize = (width, height)
+    return None
+
+def detScale (positions:dict, lenscale):
+    global scale
+    a = list(positions.keys())[0]
+    b = list(positions.keys())[1]
+    apos, bpos = positions[a], positions[b]
+    xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
+    scale = lenscale / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
     return None
 
 
@@ -508,7 +527,7 @@ def copy_im (image):
         newIm.append(newLine)
     return newIm
 
-def rectangle_NB(image, extremas):
+def Add_rectangle_NB(image, extremas):
     global rectanglewidth
     L = len(image)
     l = len(image[0])
@@ -524,7 +543,7 @@ def rectangle_NB(image, extremas):
                 image[j % L][(xmin - n) % l], image[j % L][(xmax + n) % l] = 255, 255
     return image
 
-def cross_color(image, positions):
+def Add_cross_color(image, positions):
     global crosswidth
     L = len(image)
     l = len(image[0])
@@ -540,6 +559,15 @@ def cross_color(image, positions):
                 image[j % L][n % l] = [0, 255, 0]
     return image
 
+def Add_scale(image):
+    global scale, crosswidth, bordure_size
+    L = len(image)
+    l = len(image[0])
+    for i in range (int(10/scale)):
+        for j in range (crosswidth):
+            image[(j+L-bordure_size) % L][(bordure_size+i) % l] = [0, 0, 255]
+    cv2.putText(image, '10cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255))
+    return image
 
 # Calibration fcts
 
@@ -547,7 +575,7 @@ def calibration():
     """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
     """
-    global video, frames, Framesize, positions
+    global video, frames, Framesize, lenscale, positions, scale
     positions = {}
 
     print('\nTraitement en cours ...')
@@ -562,6 +590,7 @@ def calibration():
 
     extremas = detected[0]
     positions[first_key] = position(rectifyer(detected[0]))
+    detScale(positions[first_key], lenscale)
 
     print('\nTraitement -------------------------------------------------------- OK')
 
@@ -576,11 +605,13 @@ def calibration():
     images_names.append('NB_im')
     fill_calibdir(NB_im, 'NB_im')
 
-    treated_NB = np.uint8(rectangle_NB(NB_im, extremas))
+    treated_NB = np.uint8(Add_rectangle_NB(NB_im, extremas))
     images_names.append('treated_NB')
     fill_calibdir(treated_NB, 'treated_NB')
 
-    treated_color = np.uint8(cross_color(color_im, positions[first_key]))
+    ImWithCross = Add_cross_color(color_im, positions[first_key])
+    ImWithScale = Add_scale(ImWithCross)
+    treated_color = np.uint8(ImWithScale)
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
@@ -589,6 +620,7 @@ def calibration():
     print('Validation du résultat -------------------------------------------- OK')
 
     sht.rmtree(paths['calib'])
+
     return None
 
 
