@@ -35,5 +35,5 @@ def Add_scale(image, scale, crosswidth, bordure_size):
     for i in range(int(1/scale)):
         for j in range(crosswidth):
             image[(j+L-bordure_size) % L][(bordure_size+i) % l] = [255, 255, 255]
-    cv2.putText(image, '1cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
+    cv2.putText(image, '1cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
     return image
