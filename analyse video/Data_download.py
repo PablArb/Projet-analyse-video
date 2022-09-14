@@ -3,10 +3,10 @@ from Modules import *
 from Paths import paths, add_subdata_dirs, delete_dir, create_dir
 from Indicators import *
 
-def resultsdownload(video, crosswidth):
+def resultsdownload(video, scale, crosswidth):
     reboot(video)
     videodownload()
-    datadownload(video)
+    datadownload(video, scale)
     framesdownload(video, crosswidth)
     create_video(video, crosswidth)
     return None
@@ -27,7 +27,7 @@ def videodownload():
     os.remove(paths['video storage'])
     return None
 
-def datadownload(video):
+def datadownload(video, scale):
     create_dir('csv')
     print('\nSauvegarde de la data en cours ...')
     nom_colonnes = ['frame', 'time']
@@ -44,8 +44,8 @@ def datadownload(video):
     for i in range (len(frames)):
         dico = {'frame': frames[i].id, 'time': round(int(frames[i].id.split('.')[1]) / video.Framerate, 3)}
         for obj in video.frames[i].identified_objects:
-            dico['X' + str(obj)] = video.frames[i].identified_objects[obj][0]
-            dico['Y' + str(obj)] = video.frames[i].identified_objects[obj][1]
+            dico['X' + str(obj)] = scale * video.frames[i].identified_objects[obj][0]
+            dico['Y' + str(obj)] = scale * video.frames[i].identified_objects[obj][1]
         array.writerow(dico)
     dos.close()
     print('Sauvegarde de la data --------------------------------------------- OK')

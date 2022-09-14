@@ -9,9 +9,10 @@ class Video:
         self.id = id
         self.frames = get_frames(self)
         self.Framerate = get_framerate(self)
-        mode = get_mode(self)
-        self.Framessize = mode[0]
-        self.mode = mode[1]
+        self.Framessize = get_framessize()
+        self.mode = None
+        self.scale = None
+
 
 class Frame:
     def __init__(self, id, array):
@@ -41,8 +42,8 @@ def get_framessize():
     Framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
     return Framessize
 
-def get_mode(video):
-    Framessize = get_framessize()
+def get_mode(video ,Framessize):
+    # Framessize = get_framessize()
     while True:
         mode = input('\nLa vidéo est en mode (1=landscape, 2=portrait) : ')
         if mode in ['1', '2', 'break']:
@@ -83,3 +84,12 @@ def get_frames(video):
     print('\rRécupération de la vidéo ------------------------------------------ OK')
     video.frames = frames
     return frames
+
+def detScale (video, positions:dict, lenref):
+    a = list(positions.keys())[0]
+    b = list(positions.keys())[1]
+    apos, bpos = positions[a], positions[b]
+    xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
+    scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
+    video.scale = scale
+    return scale

@@ -28,3 +28,12 @@ def cross_color(image, positions, crosswidth):
             for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
                 image[j % L][n % l] = [0, 255, 0]
     return np.uint8(image)
+
+def Add_scale(image, scale, crosswidth, bordure_size):
+    L = len(image)
+    l = len(image[0])
+    for i in range(int(10/scale)):
+        for j in range(crosswidth):
+            image[(j+L-bordure_size) % L][(bordure_size+i) % l] = [0, 0, 255]
+    cv2.putText(image, '10cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255))
+    return image

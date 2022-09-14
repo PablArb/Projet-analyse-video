@@ -2,16 +2,17 @@ from Modules import *
 from Paths import *
 from Indicators import *
 
+from Video_constructor import detScale
 from Error_constructor import SettingError
 from IHM import verif_settings
 
 # Treatement tools
 
-def videotreatement(video, maxdist, bordure_size):
+def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist):
     """
     Permet le traitement de l'ensemble des frames qui constituent la vidéo ainsi que le suivi des objets
     """
-    global positions, definition, tol, c, minsize, crosswidth, rectanglewidth
+    global positions, definition
     frames = video.frames
     obj_compteur = 0
 
@@ -27,7 +28,7 @@ def videotreatement(video, maxdist, bordure_size):
 
     for i in range(1, len(frames)):
         try :
-            treated = frametreatement( frames[i].array )[0]
+            treated = frametreatement(frames[i].array, tol, c, minsize)[0]
             positions[frames[i].id] = position(treated)
 
             for obj1 in positions[frames[i].id]:
@@ -37,7 +38,8 @@ def videotreatement(video, maxdist, bordure_size):
                 x1, y1 = positions[frames[i].id][obj1][0], positions[frames[i].id][obj1][1]
 
                 for obj2 in video.frames[i-1].identified_objects:
-                    x2, y2 = video.frames[i-1].identified_objects[obj2][0], video.frames[i-1].identified_objects[obj2][1]
+                    x2, y2 = video.frames[i-1].identified_objects[obj2][0], \
+                             video.frames[i-1].identified_objects[obj2][1]
                     d = round(((x1 - x2) ** 2 + (y1 - y2) ** 2) ** (1 / 2), 2)
                     distances_list[obj2] = d
 
@@ -65,7 +67,7 @@ def videotreatement(video, maxdist, bordure_size):
     print('\nTraitement de ' + video.id + ' -------------------------------------------- Finit')
     return None
 
-def frametreatement(frame):
+def frametreatement(frame, tol, c, minsize):
     """
     Permet le traitement de la frame passée en argument.
     frame : tableau uint8.
@@ -74,16 +76,16 @@ def frametreatement(frame):
     isOK = False
     while not isOK and definition <= 15:
         try:
-            NB_im = prep(frame)
-            extremas = objects_identification(NB_im)
+            NB_im = prep(frame, definition, tol, c)
+            extremas = objects_identification(NB_im, definition)
             isOK = True
         except RecursionError:
             print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
             definition += 1
-            frametreatement(frame)
+            frametreatement(frame, tol, c, minsize)
 
     if isOK:
-        extremas = rectifyer(extremas)
+        extremas = rectifyer(extremas, minsize)
         return extremas, NB_im
     else:
         raise SettingError
@@ -140,7 +142,7 @@ def discovery(image, depart: list) -> list:
     extr = infos[1]
     return object, extr
 
-def objects_identification(image) -> dict:
+def objects_identification(image, definition) -> dict:
     """
     Regroupe tout les objets de l'image dans un dictionnaire.
     image : image en N&B sous la forme d'un array de 0 et 255.
@@ -180,12 +182,11 @@ def position(extremas: dict) -> list:
         position[obj] = [x, y]
     return position
 
-def rectifyer(extremas: dict) -> dict:
+def rectifyer(extremas: dict, minsize) -> dict:
     """
     Rectifie quelques erreurs.
     """
     # On supprime les objets trop petits, probablement issus d'erreurs.
-    global minsize
     problematic_objects = []
     for obj in extremas:
         if extremas[obj][2] - extremas[obj][0] < minsize or extremas[obj][3] - extremas[obj][1] < minsize:
@@ -197,25 +198,23 @@ def rectifyer(extremas: dict) -> dict:
 
 # Frame preparation tools
 
-def rate_rgb(pixel: list) -> float:
+def rate_rgb(pixel: list, c) -> float:
     """
     Calcul le poids relatif de la composante c du pixel pixel parmis les composantes rgb qui le définissent.
     pixel : élement de l'image d'origine sous la forme [r, g, b].
     c = 0(rouge), 1(vert) ou 2(bleu).
     """
-    global c
     assert c in [0, 1, 2]
     # la rédaction ci-dessous n'est pas idéale, mais l'utilisation du np.sum rend le traitement trop long
     return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
 
-def prep(image):
+def prep(image, definition, tol, c):
     """
     Renvoie une image en noir et blanc
     image : image de depart.
     Definition : l'image finale contiendra 1/definition² pixels de l'image initiale. Attention les dimensions de l'image
     sont donc modifiées.
     """
-    global definition
     assert 0 < definition
     assert type(definition) == int
     simplified_im = []
@@ -225,7 +224,7 @@ def prep(image):
         line = []
         for j in range(int(w / definition)):
             pixel = image[i * definition][j * definition]
-            if rate_rgb(pixel) < tol:
+            if rate_rgb(pixel, c) < tol:
                 line.append(0)
             else:
                 line.append(255)
@@ -235,20 +234,19 @@ def prep(image):
 
 # Calibration fcts
 
-def calibration(video, definition2, tol2, c2, minsize2, crosswidth2, rectanglewidth2):
+def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref):
     """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
     """
-    global positions, definition, tol, c, minsize, crosswidth, rectanglewidth
-    definition, tol, c, minsize, crosswidth, rectanglewidth = definition2, tol2, c2, minsize2, crosswidth2,\
-                                                              rectanglewidth2
+    global positions, definition
+    definition = definition2
     positions = {}
 
     print('\nTraitement en cours ...')
     first = copy_im(video.frames[0].array)
 
     try :
-        detected = frametreatement(first)
+        detected = frametreatement(first, tol, c, minsize)
     except SettingError :
         print('\nIl y a un problème, veuillez vérifiez les réglages')
         verif_settings()
@@ -257,7 +255,8 @@ def calibration(video, definition2, tol2, c2, minsize2, crosswidth2, rectanglewi
         return None
 
     extremas = detected[0]
-    positions[video.frames[0].id] = position(rectifyer(detected[0]))
+    positions[video.frames[0].id] = position(rectifyer(detected[0], minsize))
+    scale = detScale(video, positions[video.frames[0].id], lenref)
 
     print('\nTraitement -------------------------------------------------------- OK')
 
@@ -276,7 +275,9 @@ def calibration(video, definition2, tol2, c2, minsize2, crosswidth2, rectanglewi
     images_names.append('treated_NB')
     fill_calibdir(treated_NB, 'treated_NB')
 
-    treated_color = np.uint8(cross_color(color_im, positions[video.frames[0].id], crosswidth))
+    ImWithCross = cross_color(color_im, positions[video.frames[0].id], crosswidth)
+    ImWithScale = Add_scale(ImWithCross, scale,crosswidth, bordure_size)
+    treated_color = np.uint8(ImWithScale)
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 

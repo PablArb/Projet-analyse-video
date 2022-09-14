@@ -39,6 +39,15 @@ def cinput():
         print('Vous devez avoir fait une erreur, veuillez rééssayer.')
         cinput()
 
+def refinput ():
+    while True:
+        l = input('\nlongueur entre les deux premiers repères(cm) : ')
+        try :
+            lenref = float(l)
+            return lenref
+        except ValueError :
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
 def verif_settings (video, tol, c, mode):
     print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode])
     print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])

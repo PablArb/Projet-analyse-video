@@ -24,7 +24,15 @@ def main():
     except Break:
         print('\nFin de la procédure')
         return None
-    delete_dir('bac')
+    # delete_dir('bac')
+
+    try:
+        c = cinput()
+        mode = get_mode(video, video.Framessize)
+        lenref = refinput()
+    except Break:
+        print('\nFin de la procédure')
+        return None
 
     # On définit la taille des indicateurs visuels par rapport à la taille de l'image
     minsize = int(video.Framessize[1] / 300)
@@ -33,17 +41,12 @@ def main():
     crosswidth = int(video.Framessize[1] / 500)
     rectanglewidth = int(video.Framessize[1] / 1250)
 
-    try :
-        c = cinput()
-    except Break :
-        print('\nFin de la procédure')
-        return None
 
     # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
     try :
         isOK = False
         while not isOK:
-            calibration(video, definition, tol, c, minsize, crosswidth, rectanglewidth)
+            calibration(video, definition, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref)
             if yn('Le traitement est-il bon ?'):
                 isOK = True
             else:
@@ -54,14 +57,13 @@ def main():
         return None
 
     # Une fois que tout est bon on traite la vidéo
-    videotreatement(video, maxdist, bordure_size)
+    videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist)
 
     # On télécharge les données
     if yn("Voulez vous télécharger les résultats de l'étude ?"):
-        resultsdownload(video, crosswidth)
+        resultsdownload(video, video.scale, crosswidth)
     print('\nProcédure terminée')
 
     return None
-
 
 main ()
