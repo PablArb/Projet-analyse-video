@@ -28,51 +28,53 @@ def videoinput():
         videoinput()
 
 def cinput():
-    c = input('\nCouleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
-    if c in ['1', '2', '3', 'break']:
-        if c in ['1', '2', '3']:
-            c = int(c)-1
-            return c
+    while True :
+        c = input('\nCouleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
+        if c in ['1', '2', '3', 'break']:
+            if c in ['1', '2', '3']:
+                c = int(c)-1
+                return c
+            else:
+                raise Break
         else:
-            raise Break
-    else:
-        print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-        cinput()
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 def refinput ():
     while True:
         l = input('\nlongueur entre les deux premiers repères(cm) : ')
         try :
+            if l == 'break':
+                raise Break
             lenref = float(l)
             return lenref
         except ValueError :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 def verif_settings (video, tol, c, mode):
-    print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode])
-    print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
-    print('3 tolérance : ', tol)
-    which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3) ? ')
-    if which in ['0', '1', '2', '3', 'pres', 'break']:
-        if which == '0':
-            return tol, c
-        elif which == '1':
-            get_mode(video)[1]
-            return tol, c
-        elif which == '2':
-            c = cinput()
-            return tol, c
-        elif which == '3':
-            tol += float(input('\nTolérance actuelle : ', tol, ', implémenter de : '))
-            return tol, c
-        elif which == 'pres':
-            sys.setrecursionlimit(int(input('setrecursionlimit : ')))
-            return tol, c
-        else :
-            raise Break
-    else:
-        print ('vous devez avoir fait une erreur, veuillez réessayer')
-        verif_settings()
+    while True :
+        print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode])
+        print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
+        print('3 tolérance : ', tol)
+        which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3) ? ')
+        if which in ['0', '1', '2', '3', 'pres', 'break']:
+            if which == '0':
+                return tol, c
+            elif which == '1':
+                get_mode(video)[1]
+                return tol, c
+            elif which == '2':
+                c = cinput()
+                return tol, c
+            elif which == '3':
+                tol += float(input('\nTolérance actuelle : ', tol, ', implémenter de : '))
+                return tol, c
+            elif which == 'pres':
+                sys.setrecursionlimit(int(input('setrecursionlimit : ')))
+                return tol, c
+            else :
+                raise Break
+        else:
+            print ('vous devez avoir fait une erreur, veuillez réessayer')
 
 def yn(question):
     assert type(question) == str

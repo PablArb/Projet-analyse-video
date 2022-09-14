@@ -42,7 +42,7 @@ def get_framessize():
     Framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
     return Framessize
 
-def get_mode(video ,Framessize):
+def get_mode(video, Framessize):
     # Framessize = get_framessize()
     while True:
         mode = input('\nLa vidéo est en mode (1=landscape, 2=portrait) : ')
@@ -61,7 +61,6 @@ def get_mode(video ,Framessize):
             return Framessize, int(mode)
         else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-            get_mode(video)
 
 def get_frames(video):
     """
