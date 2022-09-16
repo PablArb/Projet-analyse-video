@@ -85,6 +85,9 @@ def get_frames(video):
     return frames
 
 def detScale (video, positions:dict, lenref):
+    if len(positions) < 2 :
+        video.scale = 1
+        return 1
     a = list(positions.keys())[0]
     b = list(positions.keys())[1]
     apos, bpos = positions[a], positions[b]

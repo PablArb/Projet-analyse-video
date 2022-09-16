@@ -24,7 +24,7 @@ def main():
     except Break:
         print('\nFin de la procédure')
         return None
-    # delete_dir('bac')
+    delete_dir('bac')
 
     try:
         c = cinput()
