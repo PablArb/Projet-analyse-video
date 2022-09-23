@@ -8,7 +8,7 @@ def resultsdownload(video, scale, crosswidth):
     videodownload()
     datadownload(video, scale)
     framesdownload(video, crosswidth)
-    create_video(video, crosswidth)
+    create_video(video)
     return None
 
 def reboot(video):
@@ -63,12 +63,11 @@ def framesdownload(video, crosswidth):
     print('Sauvegarde des frames --------------------------------------------- OK')
     return None
 
-def create_video(video, crosswidth):
+def create_video(video):
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate,
                           video.Framessize)
     print('\nSauvegarde de la vidéo en cours ...')
     for frame in video.frames:
-        # img = np.uint8(cross_color(frame.array, frame.identified_objects))
         img = frame.array
         out.write(img)
     print('Sauvegarde de la vidéo -------------------------------------------- OK')
