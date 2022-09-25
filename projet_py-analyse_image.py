@@ -32,7 +32,7 @@ def main():
     except Break:
         print('\nFin de la procédure')
         return None
-    # delete_dir('bac')
+    delete_dir('bac')
 
     try:
         c = cinput()
@@ -80,10 +80,15 @@ def main():
 
 user = gp.getuser()
 paths = {}
-paths['bac'] = '/Users/' + user + '/Desktop/bac'
-paths['calib'] = '/Users/' + user + '/Documents/##calibdir##'
-paths['video storage'] = '/Users/' + user + '/Documents/temporary storage.mp4'
-paths['data'] = '/Users/' + user + '/Desktop/data'
+L_paths = ['bac', 'calib', 'video storage', 'data']
+paths[L_paths[0]] = '/Users/' + user + '/Desktop/bac'
+paths[L_paths[1]] = '/Users/' + user + '/Desktop/##calibdir##'
+paths[L_paths[2]] = '/Users/' + user + '/Desktop/temporary storage.mp4'
+paths[L_paths[3]] = '/Users/' + user + '/Desktop/data'
+
+if os.name == 'nt':
+    for el in L_paths:
+        paths[el] = 'C:'+paths[el]
 
 def add_subdata_dirs(video):
     paths['csv'] = paths['data'] + '/' + video + '/csv'
