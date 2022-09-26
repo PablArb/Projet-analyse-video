@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
+from numpy.fft import rfft
 
 
 def str2float(N:str):
@@ -9,7 +10,7 @@ def str2float(N:str):
     else :
         return float(N)
 
-dos = open('/Users/pabloarb/Desktop/data/test 2/csv/positions objets.csv', 'r')
+dos = open('/Users/pabloarb/Desktop/data/test 1/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
 T = []
@@ -18,7 +19,7 @@ Y0 = []
 X1 = []
 Y1 = []
 
-for line in lines[5:] :
+for line in lines[1:] :
 
     line = line.split(',')
     time = str2float(line[1])
@@ -40,16 +41,33 @@ def deriv (X):
     D.append ( (X[-1]-X[-2]) / (T[-1]-T[-2]))
     return D
 
-def lissage (X, th):
-    newX = [X[0], X[1]]
-    for i in range(1, len(X)-1):
-        if np.abs(X[i+1]-newX[i]) > th :
-            # prediction = X[i] + newX[i]-newX[i-1]
-            # x = (X[i+1] + prediction)/2
-            # newX.append(x)
-            newX.append(newX[i])
-        else :
-            newX.append(X[i+1])
+def lissage (X, fc):
+    global T
+    pi = np.pi
+    N = len(T)
+    fe = len(T) / (T[-1]-T[0])
+
+    TF = rfft(X)
+    Normalisation = np.array ([1/ N ]+[2/ N for k in range ( N //2)])
+    Ampl = np.abs( Normalisation * TF )
+    Phase = np.angle(TF)
+    freq = np.array ([ k * fe / N for k in range ( N//2 +1)])
+
+    F = []
+    i = 0
+    while freq[i] < fc :
+        F.append(freq[i])
+        i += 1
+
+    newX = []
+    for t in T :
+        xi = 0
+        for i in range ( len(F) ):
+            A = Ampl[i]
+            w = 2*pi*F[i]
+            phi = Phase[i]
+            xi += A * np.cos( w * t + phi )
+        newX.append(xi)
     return newX
 
 
@@ -74,14 +92,21 @@ plt.show()
 ## data analyse
 
 #on def un seuil de pente pour le lissage
-c = 30
+fc = 5
 
 Xrel = [ X0[i]-X1[i] for i in range( len(X0) ) ]
 Yrel = [ Y0[i]-Y1[i] for i in range( len(Y0) ) ]
+Xlisse = lissage(Xrel, fc)
+# Ylisse = lissage(Yrel, fc)
+dX = deriv(Xrel)
+# dY = deriv(Yrel)
+dXlisse = deriv(Xlisse)
+# dYlisse = deriv(Ylisse)
 
 plt.figure("relatif")
 plt.clf()
-plt.plot(T, Xrel, label='X', color='blue')
+plt.plot(T, Xrel,   label='X',       color='blue')
+plt.plot(T, Xlisse, label='X lissé', color='orange')
 plt.xlabel('Temps(en s)')
 plt.ylabel('X(en cm) ')
 plt.grid()
@@ -89,16 +114,16 @@ plt.legend()
 
 plt.figure("relatif dérivé")
 plt.clf()
-plt.plot(T, lissage(deriv(Xrel), c), label='dX/dt', color='red')
+plt.plot(T, dX,      label='dX/dt',       color='blue')
+plt.plot(T, dXlisse, label='dX/dt lissé', color='orange')
 plt.xlabel('Temps(en s)')
 plt.ylabel('X(en cm) ')
 plt.grid()
 plt.legend()
 
-
 plt.figure("figure de phase relatif")
 plt.clf()
-plt.plot(Xrel, lissage(deriv(Xrel), c), label='X relatif', color='green')
+plt.plot(Xlisse, dXlisse, label='X relatif', color='green')
 plt.xlabel('X')
 plt.ylabel('dX/dt')
 plt.grid()
