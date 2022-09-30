@@ -10,7 +10,8 @@ def str2float(N:str):
     else :
         return float(N)
 
-dos = open('/Users/pabloarb/Desktop/data/test 1/csv/positions objets.csv', 'r')
+video = 'test C - pendule sur tour long'
+dos = open('/Users/pabloarb/Desktop/data/' + video + '/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
 T = []
@@ -43,9 +44,9 @@ def deriv (X):
 
 def lissage (X, fc):
     global T
-    pi = np.pi
-    N = len(T)
-    fe = len(T) / (T[-1]-T[0])
+    pi  = np.pi
+    N   = len(X)
+    fe  = len(T) / (T[-1]-T[0])
 
     TF = rfft(X)
     Normalisation = np.array ([1/ N ]+[2/ N for k in range ( N //2)])
@@ -60,7 +61,7 @@ def lissage (X, fc):
         i += 1
 
     newX = []
-    for t in T :
+    for t in T:
         xi = 0
         for i in range ( len(F) ):
             A = Ampl[i]
@@ -92,7 +93,7 @@ plt.show()
 ## data analyse
 
 #on def un seuil de pente pour le lissage
-fc = 5
+fc = 3
 
 Xrel = [ X0[i]-X1[i] for i in range( len(X0) ) ]
 Yrel = [ Y0[i]-Y1[i] for i in range( len(Y0) ) ]
@@ -106,7 +107,7 @@ dXlisse = deriv(Xlisse)
 plt.figure("relatif")
 plt.clf()
 plt.plot(T, Xrel,   label='X',       color='blue')
-plt.plot(T, Xlisse, label='X lissé', color='orange')
+plt.plot(T[10:-10], Xlisse[10:-10], label='X lissé', color='orange')
 plt.xlabel('Temps(en s)')
 plt.ylabel('X(en cm) ')
 plt.grid()
@@ -115,7 +116,7 @@ plt.legend()
 plt.figure("relatif dérivé")
 plt.clf()
 plt.plot(T, dX,      label='dX/dt',       color='blue')
-plt.plot(T, dXlisse, label='dX/dt lissé', color='orange')
+plt.plot(T[10:-10], dXlisse[10:-10], label='dX/dt lissé', color='orange')
 plt.xlabel('Temps(en s)')
 plt.ylabel('X(en cm) ')
 plt.grid()
@@ -123,7 +124,7 @@ plt.legend()
 
 plt.figure("figure de phase relatif")
 plt.clf()
-plt.plot(Xlisse, dXlisse, label='X relatif', color='green')
+plt.plot(Xlisse[10:-10], dXlisse[10:-10], label='X relatif', color='green')
 plt.xlabel('X')
 plt.ylabel('dX/dt')
 plt.grid()
