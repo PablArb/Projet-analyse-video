@@ -82,8 +82,8 @@ user = gp.getuser()
 paths = {}
 L_paths = ['bac', 'calib', 'video storage', 'data']
 paths[L_paths[0]] = '/Users/' + user + '/Desktop/bac'
-paths[L_paths[1]] = '/Users/' + user + '/Desktop/##calibdir##'
-paths[L_paths[2]] = '/Users/' + user + '/Desktop/temporary storage.mp4'
+paths[L_paths[1]] = '/Users/' + user + '/Desktop/.##calibdir##'
+paths[L_paths[2]] = '/Users/' + user + '/Desktop/.##temporary storage##.mp4'
 paths[L_paths[3]] = '/Users/' + user + '/Desktop/data'
 
 if os.name == 'nt':
@@ -201,11 +201,14 @@ def get_frames(video):
     return frames
 
 def detScale (video, positions:dict, lenref):
-    a = list(positions.keys())[0]
-    b = list(positions.keys())[1]
-    apos, bpos = positions[a], positions[b]
-    xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
-    scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
+    if len(positions) >= 2 :
+        a = list(positions.keys())[0]
+        b = list(positions.keys())[1]
+        apos, bpos = positions[a], positions[b]
+        xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
+        scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
+    else :
+        scale = 1
     video.scale = scale
     return scale
 
@@ -220,6 +223,7 @@ def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_
     global positions, definition
     frames = video.frames
     obj_compteur = 0
+    T = t.time()
 
     print('')
 
@@ -265,9 +269,10 @@ def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_
         except SettingError :
             pass
 
-        progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
-        print('\rTraitement de ' + video.id + ' en cours :', str(progression), '%', end='')
-        t.sleep(.02)
+        if t.time() - T > 0.5 :
+            progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
+            print('\rTraitement de ' + video.id + ' en cours :', str(progression), '%', end='')
+            T = t.time()
 
     print('\nTraitement de ' + video.id + ' -------------------------------------------- Finit')
     return None
@@ -356,6 +361,7 @@ def objects_identification(image, definition) -> dict:
     objects = {}
     extremas = {}
     n = 0
+    # pas = int(1 + 10/definition)
     for j in range(h):
         for i in range(w):
             if image[j][i] == 255:
@@ -602,7 +608,7 @@ def refinput ():
 
 def verif_settings (video, tol, c, mode):
     while True :
-        print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode])
+        print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode-1])
         print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
         print('3 tolérance : ', tol)
         which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3) ? ')
@@ -645,7 +651,7 @@ def resultsdownload(video, scale, crosswidth):
     reboot(video)
     videodownload()
     datadownload(video, scale)
-    framesdownload(video, crosswidth)
+    # framesdownload(video, crosswidth)
     create_video(video, crosswidth)
     return None
 
@@ -702,12 +708,11 @@ def framesdownload(video, crosswidth):
     return None
 
 def create_video(video, crosswidth):
-    out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate,
-                          video.Framessize)
+    out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate, video.Framessize)
     print('\nSauvegarde de la vidéo en cours ...')
     for frame in video.frames:
-        # img = np.uint8(cross_color(frame.array, frame.identified_objects))
-        img = frame.array
+        img = np.uint8(cross_color(frame.array, frame.identified_objects, crosswidth))
+        # img = frame.array
         out.write(img)
     print('Sauvegarde de la vidéo -------------------------------------------- OK')
     return None
