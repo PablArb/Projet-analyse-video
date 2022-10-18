@@ -2,11 +2,11 @@ import numpy as np
 import cv2 as cv2
 import csv as csv
 import pymediainfo as mi
-import os as os         # intégré à python par défaut
-import sys as sys       # intégré à python par défaut
-import time as t        # intégré à python par défaut
-import getpass as gp    # intégré à python par défaut
-import shutil as sht    # intégré à python par défaut
+import os as os             # intégré à python par défaut
+import sys as sys           # intégré à python par défaut
+import time as t            # intégré à python par défaut
+import getpass as gp        # intégré à python par défaut
+import shutil as sht        # intégré à python par défaut
 
 class SettingError (Exception):
     pass
@@ -14,44 +14,43 @@ class SettingError (Exception):
 class Break (Exception):
     pass
 
+stoplist = ['stop']
 
 # main
 def main():
     """
     """
+    global video
     # Réglages de rapidité/précision/sensibilité par défault.
-    sys.setrecursionlimit(1000)
-    definition = 1
-    tol = 0.4
+    sys.setrecursionlimit(1000)     # Dans le cadre de ce scripte ce reglage nous permet d'ajuster la précision du traitement qui sera effectué.
+    definition = 1                  # Réglage par défault étant ajusté automatiquement par l'algorythme.
+    tol = 0.4                       # seuil à partir duquel le repère sera détecté
+    pas = 1
 
     print('\nInitialisation de la procédure')
+    Ti = t.time()
 
-    create_dir('bac')
-    try:
+    try :
+
+        # On récupère la vidéo
+        create_dir('bac')
         video = Video(videoinput())
-    except Break:
-        print('\nFin de la procédure')
-        return None
-    delete_dir('bac')
+        delete_dir('bac')
 
-    try:
+        # On réupère les infos complémentaires
         c = cinput()
         mode = get_mode(video, video.Framessize)
         lenref = refinput()
-    except Break:
-        print('\nFin de la procédure')
-        return None
 
-    # On définit la taille des indicateurs visuels par rapport à la taille de l'image
-    minsize = int(video.Framessize[1] / 300)
-    maxdist = int(video.Framessize[1] / 10)
-    bordure_size = int(video.Framessize[1] / 30)
-    crosswidth = int(video.Framessize[1] / 500)
-    rectanglewidth = int(video.Framessize[1] / 1250)
+        # On définit la taille des indicateurs visuels par rapport à la taille de l'image
+        minsize = int(video.Framessize[1] / 300)
+        maxdist = int(video.Framessize[1] / 10)
+        bordure_size = int(video.Framessize[1] / 30)
+        crosswidth = int(video.Framessize[1] / 500)
+        rectanglewidth = int(video.Framessize[1] / 1250)
 
 
-    # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
-    try :
+        # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
         isOK = False
         while not isOK:
             calibration(video, definition, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref)
@@ -60,17 +59,20 @@ def main():
             else:
                 tol, c = verif_settings(video, tol, c, video.mode)
                 definition = 1
-    except Break :
-        print ('\nFin de la procédure')
-        return None
 
-    # Une fois que tout est bon on traite la vidéo
-    videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist)
+        # Une fois que tout est bon on traite la vidéo
+        videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist)
 
-    # On télécharge les données
-    if yn("Voulez vous télécharger les résultats de l'étude ?"):
-        resultsdownload(video, video.scale, crosswidth)
-    print('\nProcédure terminée')
+        # On télécharge les données
+        if yn("Voulez vous télécharger les résultats de l'étude ?"):
+            resultsdownload(video, video.scale, crosswidth)
+
+        print('\nProcédure terminée (', round(t.time()-Ti, 1), 's)')
+
+    except Break:
+        for i in range(3):
+            delete_dir(L_paths[i])
+        print('\nProcédure terminée')
 
     return None
 
@@ -82,8 +84,8 @@ user = gp.getuser()
 paths = {}
 L_paths = ['bac', 'calib', 'video storage', 'data']
 paths[L_paths[0]] = '/Users/' + user + '/Desktop/bac'
-paths[L_paths[1]] = '/Users/' + user + '/Desktop/.##calibdir##'
-paths[L_paths[2]] = '/Users/' + user + '/Desktop/.##temporary storage##.mp4'
+paths[L_paths[1]] = '/Users/' + user + '/Desktop/.calibdir'
+paths[L_paths[2]] = '/Users/' + user + '/Desktop/.temporary storage'
 paths[L_paths[3]] = '/Users/' + user + '/Desktop/data'
 
 if os.name == 'nt':
@@ -100,20 +102,14 @@ def add_subdata_dirs(video):
 
 def create_dir(dir: str):
     p = paths[dir]
-    try:
-        if not os.path.exists(p):
-            os.makedirs(p)
-    except OSError:
-        print('Error: Creating directory of data')
+    if not os.path.exists(p):
+        os.makedirs(p)
     return None
 
 def delete_dir(dir: str):
     p = paths[dir]
-    try:
-        if os.path.exists(p):
-            sht.rmtree(p)
-    except OSError:
-        print('Error: Creating directory of data')
+    if os.path.exists(p) :
+        sht.rmtree(p)
     return None
 
 
@@ -128,7 +124,6 @@ class Video:
         self.Framessize = get_framessize()
         self.mode = None
         self.scale = None
-
 
 class Frame:
     def __init__(self, id, array):
@@ -157,26 +152,6 @@ def get_framessize():
     video_tracks = media_info.video_tracks[0]
     Framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
     return Framessize
-
-def get_mode(video, Framessize):
-    # Framessize = get_framessize()
-    while True:
-        mode = input('\nLa vidéo est en mode (1=landscape, 2=portrait) : ')
-        if mode in ['1', '2', 'break']:
-            if mode == '1':
-                height = min(Framessize)
-                width = max(Framessize)
-            elif mode == '2':
-                height = max(Framessize)
-                width = min(Framessize)
-            else:
-                raise Break
-            Framessize = (width, height)
-            video.Framessize = Framessize
-            video.mode = int(mode)
-            return Framessize, int(mode)
-        else:
-            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 def get_frames(video):
     """
@@ -300,7 +275,67 @@ def frametreatement(frame, tol, c, minsize):
     else:
         raise SettingError
 
+
+
 # Frame manipulation tools
+
+def objects_identification(image, definition) -> dict:
+    """
+    Regroupe tout les objets de l'image dans un dictionnaire.
+    image : image en N&B sous la forme d'un array de 0 et 255.
+    """
+    global pas
+    h = len(image)
+    w = len(image[0])
+    objects = {}
+    extremas = {}
+    n = 0
+    for j in range(int(h)):
+        for i in range(int(w)):
+            if image[j][i] == 255:
+                element_in = False
+                for obj in objects:
+                    if [i, j] in objects[obj]:
+                        element_in = True
+                if not element_in:
+                    infos = discovery(image, [i, j])
+                    objects[n] = infos[0]
+                    extremas[n] = infos[1]
+                    n += 1
+    for obj in extremas:
+        xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3]
+        extremas[obj] = [xmin * definition, ymin * definition, xmax * definition, ymax * definition]
+    return extremas
+
+def discovery(image, depart: list) -> list:
+    object = [depart]
+    init_extr = [depart[0], depart[1], depart[0], depart[1]]
+    infos = visiter(image, depart, object, init_extr)
+    object = infos[0]
+    extr = infos[1]
+    return object, extr
+
+def visiter(image, depart: list, object: list, extr: list) -> list:
+    """
+    Regroupe tous les pixels appartenant a un même objets (forme blanche ici) sous la forme d'une liste.
+    image : image en N&B.
+    depart : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
+    objet : liste contenant tout les pixels appartenants au même objet.
+    """
+    if depart not in object:
+        object.append(depart)
+        if depart[0] < extr[0]:
+            extr[0] = depart[0]
+        elif depart[1] < extr[1]:
+            extr[1] = depart[1]
+        if depart[0] > extr[2]:
+            extr[2] = depart[0]
+        elif depart[1] > extr[3]:
+            extr[3] = depart[1]
+    for pixel in get_neighbours(image, depart):
+        if pixel not in object:
+            visiter(image, pixel, object, extr)
+    return object, extr
 
 def get_neighbours(image, pixel: list) -> list:
     """
@@ -319,65 +354,6 @@ def get_neighbours(image, pixel: list) -> list:
         if image[element[1]][element[0]] == 255:
             L_neighours.append(element)
     return L_neighours
-
-def visiter(image, depart: list, object: list, extr: list) -> list:
-    """
-    Regroupe tous les pixels appartenant a un même objets (forme blanche ici) sous la forme d'une liste.
-    image : image en N&B.
-    depart : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
-    objet : liste contenant tout les pixels appartenants au même objet.
-    """
-    if depart not in object:
-        object.append(depart)
-        # xmin, ymin, xmax, ymax = extr[0], extr[1], extr[2], extr[3] (pour info)
-        if depart[0] < extr[0]:
-            extr[0] = depart[0]
-        if depart[1] < extr[1]:
-            extr[1] = depart[1]
-        if depart[0] > extr[2]:
-            extr[2] = depart[0]
-        if depart[1] > extr[3]:
-            extr[3] = depart[1]
-    for pixel in get_neighbours(image, depart):
-        if pixel not in object:
-            visiter(image, pixel, object, extr)
-    return object, extr
-
-def discovery(image, depart: list) -> list:
-    object = [depart]
-    init_extr = [depart[0], depart[1], depart[0], depart[1]]
-    infos = visiter(image, depart, object, init_extr)
-    object = infos[0]
-    extr = infos[1]
-    return object, extr
-
-def objects_identification(image, definition) -> dict:
-    """
-    Regroupe tout les objets de l'image dans un dictionnaire.
-    image : image en N&B sous la forme d'un array de 0 et 255.
-    """
-    h = len(image)
-    w = len(image[0])
-    objects = {}
-    extremas = {}
-    n = 0
-    # pas = int(1 + 10/definition)
-    for j in range(h):
-        for i in range(w):
-            if image[j][i] == 255:
-                element_in = False
-                for obj in objects:
-                    if [i, j] in objects[obj]:
-                        element_in = True
-                if not element_in:
-                    infos = discovery(image, [i, j])
-                    objects[n] = infos[0]
-                    extremas[n] = infos[1]
-                    n += 1
-    for obj in extremas:
-        xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3]
-        extremas[obj] = [xmin * definition, ymin * definition, xmax * definition, ymax * definition]
-    return extremas
 
 def position(extremas: dict) -> list:
     """
@@ -439,6 +415,21 @@ def prep(image, definition, tol, c):
         simplified_im.append(line)
     return simplified_im
 
+def Pas (extr:dict):
+    '''
+    extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
+        dictionaire où chaque clef correspond à un objet,
+        la valeure qui lui est associée est la liste des 4 coordonées
+        extremales entourant l'objet.
+    '''
+    L = list(extr.keys())
+    min = extr[L[0]][2]-extr[L[0]][0]
+    for el in extr :
+        if extr[el][2]-extr[el][0] < min :
+            min = extr[el][2]-extr[el][0]
+        if extr[el][3]-extr[el][1] < min :
+            min = extr[el][3]-extr[el][1]
+    return int(min)
 
 # Calibration fcts
 
@@ -446,7 +437,7 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
     """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
     """
-    global positions, definition
+    global positions, definition, pas
     definition = definition2
     positions = {}
 
@@ -463,6 +454,7 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
         return None
 
     extremas = detected[0]
+    pas = Pas(extremas)
     positions[video.frames[0].id] = position(rectifyer(detected[0], minsize))
     scale = detScale(video, positions[video.frames[0].id], lenref)
 
@@ -520,7 +512,7 @@ def calib_show(images_names: list):
 
 
 
-# indicators
+# indicateurs visiuels sur la vidéo
 
 def rectangle_NB(image, extremas, rectanglewidth):
     L = len(image)
@@ -561,6 +553,9 @@ def Add_scale(image, scale, crosswidth, bordure_size):
     return image
 
 
+
+# fonctions permettant l'IHM
+
 def videoinput():
     isempty = True
     print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
@@ -572,7 +567,9 @@ def videoinput():
     if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
         video = bac[0].split('.')[0]
         paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
+        create_dir('video storage')
         sht.copy2(paths['vidéoinput'], paths['video storage'])
+        # + '/' + video + '.mp4'
         return video
     elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
         print('Veuillez fournir une vidéo au format mp4')
@@ -584,35 +581,39 @@ def videoinput():
         videoinput()
 
 def cinput():
+    global stoplist
     while True :
         c = input('\nCouleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
-        if c in ['1', '2', '3', 'break']:
+        if c in ['1', '2', '3']:
             if c in ['1', '2', '3']:
                 c = int(c)-1
                 return c
-            else:
-                raise Break
+        elif c in stoplist :
+            raise Break
         else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 def refinput ():
+    global stoplist
     while True:
         l = input('\nlongueur entre les deux premiers repères(cm) : ')
         try :
-            if l == 'break':
+            if l in stoplist:
                 raise Break
-            lenref = float(l)
-            return lenref
+            else :
+                lenref = float(l)
+                return lenref
         except ValueError :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 def verif_settings (video, tol, c, mode):
+    global stoplist
     while True :
         print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode-1])
         print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
         print('3 tolérance : ', tol)
         which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3) ? ')
-        if which in ['0', '1', '2', '3', 'pres', 'break']:
+        if which in ['0', '1', '2', '3', 'pres']:
             if which == '0':
                 return tol, c
             elif which == '1':
@@ -627,29 +628,51 @@ def verif_settings (video, tol, c, mode):
             elif which == 'pres':
                 sys.setrecursionlimit(int(input('setrecursionlimit : ')))
                 return tol, c
-            else :
-                raise Break
+        elif which in stoplist :
+            raise Break
         else:
             print ('vous devez avoir fait une erreur, veuillez réessayer')
 
+def get_mode(video, Framessize):
+    while True:
+        mode = input('\nLa vidéo est en mode (1=landscape, 2=portrait) : ')
+        if mode in ['1', '2']:
+            if mode == '1':
+                height = min(Framessize)
+                width = max(Framessize)
+            elif mode == '2':
+                height = max(Framessize)
+                width = min(Framessize)
+            Framessize = (width, height)
+            video.Framessize = Framessize
+            video.mode = int(mode)
+            return Framessize, int(mode)
+        elif mode in stoplist :
+            raise Break
+        else:
+            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
 def yn(question):
+    global stoplist
     assert type(question) == str
     while True:
         yn = input('\n' + question + '\n[y]/n : ')
-        if yn in ['y', '', 'n', 'break']:
+        if yn in ['y', '', 'n']:
             if yn == 'y' or yn == '':
                 return True
             elif yn == 'n':
                 return False
-            else:
-                raise Break
+        elif yn in stoplist :
+            raise Break
         else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
 
+# Récupération des résultats du traitement
+
 def resultsdownload(video, scale, crosswidth):
     reboot(video)
-    videodownload()
+    videodownload(video)
     datadownload(video, scale)
     # framesdownload(video, crosswidth)
     create_video(video, crosswidth)
@@ -663,12 +686,12 @@ def reboot(video):
     add_subdata_dirs(video.id)
     return None
 
-def videodownload():
+def videodownload(video):
     create_dir('vidéodl')
-    source = paths['video storage']
+    source = paths['video storage']  + '/' + video.id + '.mp4'
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
     sht.copy2(source, destination)
-    os.remove(paths['video storage'])
+    sht.rmtree(paths['video storage'])
     return None
 
 def datadownload(video, scale):
