@@ -10,7 +10,7 @@ def str2float(N:str):
     else :
         return float(N)
 
-video = 'test C - pendule sur tour long'
+video = 'pendule'
 dos = open('/Users/pabloarb/Desktop/data/' + video + '/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
@@ -93,7 +93,7 @@ plt.show()
 ## data analyse
 
 #on def un seuil de pente pour le lissage
-fc = 3
+fc = 7
 
 Xrel = [ X0[i]-X1[i] for i in range( len(X0) ) ]
 Yrel = [ Y0[i]-Y1[i] for i in range( len(Y0) ) ]
@@ -106,6 +106,8 @@ dXlisse = deriv(Xlisse)
 
 plt.figure("relatif")
 plt.clf()
+
+plt.subplot(2, 2, 1)
 plt.plot(T, Xrel,   label='X',       color='blue')
 plt.plot(T[10:-10], Xlisse[10:-10], label='X lissé', color='orange')
 plt.xlabel('Temps(en s)')
@@ -113,8 +115,7 @@ plt.ylabel('X(en cm) ')
 plt.grid()
 plt.legend()
 
-plt.figure("relatif dérivé")
-plt.clf()
+plt.subplot(2, 2, 2)
 plt.plot(T, dX,      label='dX/dt',       color='blue')
 plt.plot(T[10:-10], dXlisse[10:-10], label='dX/dt lissé', color='orange')
 plt.xlabel('Temps(en s)')
@@ -122,9 +123,15 @@ plt.ylabel('X(en cm) ')
 plt.grid()
 plt.legend()
 
-plt.figure("figure de phase relatif")
-plt.clf()
-plt.plot(Xlisse[10:-10], dXlisse[10:-10], label='X relatif', color='green')
+plt.subplot(2, 2, 3)
+plt.plot(Xrel, dX, label='phase non lissée', color='blue')
+plt.xlabel('X')
+plt.ylabel('dX/dt')
+plt.grid()
+plt.legend()
+
+plt.subplot(2, 2, 4)
+plt.plot(Xlisse[10:-10], dXlisse[10:-10], label='phase lissée', color='orange')
 plt.xlabel('X')
 plt.ylabel('dX/dt')
 plt.grid()
