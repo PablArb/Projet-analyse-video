@@ -20,9 +20,9 @@ stoplist = ['stop', 'quit', 'abandon', 'kill']
 def main():
     """
     """
-    global video
+    global video, definition, pas
     # Réglages de rapidité/précision/sensibilité par défault.
-    sys.setrecursionlimit(1000)     # Dans le cadre de ce scripte ce reglage nous permet d'ajuster la précision du traitement qui sera effectué.
+    sys.setrecursionlimit(100)     # Dans le cadre de ce scripte ce reglage nous permet d'ajuster la précision du traitement qui sera effectué.
     definition = 1                  # Réglage par défault étant ajusté automatiquement par l'algorythme.
     tol = 0.4                       # seuil à partir duquel le repère sera détecté
     pas = 1
@@ -308,6 +308,7 @@ def objects_identification(image, definition, pas) -> dict:
 def discovery(image, depart: list) -> list:
     object = [depart]
     init_extr = [depart[0], depart[1], depart[0], depart[1]]
+    at_border = False
     infos = visiter(image, depart, object, init_extr)
     object = infos[0]
     extr = infos[1]
@@ -341,17 +342,35 @@ def get_neighbours(image, pixel: list) -> list:
     image : image en N&B.
     pixel : sous la forme [j,i].
     """
+    global at_border
     x, y = pixel[0], pixel[1]
     h = len(image)
     w = len(image[0])
-    L_neighours_to_test = [[(x - 1) % w, (y - 1) % h], [(x - 1) % w, y], [(x - 1) % w, (y + 1) % h],
-                           [x, (y - 1) % h], [x, (y + 1) % h],
-                           [(x + 1) % w, (y - 1) % h], [(x + 1) % w, y], [(x + 1) % w, (y + 1) % h]]
-    L_neighours = []
-    for element in L_neighours_to_test:
-        if image[element[1]][element[0]] == 255:
-            L_neighours.append(element)
-    return L_neighours
+    neighbours_coordinates = []
+    for i in range (-1, 2):
+        for j in range (-1, 2):
+            if j != i :
+                neighbours_coordinates.append([(x+i)%w, (y+j)%h])
+
+
+    is_border = False
+    outsiders = []
+    for n in neighbours_coordinates :
+        if image[n[1]][n[0]] == 0 :
+            is_border = True
+            at_border = True
+            outsiders.append(n)
+
+    L_neighbours = []
+    if not is_border and not at_border:
+        L_neighbours.append([pixel[0]+1, pixel[1]])
+    if is_border :
+        for n in neighbours_coordinates :
+            if n not in outsiders :
+                for o in outsiders :
+                    if abs(n[0]-o[0]) <= 1 and abs(n[1]-o[1]) <= 1 :
+                        L_neighbours.append(n)
+    return L_neighbours
 
 def position(extremas: dict) -> list:
     """
@@ -427,7 +446,7 @@ def Pas (extr:dict, defintion):
             min = extr[el][2]-extr[el][0]
         if extr[el][3]-extr[el][1] < min :
             min = extr[el][3]-extr[el][1]
-    return int(min/(2*defintion))
+    return int(min/(defintion))
 
 # Calibration fcts
 
