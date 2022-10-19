@@ -14,7 +14,7 @@ class SettingError (Exception):
 class Break (Exception):
     pass
 
-stoplist = ['stop']
+stoplist = ['stop', 'quit', 'abandon', 'kill']
 
 # main
 def main():
@@ -28,15 +28,12 @@ def main():
     pas = 1
 
     print('\nInitialisation de la procédure')
-    Ti = t.time()
 
     try :
 
         # On récupère la vidéo
-        create_dir('bac')
         video = Video(videoinput())
         delete_dir('bac')
-
         # On réupère les infos complémentaires
         c = cinput()
         mode = get_mode(video, video.Framessize)
@@ -53,21 +50,23 @@ def main():
         # On traite la première frame seulement pour vérifier aue tous les reglages sont bons
         isOK = False
         while not isOK:
-            calibration(video, definition, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref)
+            calibration(video, definition, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref, pas)
             if yn('Le traitement est-il bon ?'):
                 isOK = True
             else:
                 tol, c = verif_settings(video, tol, c, video.mode)
                 definition = 1
 
+        Ti = t.time()
+
         # Une fois que tout est bon on traite la vidéo
-        videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist)
+        videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist, pas)
 
         # On télécharge les données
         if yn("Voulez vous télécharger les résultats de l'étude ?"):
             resultsdownload(video, video.scale, crosswidth)
 
-        print('\nProcédure terminée (', round(t.time()-Ti, 1), 's)')
+        print('\nProcédure terminée')
 
     except Break:
         for i in range(3):
@@ -84,8 +83,8 @@ user = gp.getuser()
 paths = {}
 L_paths = ['bac', 'calib', 'video storage', 'data']
 paths[L_paths[0]] = '/Users/' + user + '/Desktop/bac'
-paths[L_paths[1]] = '/Users/' + user + '/Desktop/.calibdir'
-paths[L_paths[2]] = '/Users/' + user + '/Desktop/.temporary storage'
+paths[L_paths[1]] = '/Users/' + user + '/Desktop/.##calibdir##'
+paths[L_paths[2]] = '/Users/' + user + '/Desktop/.##temporary storage##'
 paths[L_paths[3]] = '/Users/' + user + '/Desktop/data'
 
 if os.name == 'nt':
@@ -191,14 +190,14 @@ def detScale (video, positions:dict, lenref):
 
 # Treatement tools
 
-def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist):
+def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist, pas):
     """
     Permet le traitement de l'ensemble des frames qui constituent la vidéo ainsi que le suivi des objets
     """
     global positions, definition
     frames = video.frames
     obj_compteur = 0
-    T = t.time()
+    Ti, T = t.time(), t.time()
 
     print('')
 
@@ -212,7 +211,7 @@ def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_
 
     for i in range(1, len(frames)):
         try :
-            treated = frametreatement(frames[i].array, tol, c, minsize)[0]
+            treated = frametreatement(frames[i].array, tol, c, minsize, pas)[0]
             positions[frames[i].id] = position(treated)
 
             for obj1 in positions[frames[i].id]:
@@ -249,10 +248,10 @@ def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_
             print('\rTraitement de ' + video.id + ' en cours :', str(progression), '%', end='')
             T = t.time()
 
-    print('\nTraitement de ' + video.id + ' -------------------------------------------- Finit')
+    print('\nTraitement de ' + video.id + ' ' + '-'*(9+len(video.id)) + ' OK' + '(' + str(round(t.time()-Ti)) + 's)')
     return None
 
-def frametreatement(frame, tol, c, minsize):
+def frametreatement(frame, tol, c, minsize, pas):
     """
     Permet le traitement de la frame passée en argument.
     frame : tableau uint8.
@@ -262,12 +261,12 @@ def frametreatement(frame, tol, c, minsize):
     while not isOK and definition <= 15:
         try:
             NB_im = prep(frame, definition, tol, c)
-            extremas = objects_identification(NB_im, definition)
+            extremas = objects_identification(NB_im, definition, pas)
             isOK = True
         except RecursionError:
             print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
             definition += 1
-            frametreatement(frame, tol, c, minsize)
+            frametreatement(frame, tol, c, minsize, pas)
 
     if isOK:
         extremas = rectifyer(extremas, minsize)
@@ -279,26 +278,25 @@ def frametreatement(frame, tol, c, minsize):
 
 # Frame manipulation tools
 
-def objects_identification(image, definition) -> dict:
+def objects_identification(image, definition, pas) -> dict:
     """
     Regroupe tout les objets de l'image dans un dictionnaire.
     image : image en N&B sous la forme d'un array de 0 et 255.
     """
-    global pas
     h = len(image)
     w = len(image[0])
     objects = {}
     extremas = {}
     n = 0
-    for j in range(int(h)):
-        for i in range(int(w)):
-            if image[j][i] == 255:
+    for j in range(int(h/pas)):
+        for i in range(int(w/pas)):
+            if image[j*pas][i*pas] == 255:
                 element_in = False
                 for obj in objects:
-                    if [i, j] in objects[obj]:
+                    if [i*pas, j*pas] in objects[obj]:
                         element_in = True
                 if not element_in:
-                    infos = discovery(image, [i, j])
+                    infos = discovery(image, [i*pas, j*pas])
                     objects[n] = infos[0]
                     extremas[n] = infos[1]
                     n += 1
@@ -322,7 +320,7 @@ def visiter(image, depart: list, object: list, extr: list) -> list:
     depart : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
     objet : liste contenant tout les pixels appartenants au même objet.
     """
-    if depart not in object:
+    if depart not in object:            # Le but est d'ici ne récupérer uniquement un encadrements de notre repère
         object.append(depart)
         if depart[0] < extr[0]:
             extr[0] = depart[0]
@@ -415,7 +413,7 @@ def prep(image, definition, tol, c):
         simplified_im.append(line)
     return simplified_im
 
-def Pas (extr:dict):
+def Pas (extr:dict, defintion):
     '''
     extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
         dictionaire où chaque clef correspond à un objet,
@@ -429,15 +427,15 @@ def Pas (extr:dict):
             min = extr[el][2]-extr[el][0]
         if extr[el][3]-extr[el][1] < min :
             min = extr[el][3]-extr[el][1]
-    return int(min)
+    return int(min/(2*defintion))
 
 # Calibration fcts
 
-def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref):
+def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref, pas):
     """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le bon réglage de l'ensmeble des paramètres.
     """
-    global positions, definition, pas
+    global positions, definition
     definition = definition2
     positions = {}
 
@@ -445,7 +443,7 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
     first = copy_im(video.frames[0].array)
 
     try :
-        detected = frametreatement(first, tol, c, minsize)
+        detected = frametreatement(first, tol, c, minsize, pas)
     except SettingError :
         print('\nIl y a un problème, veuillez vérifiez les réglages')
         verif_settings()
@@ -454,11 +452,11 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
         return None
 
     extremas = detected[0]
-    pas = Pas(extremas)
+    pas = Pas(extremas, definition)
     positions[video.frames[0].id] = position(rectifyer(detected[0], minsize))
     scale = detScale(video, positions[video.frames[0].id], lenref)
 
-    print('\nTraitement -------------------------------------------------------- OK')
+    print('\rTraitement -------------------------------------------------------- OK')
 
     images_names = []
     create_dir('calib')
@@ -476,16 +474,19 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
     fill_calibdir(treated_NB, 'treated_NB')
 
     ImWithCross = cross_color(color_im, positions[video.frames[0].id], crosswidth)
-    ImWithScale = Add_scale(ImWithCross, scale,crosswidth, bordure_size)
+    ImWithScale = Add_scale(ImWithCross, scale,crosswidth, bordure_size, c)
+    # ImWithPas = Add_pas(ImWithScale, pas)
     treated_color = np.uint8(ImWithScale)
+    # treated_color = np.uint8(ImWithPas)
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
     print("\nAffichage du résultat, veuillez checker sa correction\n(une fenêtre a dû s'ouvrir)")
     calib_show(images_names)
-    print('Validation du résultat -------------------------------------------- OK')
+    print('\rValidation du résultat -------------------------------------------- OK')
 
     sht.rmtree(paths['calib'])
+
     return None
 
 def copy_im (image):
@@ -543,13 +544,22 @@ def cross_color(image, positions, crosswidth):
                 image[j % L][n % l] = [0, 255, 0]
     return np.uint8(image)
 
-def Add_scale(image, scale, crosswidth, bordure_size):
+def Add_pas (image, pas):
+    for j in range (len(image)):
+        for i in range (len(image[j])):
+            if j % pas == 0 and i % pas == 0 :
+                image[j][i] = [0, 0, 0]
+    return image
+
+def Add_scale(image, scale, crosswidth, bordure_size, c):
     L = len(image)
     l = len(image[0])
+    color = [0, 0, 0]
+    color[c] = 255
     for i in range(int(1/scale)):
         for j in range(crosswidth):
-            image[(j+L-bordure_size) % L][(bordure_size+i) % l] = [255, 255, 255]
-    cv2.putText(image, '1cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255))
+            image[(j+L-bordure_size+10) % L][(bordure_size+i) % l] = color
+    cv2.putText(image, '1cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, color)
     return image
 
 
@@ -557,6 +567,7 @@ def Add_scale(image, scale, crosswidth, bordure_size):
 # fonctions permettant l'IHM
 
 def videoinput():
+    create_dir('bac')
     isempty = True
     print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.')
     while isempty:
@@ -569,7 +580,6 @@ def videoinput():
         paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
         create_dir('video storage')
         sht.copy2(paths['vidéoinput'], paths['video storage'])
-        # + '/' + video + '.mp4'
         return video
     elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
         print('Veuillez fournir une vidéo au format mp4')
@@ -585,9 +595,8 @@ def cinput():
     while True :
         c = input('\nCouleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
         if c in ['1', '2', '3']:
-            if c in ['1', '2', '3']:
-                c = int(c)-1
-                return c
+            c = int(c)-1
+            return c
         elif c in stoplist :
             raise Break
         else:
@@ -731,10 +740,12 @@ def framesdownload(video, crosswidth):
     return None
 
 def create_video(video, crosswidth):
+    global pas
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate, video.Framessize)
     print('\nSauvegarde de la vidéo en cours ...')
     for frame in video.frames:
         img = np.uint8(cross_color(frame.array, frame.identified_objects, crosswidth))
+        # img = Add_pas(img, pas)
         # img = frame.array
         out.write(img)
     print('Sauvegarde de la vidéo -------------------------------------------- OK')
