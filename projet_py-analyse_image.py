@@ -205,6 +205,7 @@ def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_
 
     # Initialisation
     for obj in positions[frames[0].id]:
+
         video.frames[0].identified_objects['obj-' + str(obj_compteur)] = positions[frames[0].id][obj]
         obj_compteur += 1
 
@@ -247,12 +248,16 @@ def videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_
 
         if t.time() - T > 0.5 :
             progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
-            print('\rTraitement de ' + video.id + ' en cours :', str(progression), '%', end='')
+            print('\rTraitement de ' + video.id + ' en cours :', str(progression), '% (temps restant :' + waiting_time(i, len(frames), Ti) + ')', end='')
             T = t.time()
 
     print('\rCréation de la vidéo :', 100, ' %', end='')
     print('\nTraitement de ' + video.id + ' ' + '-'*(9+len(video.id)) + ' OK' + '\n(' + str(round(t.time()-Ti)) + 's)')
     return None
+
+def waiting_time(i, N, Ti):
+    d = t.time()-Ti
+    return str(round((N-i)*(d/i), 1))
 
 def frametreatement(frame:np.array, tol:float, c:int, minsize:int, pas:int) -> tuple:
     """
@@ -451,7 +456,7 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
         detected = frametreatement(first, tol, c, minsize, pas)
     except SettingError :
         print('\nIl y a un problème, veuillez vérifiez les réglages')
-        verif_settings()
+        verif_settings(video, tol, c, video.mode)
         definition = 1
         calibration()
         return None
@@ -470,7 +475,7 @@ def calibration(video, definition2, tol, c, minsize, crosswidth, rectanglewidth,
     images_names.append('color_im')
     fill_calibdir(color_im, 'color_im')
 
-    NB_im = cv2.resize(np.uint8(detected[1]), video.Framessize)
+    NB_im = cv2.resize(detected[1], video.Framessize)
     images_names.append('NB_im')
     fill_calibdir(NB_im, 'NB_im')
 
@@ -505,7 +510,7 @@ def copy_im (image:np.array) -> np.array:
         newIm.append(newLine)
     return np.uint8(newIm)
 
-def fill_calibdir(image:np.array, image_name:str) -> Noone:
+def fill_calibdir(image:np.array, image_name:str) -> None:
     cv2.imwrite(paths['calib'] + '/' + image_name + '.jpg', image)
     return None
 
@@ -556,7 +561,7 @@ def Add_pas (image:np.array, pas:int) -> np.array:
                 image[j][i] = [0, 0, 0]
     return np.uint8(image)
 
-def Add_scale(imagenp.array, scale:float, crosswidth:int, bordure_size:int, c:int) -> np.array:
+def Add_scale(image:np.array, scale:float, crosswidth:int, bordure_size:int, c:int) -> np.array:
     L = len(image)
     l = len(image[0])
     color = [0, 0, 0]
