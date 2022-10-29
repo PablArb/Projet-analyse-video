@@ -3,36 +3,34 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.fft import rfft
 
-
 def str2float(N:str):
     if N == '' or N == '\n':
         return 0.0
     else :
         return float(N)
 
-video = 'pendule'
+video = 'test Z'
 dos = open('/Users/pabloarb/Desktop/data/' + video + '/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
+
 T = []
-X0 = []
-Y0 = []
-X1 = []
-Y1 = []
+n = int((len(lines[0].split(','))-2)/2)
+
+for i in range(n):
+    exec(f'X{i}, Y{i} = [], []')
 
 for line in lines[1:] :
 
     line = line.split(',')
     time = str2float(line[1])
 
-    x0, y0 = str2float(line[2]), str2float(line[3])
-    x1, y1 = str2float(line[4]), str2float(line[5])
-
     T.append(time)
-    X0.append(x0)
-    Y0.append(y0)
-    X1.append(x1)
-    Y1.append(y1)
+
+    for i in range(n):
+        exec(f'x{i}, y{i} = str2float(line[(i+1)*2]), str2float(line[(i+1)*2+1])')
+        exec(f'X{i}.append(x{i})')
+        exec(f'Y{i}.append(y{i})')
 
 def deriv (X):
     global T
@@ -88,12 +86,10 @@ plt.legend()
 plt.show()
 
 
-
-
 ## data analyse
 
 #on def un seuil de pente pour le lissage
-fc = 7
+fc = 3
 
 Xrel = [ X0[i]-X1[i] for i in range( len(X0) ) ]
 Yrel = [ Y0[i]-Y1[i] for i in range( len(Y0) ) ]
@@ -135,6 +131,16 @@ plt.plot(Xlisse[10:-10], dXlisse[10:-10], label='phase lissée', color='orange')
 plt.xlabel('X')
 plt.ylabel('dX/dt')
 plt.grid()
+plt.legend()
+
+plt.show()
+
+## special
+
+plt.figure("demonstration")
+plt.clf()
+ax = plt.axes(projection='3d')
+ax.plot(T, X0, Y0, label='obj0')
 plt.legend()
 
 plt.show()
