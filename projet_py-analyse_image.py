@@ -44,8 +44,8 @@ def main():
 
         # On définit la taille des indicateurs visuels / taille de l'image
         minsize = int(video.Framessize[1] / 300)
-        maxdist = int(video.Framessize[1] / (0.5 * video.Framerate) )
-        bordure_size = int(video.Framessize[1] / 60)
+        maxdist = int(video.Framessize[1] / (0.5 * video.Framerate)) * 2
+        bordure_size = int(video.Framessize[1] / 15)
         crosswidth = int(video.Framessize[1] / 500)
         rectanglewidth = int(video.Framessize[1] / 1250)
 
@@ -56,7 +56,7 @@ def main():
             if yn('Le traitement est-il bon ?'):
                 isOK = True
             else:
-                tol, c = verif_settings(video, tol, c, video.mode)
+                tol, c = verif_settings(video, tol, c, video.mode, video.Framessize)
                 definition = 1
 
         # Une fois que tout est bon on traite la vidéo
@@ -77,12 +77,9 @@ def main():
     return None
 
 def cleaner():
-
     sys.setrecursionlimit(1000)
-
     for i in range(3):
         delete_dir(L_paths[i])
-
     return None
 
 # path gestion
@@ -247,8 +244,9 @@ def videotreatement(video:Video, tol:float, c:int, minsize:int, crosswidth:int,r
 
     # Les objets apparaissant aux bordures de l'écran ne seront pas considérés comme des erreurs
     # mais comme des nouveaux objetsentrant dans le chant de la caméra.
-    bande1 = [i for i in range(0, bordure_size + 1)]
-    bande2 = [i for i in range(video.Framessize[1] - bordure_size, video.Framessize[1] + 1)]
+    BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
+    BandeBas = [i for i in range(video.Framessize[1] - bordure_size, video.Framessize[1] + 1)]
+    BandeDroite = [i for i in range(video.Framessize[0] - bordure_size, video.Framessize[0] + 1)]
     print('')
 
     # Initialisation
@@ -283,11 +281,11 @@ def videotreatement(video:Video, tol:float, c:int, minsize:int, crosswidth:int,r
                         identified = True
                         video.frames[i].identified_objects[min_key] = positions[obj1]
 
-                if not identified:
-                    if x1 in bande1 or x1 in bande2:
+                if not identified :
+                    if x1 in BandeGaucheHaut or x1 in BandeDroite:
                         video.frames[i].identified_objects['obj-' + str(obj_compteur)] = [x1, y1]
                         obj_compteur += 1
-                    if y1 in bande1 or y1 in bande2:
+                    if y1 in BandeGaucheHaut or y1 in BandeBas:
                         video.frames[i].identified_objects['obj-' + str(obj_compteur)] = [x1, y1]
                         obj_compteur += 1
 
@@ -329,9 +327,7 @@ def frametreatement(frame:np.array, tol:float, c:int, minsize:int, pas:int) -> t
     while not isOK and definition <= 15:
         try:
             NB_im = prep(frame, definition, tol, c)
-            res = objects_identification(NB_im, definition, pas)
-            extremas = res[0]
-            borders = res[1]
+            extremas, borders = objects_identification(NB_im, definition, pas)
             isOK = True
         except RecursionError:
             print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
@@ -371,9 +367,7 @@ def objects_identification(image:np.array, definition:int, pas:int) -> dict:
                         element_in = True
 
                 if not element_in :
-                    res = discovery(image, [i*pas, j*pas])
-                    extremas[n] = res[0]
-                    borders[n] = res[1]
+                    extremas[n], borders[n] = discovery(image, [i*pas, j*pas])
                     n += 1
 
     for obj in extremas:
@@ -520,7 +514,7 @@ def prep(image:np.array, definition:int, tol:float, c:int) -> np.array:
         simplified_im.append(line)
     return np.uint8(simplified_im)
 
-def Pas (extr:dict, defintion:int):
+def Pas (extr:dict, definition:int):
     '''
     extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
         dictionaire où chaque clef correspond à un objet,
@@ -534,7 +528,7 @@ def Pas (extr:dict, defintion:int):
             min = extr[el][2]-extr[el][0]
         if extr[el][3]-extr[el][1] < min :
             min = extr[el][3]-extr[el][1]
-    return int(min/(defintion*2))
+    return int(min/(definition* 3)) + 1 # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
 
 
 
@@ -555,13 +549,13 @@ def calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size
         detected = frametreatement(first, tol, c, minsize, pas)
     except SettingError :
         print('\nIl y a un problème, veuillez vérifiez les réglages')
-        verif_settings(video, tol, c, video.mode)
+        verif_settings(video, tol, c, video.mode, video.Framessize)
         definition, pas = 1, 1
         calibration()
         return None
 
     extremas = detected[0]
-    # pas = Pas(extremas, definition)
+    pas = Pas(extremas, definition)
     positions = position( rectifyer(detected[0], minsize) )
     scale = detScale(video, positions, lenref)
 
@@ -585,7 +579,7 @@ def calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size
 
     treated_color = draw_cross_color(color_im, positions, crosswidth)
     treated_color = Add_scale(treated_color, scale,crosswidth, bordure_size, c)
-    # treated_color = Add_pas(treated_color, pas)
+    treated_color = Add_pas(treated_color, pas)
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
@@ -621,9 +615,11 @@ def fill_calibdir(image:np.array, image_name:str):
 
 def calib_show(images_names: list):
     for i in range(len(images_names)):
-        cv2.imshow('Config Window - ' + images_names[i], cv2.imread(paths['calib'] + '/' + images_names[i] + '.jpg'))
+        name = 'Config Window - ' + images_names[i]
+        cv2.imshow(name, cv2.imread(paths['calib'] + '/' + images_names[i] + '.jpg'))
         cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        cv2.destroyWindow(name)
+        cv2.waitKey(1)
     return None
 
 
@@ -740,7 +736,7 @@ def refinput() -> float:
         except ValueError :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-def verif_settings (video, tol, c, mode):
+def verif_settings (video, tol, c, mode, Framessize):
     while True :
         print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode-1])
         print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
@@ -750,7 +746,7 @@ def verif_settings (video, tol, c, mode):
             if which == '0':
                 return tol, c
             elif which == '1':
-                get_mode(video)[1]
+                get_mode(video, Framessize)[1]
                 return tol, c
             elif which == '2':
                 c = cinput()
@@ -871,6 +867,7 @@ def create_video(video, crosswidth):
     print('\nSauvegarde de la vidéo en cours ...', end='')
     for frame in video.frames:
         img = draw_cross_color(frame.array, frame.identified_objects, crosswidth)
+        # img = Add_pas(img, pas)
         out.write(img)
     print('\rSauvegarde de la vidéo -------------------------------------------- OK')
     return None
