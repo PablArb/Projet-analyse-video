@@ -3,13 +3,14 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from numpy.fft import rfft
 
+
 def str2float(N:str):
     if N == '' or N == '\n':
-        return 0.0
+        return 0
     else :
         return float(N)
 
-video = 'test Z'
+video = 'test plusieurs repères'
 dos = open('/Users/pabloarb/Desktop/data/' + video + '/csv/positions objets.csv', 'r')
 
 lines = dos.readlines()
@@ -31,6 +32,7 @@ for line in lines[1:] :
         exec(f'x{i}, y{i} = str2float(line[(i+1)*2]), str2float(line[(i+1)*2+1])')
         exec(f'X{i}.append(x{i})')
         exec(f'Y{i}.append(y{i})')
+
 
 def deriv (X):
     global T
@@ -72,16 +74,24 @@ def lissage (X, fc):
 
 ## demo
 
-Xrel = [ X0[i]-X1[i] for i in range( len(X0) ) ]
-Yrel = [ Y0[i]-Y1[i] for i in range( len(Y0) ) ]
-zero = [0]*len(Xrel)
-
+zero = [0]*len(X0)
 plt.figure("demonstration")
 plt.clf()
 ax = plt.axes(projection='3d')
 ax.plot(T, zero, zero, label='obj0')
-ax.plot(T, Xrel, Yrel, label='obj1')
-plt.legend()
+
+for k in range (1,n):
+    Xrel, Yrel = [], []
+    for i in range(len(X0)):
+        exec(f'if X{k}[i] != 0 : Xrel.append(X0[i]-X{k}[i])\nelse : Xrel.append(0)')
+        exec(f'if Y{k}[i] != 0 : Yrel.append(Y0[i]-Y{k}[i])\nelse : Yrel.append(0)')
+    exec(f"ax.plot(T, Xrel, Yrel, label='obj{k}')")
+
+ax.set_xlabel('temps (en s)')
+ax.set_ylabel('X')
+ax.set_zlabel('Y')
+ax.legend()
+
 
 plt.show()
 
@@ -104,7 +114,7 @@ plt.figure("relatif")
 plt.clf()
 
 plt.subplot(2, 2, 1)
-plt.plot(T, Xrel,   label='X',       color='blue')
+plt.plot(T, Xrel, label='X', color='blue')
 plt.plot(T[10:-10], Xlisse[10:-10], label='X lissé', color='orange')
 plt.xlabel('Temps(en s)')
 plt.ylabel('X(en cm) ')
@@ -112,7 +122,7 @@ plt.grid()
 plt.legend()
 
 plt.subplot(2, 2, 2)
-plt.plot(T, dX,      label='dX/dt',       color='blue')
+plt.plot(T, dX, label='dX/dt', color='blue')
 plt.plot(T[10:-10], dXlisse[10:-10], label='dX/dt lissé', color='orange')
 plt.xlabel('Temps(en s)')
 plt.ylabel('X(en cm) ')
