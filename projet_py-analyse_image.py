@@ -20,7 +20,7 @@ stoplist = ['stop', 'quit', 'abandon', 'kill']
 def main():
     """
     """
-    global video, definition, pas # pour pouvoir accéder à ces données une fois le  traitement finit.
+    global video, definition, pas, tol, c, lenref, obj_compteur # pour pouvoir accéder à ces données une fois le  traitement finit.
 
     # Réglages de rapidité/précision/sensibilité par défault.
     reclimit = 100
@@ -52,11 +52,11 @@ def main():
         # On traite la première frame  pour vérifier que les reglages sont bons
         isOK = False
         while not isOK:
-            calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref)
+            calibration(video, minsize, crosswidth, rectanglewidth, bordure_size)
             if yn('Le traitement est-il bon ?'):
                 isOK = True
             else:
-                tol, c = verif_settings(video, tol, c, video.mode, video.Framessize)
+                tol, c, lenref = verif_settings(video, tol, c, video.mode, video.Framessize, lenref)
                 definition, pas = 1, 1
                 video.frames[0].identified_objects = []
 
@@ -166,7 +166,8 @@ class Object:
         self.status = 'in'
         self.positions = {}
         self.LastKnownPos = None
-
+    def __del__(self):
+        pass
 
 def get_framerate(video:Video) -> float:
     """
@@ -280,6 +281,7 @@ def videotreatement(video:Video, tol:float, c:int, minsize:int, crosswidth:int, 
     return None
 
 def object_tracker(i, positions, obj_compteur, maxdist, bordure_size):
+    frames = video.frames
 
     for obj1 in positions :
 
@@ -399,8 +401,12 @@ def objects_identification(image:np.array, definition:int, pas:int) -> dict:
                     n += 1
 
     for obj in extremas:
-        xmin, ymin, xmax, ymax = extremas[obj][0], extremas[obj][1], extremas[obj][2], extremas[obj][3]
+        xmin, ymin = extremas[obj][0], extremas[obj][1]
+        xmax, ymax = extremas[obj][2], extremas[obj][3]
         extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
+        for i in range (len(borders[obj])):
+            x, y = borders[obj][i][0], borders[obj][i][1]
+            borders[obj][i] = [x*definition, y*definition]
 
     return extremas, borders
 
@@ -551,6 +557,8 @@ def Pas (extr:dict, definition:int):
         extremales entourant l'objet.
     '''
     L = list(extr.keys())
+    if len(L) == 0:
+        raise SettingError
     min = extr[L[0]][2]-extr[L[0]][0]
     for el in extr :
         if extr[el][2]-extr[el][0] < min :
@@ -564,29 +572,30 @@ def Pas (extr:dict, definition:int):
 
 # Calibration fcts
 
-def calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref):
+def calibration(video, minsize, crosswidth, rectanglewidth, bordure_size):
     """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le
         bon réglage de l'ensmeble des paramètres.
     """
-    global obj_compteur, definition, pas
+    global obj_compteur, definition, pas, tol, c, lenref
 
     print('\nTraitement en cours ...', end='')
     first = copy_im(video.frames[0].array)
 
     try :
         detected = frametreatement(first, tol, c, minsize, pas)
+        extremas = detected[0]
+        pas = Pas(extremas, definition)
+        positions = position( rectifyer(detected[0], minsize) )
+        scale = detScale(video, positions, lenref)
     except SettingError :
         print('\nIl y a un problème, veuillez vérifiez les réglages')
-        tol, c = verif_settings(video, tol, c, video.mode, video.Framessize)
+        tol, c, lenref = verif_settings(video, tol, c, video.mode, video.Framessize, lenref)
         definition, pas = 1, 1
-        calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, lenref)
+        calibration(video, minsize, crosswidth, rectanglewidth, bordure_size)
         return None
 
-    extremas = detected[0]
-    pas = Pas(extremas, definition)
-    positions = position( rectifyer(detected[0], minsize) )
-    scale = detScale(video, positions, lenref)
+
 
     obj_compteur = 0
     for obj in positions :
@@ -600,7 +609,7 @@ def calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size
     images_names = []
     create_dir('calib')
 
-    color_im = first
+    color_im = copy_im(first)
     images_names.append('color_im')
     fill_calibdir(color_im, 'color_im')
 
@@ -613,8 +622,8 @@ def calibration(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size
     images_names.append('treated_NB')
     fill_calibdir(treated_NB, 'treated_NB')
 
-    treated_color = Add_pas(color_im, pas)
-    treated_color = draw_cross_color(treated_color, video.frames[0], crosswidth)
+    # treated_color = Add_pas(color_im, pas)
+    treated_color = draw_cross_color(color_im, video.frames[0], crosswidth)
     treated_color = Add_scale(treated_color, scale,crosswidth, bordure_size, c)
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
@@ -692,7 +701,7 @@ def draw_cross_color(image:np.array, frame:Frame, crosswidth:int) -> np.array:
                     image[n][i] = [0, 255, 0]
         for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
             for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
-                if 0<=n<l and 0<=j<L :
+                if 0 <= n < l and 0 <= j < L :
                     image[j][n] = [0, 255, 0]
     return np.uint8(image)
 
@@ -716,15 +725,18 @@ def Add_scale(image:np.array, scale:float, crosswidth:int, bordure_size:int, c:i
 
 def visu_detection (image:np.array, borders:list) -> np.array:
     global definition
-    for j in range(len(image)) :
-        for i in range(len(image[j])):
+    L = len(image)
+    l = len(image[0])
+    for j in range(L) :
+        for i in range(l):
             if image[j][i] == 255:
                 image[j][i] = 100
     for obj in borders:
         for pixel in borders[obj] :
             for i in range (-1, 2):
                 for j in range (-1, 2):
-                    image[pixel[1]*definition+j][pixel[0]*definition+i] = 255
+                    if 0 <= pixel[1] < L and 0 <= pixel[0] < l :
+                        image[pixel[1]+j][pixel[0]+i] = 255
     return np.uint8(image)
 
 
@@ -778,13 +790,14 @@ def refinput() -> float:
         except ValueError :
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-def verif_settings (video, tol, c, mode, Framessize):
+def verif_settings (video, tol, c, mode, Framessize, lenref):
     while True :
-        print('\n1 orientation de la vidéo :', ['landscape', 'portrait'][mode-1])
-        print('2 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
-        print('3 tolérance : ', tol)
-        which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3) ? ')
-        if which in ['0', '1', '2', '3', 'pres']:
+        print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][c])
+        print('2 orientation de la vidéo :', ['landscape', 'portrait'][mode-1])
+        print('3 longueur de référence : ', lenref)
+        print('4 tolérance : ', tol)
+        which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3, 4) ? ')
+        if which in ['0', '1', '2', '3', '4', 'pres']:
             if which == '0':
                 pass
             elif which == '1':
@@ -792,10 +805,12 @@ def verif_settings (video, tol, c, mode, Framessize):
             elif which == '2':
                 c = cinput()
             elif which == '3':
+                lenref = float(input('Longueur entre les deux premiers repères(cm) : '))
+            elif which == '4':
                 tol += float(input('\nTolérance actuelle : ' + str(tol) + ', implémenter de : '))
             elif which == 'pres':
                 sys.setrecursionlimit(int(input('setrecursionlimit : ')))
-            return tol, c
+            return tol, c, lenref
         elif which in stoplist :
             raise Break
         else:
