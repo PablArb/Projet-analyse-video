@@ -58,6 +58,7 @@ def main():
             else:
                 tol, c = verif_settings(video, tol, c, video.mode, video.Framessize)
                 definition, pas = 1, 1
+                video.frames[0].identified_objects = []
 
         # Une fois que tout est bon on traite la vidéo
         videotreatement(video, tol, c, minsize, crosswidth, rectanglewidth, bordure_size, maxdist, pas)
