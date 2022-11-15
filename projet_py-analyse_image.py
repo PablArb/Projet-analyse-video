@@ -20,6 +20,7 @@ class Settings:
         self.tol = 0.4              # est réglable lors de l'execution
         self.definition = 1         # est automatiquement réglé par le programme
         self.step = 1               # est automatiquement réglé par le programme
+        self.maxdef = 15            # abaissement de la definition maximal
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.minsize = int(video.Framessize[1] / 50)
@@ -454,9 +455,8 @@ def frametreatement(frame:np.array, c:int) -> tuple:
     Permet le traitement de la frame passée en argument.
     """
     global settings
-    definition = settings.definition
     isOK = False
-    while not isOK and definition <= 15:
+    while not isOK and settings.definition <= settings.maxdef :
         try:
             NB_im = prep(frame, settings.definition, settings.tol, c)
             extremas, borders = objects_identification(NB_im, settings.definition, settings.step)
