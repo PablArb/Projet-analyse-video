@@ -16,7 +16,7 @@ class Break (Exception):
 
 class Settings:
     def __init__(self, video):
-        sys.setrecursionlimit(200)  # permet de gérer la precision du système
+        sys.setrecursionlimit(100)  # permet de gérer la precision du système
         self.tol = 0.4              # est réglable lors de l'execution
         self.definition = 1         # est automatiquement réglé par le programme
         self.step = 1               # est automatiquement réglé par le programme
@@ -33,9 +33,10 @@ class SettingError (Exception):
 
 
 class Video:
-    def __init__(self, id):
 
-        self.id = id
+    def __init__(self):
+
+        self.id = None
 
         self.Frames = None
         self.Framerate = None
@@ -48,6 +49,9 @@ class Video:
         self.scale = None
         self.markercount = None
 
+        create_dir('bac')
+        self.videoinput()
+        delete_dir('bac')
 
         self.get_frames()
         self.get_framerate()
@@ -57,13 +61,36 @@ class Video:
         self.orientation_input()
         self.ref_input()
 
+    def videoinput(self) :
+        isempty = True
+        print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='')
+        while isempty:
+            if len(os.listdir(paths['bac'])) != 0:
+                isempty = False
+            t.sleep(0.5)
+        bac = os.listdir(paths['bac'])
+        if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
+            video = bac[0].split('.')[0]
+            paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
+            create_dir('video storage')
+            sht.copy2(paths['vidéoinput'], paths['video storage'])
+            self.id = str(video)
+        elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
+            print('Veuillez fournir une vidéo au format mp4')
+            delete_dir('bac')
+            videoinput()
+        elif len(bac) > 1:
+            print("Veuillez ne placer qu'un document dans le bac")
+            delete_dir('bac')
+            videoinput()
+
     def get_frames(self):
         """
         Renvoie un dictionaire où les clés sont les numéros de frames
         et les valeurs sont les images (tableaux de type uint8).
         """
         frames = []
-        cam = cv2.VideoCapture(paths['vidéoinput'])
+        cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id + '.mp4')
         frame_number = 0
         print('\rRécupération de la vidéo en cours ...', end='')
         while True:
@@ -84,7 +111,7 @@ class Video:
         Renvoie le nombre de frames par secondes de la vidéo passée en entrée du
             script.
         """
-        media_info = mi.MediaInfo.parse(paths['vidéoinput'])
+        media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id + '.mp4')
         tracks = media_info.tracks
         for i in tracks:
             if i.track_type == 'Video':
@@ -96,7 +123,7 @@ class Video:
         Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de
         la video.
         """
-        media_info = mi.MediaInfo.parse(paths['vidéoinput'])
+        media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id + '.mp4')
         video_tracks = media_info.video_tracks[0]
         Framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
         self.Framessize = Framessize
@@ -153,6 +180,7 @@ class Frame:
     def __init__(self, id, array):
         self.id = id
         self.array = array
+        self.AreasOfInterest = []
         self.identified_objects = []
 
 class Object:
@@ -174,9 +202,9 @@ def main():
     try :
 
         # On récupère la vidéo et ses caractéristiques
-        create_dir('bac')
-        video = Video(videoinput())
-        delete_dir('bac')
+        # create_dir('bac')
+        video = Video()
+        # delete_dir('bac')
 
         # On definit les réglages par défault
         settings = Settings(video)
@@ -330,8 +358,6 @@ def videotreatement() -> None:
     minsize, maxdist = settings.minsize, settings.maxdist
     bordure_size = settings.bordure_size
 
-
-
     Ti, T = t.time(), t.time()
     print()
 
@@ -351,9 +377,10 @@ def videotreatement() -> None:
             progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
             print('\rTraitement en cours :', str(progression), '% (' + waiting_time(i, len(frames), Ti) + ')', end='')
             T = t.time()
-    t.sleep(1)
-    print('\rTraitement de ' + video.id + ' ' + '-'*(67-(14+len(video.id))) + ' OK')
-    t.sleep(1)
+
+    t.sleep(0.1)
+    print('\rTraitement de ' + video.id + ' ' + '-'*( 67-14-len(video.id) ) + ' OK')
+
     return None
 
 def object_tracker(video, i, positions, maxdist, bordure_size):
@@ -770,29 +797,6 @@ def delete_dir(dir:str) -> None:
 
 
 # fonctions permettant l'IHM
-
-def videoinput() :
-    isempty = True
-    print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='')
-    while isempty:
-        if len(os.listdir(paths['bac'])) != 0:
-            isempty = False
-        t.sleep(0.5)
-    bac = os.listdir(paths['bac'])
-    if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
-        video = bac[0].split('.')[0]
-        paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
-        create_dir('video storage')
-        sht.copy2(paths['vidéoinput'], paths['video storage'])
-        return  video
-    elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
-        print('Veuillez fournir une vidéo au format mp4')
-        delete_dir('bac')
-        videoinput()
-    elif len(bac) > 1:
-        print("Veuillez ne placer qu'un document dans le bac")
-        delete_dir('bac')
-        videoinput()
 
 def verif_settings ():
     global video, settings
