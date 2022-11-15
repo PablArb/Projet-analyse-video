@@ -16,7 +16,7 @@ class Break (Exception):
 
 class Settings:
     def __init__(self, video):
-        sys.setrecursionlimit(100)  # permet de gérer la precision du système
+        sys.setrecursionlimit(200)  # permet de gérer la precision du système
         self.tol = 0.4              # est réglable lors de l'execution
         self.definition = 1         # est automatiquement réglé par le programme
         self.step = 1               # est automatiquement réglé par le programme
@@ -196,8 +196,8 @@ def main():
         videotreatement()
 
         # On télécharge les données
-        reboot(video)
-        datadownload(video)
+        reboot()
+        datadownload()
 
         if yn("Voulez vous télécharger les résultats de l'étude ?"):
             resultsdownload(video, settings.crosswidth)
@@ -709,7 +709,7 @@ def visu_detection (image:np.array, borders:list) -> np.array:
         for pixel in borders[obj] :
             for i in range (-1, 2):
                 for j in range (-1, 2):
-                    if 0 <= pixel[1] < L and 0 <= pixel[0] < l :
+                    if 0 <= pixel[1] < L-j and 0 <= pixel[0] < l-i :
                         image[pixel[1]+j][pixel[0]+i] = 255
     return np.uint8(image)
 
@@ -799,8 +799,8 @@ def verif_settings ():
     while True :
         print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
         print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
-        print('3 longueur de référence : ', video.lenref)
-        print('4 tolérance : ', settings.tol, 'cm')
+        print('3 longueur de référence : ', video.lenref, 'cm')
+        print('4 tolérance : ', settings.tol)
         which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3, 4) ? ')
         if which in ['0', '1', '2', '3', '4', 'pres']:
             if which == '0':
@@ -808,12 +808,16 @@ def verif_settings ():
             elif which == '1':
                 video.markerscolor_input()
             elif which == '2':
+                print()
                 video.orientation_input()
             elif which == '3':
+                print()
                 video.ref_input()
             elif which == '4':
+                print()
                 settings.tol += float(input('\nTolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
             elif which == 'pres':
+                print()
                 sys.setrecursionlimit(int(input('setrecursionlimit : ')))
             return None
         elif which in stoplist :
@@ -865,7 +869,8 @@ def resultsdownload(video, crosswidth):
     # framesdownload(video, crosswidth)
     return None
 
-def reboot(video):
+def reboot():
+    global video
     add_subdata_dirs(video.id)
     delete_dir('csv')
     delete_dir('frames')
@@ -881,7 +886,8 @@ def videodownload(video):
     sht.rmtree(paths['video storage'])
     return None
 
-def datadownload(video):
+def datadownload():
+    global video
     create_dir('csv')
     print('\nSauvegarde de la data en cours ...', end='')
     nom_colonnes = ['frame', 'time']
