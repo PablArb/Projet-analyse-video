@@ -16,14 +16,14 @@ class Break (Exception):
 
 class Settings:
     def __init__(self, video):
-        sys.setrecursionlimit(100)  # permet de gérer la precision du système
-        self.tol = 0.4              # est réglable lors de l'execution
-        self.definition = 1         # est automatiquement réglé par le programme
-        self.step = 1               # est automatiquement réglé par le programme
-        self.maxdef = 15            # abaissement de la definition maximal
+        sys.setrecursionlimit(50) # permet de gérer la precision du système
+        self.tol = 0.4             # est réglable lors de l'execution
+        self.definition = 1        # est automatiquement réglé par le programme
+        self.step = 1              # est automatiquement réglé par le programme
+        self.maxdef = 15           # abaissement de la definition maximal
 
         # On définit la taille des indicateurs visuels / taille de l'image
-        self.minsize = int(video.Framessize[1] / 50)
+        self.minsize = int(video.Framessize[1] / 170)
         self.maxdist = int(video.Framessize[1] / (0.25 * video.Framerate))
         self.bordure_size = int(video.Framessize[1] /  video.Framerate * 2)
         self.crosswidth = int(video.Framessize[1] / 500)
@@ -39,32 +39,28 @@ class Video:
 
         self.id = None
 
-        self.Frames = None
-        self.Framerate = None
-        self.Framessize = None
+        create_dir('bac')
+        self.videoinput()
+        delete_dir('bac')
+
+        self.Frames = self.get_frames()
+        self.Framerate = self.get_framerate()
+        self.Framessize = self.get_framessize()
 
         self.markerscolor = None
         self.orientation = None
         self.lenref = None
 
-        self.scale = None
-        self.markercount = None
-
-        create_dir('bac')
-        self.videoinput()
-        delete_dir('bac')
-
-        self.get_frames()
-        self.get_framerate()
-        self.get_framessize()
-
         self.markerscolor_input()
         self.orientation_input()
         self.ref_input()
 
+        self.scale = None
+        self.markercount = None
+
     def videoinput(self) :
         isempty = True
-        print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='')
+        print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='\r')
         while isempty:
             if len(os.listdir(paths['bac'])) != 0:
                 isempty = False
@@ -79,11 +75,13 @@ class Video:
         elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
             print('Veuillez fournir une vidéo au format mp4')
             delete_dir('bac')
-            videoinput()
+            create_dir('bac')
+            self.videoinput()
         elif len(bac) > 1:
             print("Veuillez ne placer qu'un document dans le bac")
             delete_dir('bac')
-            videoinput()
+            create_dir('bac')
+            self.videoinput()
 
     def get_frames(self):
         """
@@ -93,7 +91,7 @@ class Video:
         frames = []
         cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id + '.mp4')
         frame_number = 0
-        print('\rRécupération de la vidéo en cours ...', end='')
+        print('Récupération de la vidéo en cours ...', end='\r')
         while True:
             ret, frame = cam.read()
             if ret:
@@ -103,9 +101,9 @@ class Video:
                 break
         cam.release()
         cv2.destroyAllWindows()
-        print('\rRécupération de la vidéo ------------------------------------------ OK')
+        print('Récupération de la vidéo ------------------------------------------ OK')
         t.sleep(0.1)
-        self.Frames = frames
+        return frames
 
     def get_framerate(self):
         """
@@ -116,8 +114,8 @@ class Video:
         tracks = media_info.tracks
         for i in tracks:
             if i.track_type == 'Video':
-                Framerate = float(i.frame_rate)
-        self.Framerate = Framerate
+                framerate = float(i.frame_rate)
+        return framerate
 
     def get_framessize(self) -> tuple:
         """
@@ -126,8 +124,8 @@ class Video:
         """
         media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id + '.mp4')
         video_tracks = media_info.video_tracks[0]
-        Framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
-        self.Framessize = Framessize
+        framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
+        return framessize
 
     def markerscolor_input(self):
         global stoplist
@@ -182,7 +180,7 @@ class Frame:
         self.id = id
         self.array = array
         self.AreasOfInterest = []
-        self.identified_objects = []
+        self.identifiedObjects = []
 
 class Object:
     def __init__(self, id):
@@ -203,9 +201,7 @@ def main():
     try :
 
         # On récupère la vidéo et ses caractéristiques
-        # create_dir('bac')
         video = Video()
-        # delete_dir('bac')
 
         # On definit les réglages par défault
         settings = Settings(video)
@@ -219,7 +215,7 @@ def main():
             else:
                 verif_settings()
                 settings.definition, settings.step = 1, 1
-                video.Frames[0].identified_objects = []
+                video.Frames[0].iidentifiedObjects = []
 
         # Une fois que tout est bon on traite la vidéo
         videotreatement()
@@ -256,7 +252,7 @@ def calibration():
     """
     global video, settings
 
-    print('\nTraitement en cours ...', end='')
+    print('\nTraitement en cours ...', end='\r')
     first = copy_im(video.Frames[0].array)
 
     try :
@@ -278,10 +274,10 @@ def calibration():
     for obj in positions :
         new_obj = Object('obj-'+str(video.markercount))
         new_obj.positions[video.Frames[0].id] = positions[obj]
-        video.Frames[0].identified_objects.append(new_obj)
+        video.Frames[0].identifiedObjects.append(new_obj)
         video.markercount += 1
 
-    print('\rTraitement -------------------------------------------------------- OK')
+    print('Traitement -------------------------------------------------------- OK')
 
     images_names = []
     create_dir('calib')
@@ -305,9 +301,9 @@ def calibration():
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print("\nAffichage du résultat (une fenêtre a dû s'ouvrir)", end='')
+    print("\nAffichage du résultat (une fenêtre a dû s'ouvrir)", end='\r')
     calib_show(images_names)
-    print('\rValidation du résultat -------------------------------------------- OK')
+    print('Validation du résultat -------------------------------------------- OK')
     t.sleep(0.1)
     sht.rmtree(paths['calib'])
 
@@ -376,11 +372,11 @@ def videotreatement() -> None:
 
         if t.time() - T >= 1 :
             progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
-            print('\rTraitement en cours :', str(progression), '% (' + waiting_time(i, len(frames), Ti) + ')', end='')
+            print('\rTraitement en cours :', str(progression), '% (' + waiting_time(i, len(frames), Ti) + ')', end='\r')
             T = t.time()
 
     t.sleep(0.1)
-    print('\rTraitement de ' + video.id + ' ' + '-'*( 67-14-len(video.id) ) + ' OK')
+    print('Traitement de ' + video.id + ' ' + '-'*( 67-15-len(video.id) ) + ' OK')
 
     return None
 
@@ -393,7 +389,7 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
         distances_list = {}
         x1, y1 = positions[obj1][0], positions[obj1][1]
 
-        for obj2 in video.Frames[i-1].identified_objects:
+        for obj2 in video.Frames[i-1].identifiedObjects:
             x2, y2 = obj2.positions[video.Frames[i-1].id][0], obj2.positions[video.Frames[i-1].id][1]
             d = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
             distances_list[obj2] = d
@@ -403,18 +399,18 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
             distance = distances_list[min_key]
             if distance < maxdist:
                 identified = True
-                video.Frames[i].identified_objects.append(min_key)
+                video.Frames[i].identifiedObjects.append(min_key)
                 min_key.positions[video.Frames[i].id] = positions[obj1]
 
         if not identified :
             if in_bordure(bordure_size, positions[obj1]):
-                new_obj = Object('obj-'+str(obj_compteur))
-                new_obj.positions[video.frames[i].id] = [x1, y1]
-                video.Frames[i].identified_objects.append(new_obj)
+                new_obj = Object('obj-'+str(video.markercount))
+                new_obj.positions[video.Frames[i].id] = [x1, y1]
+                video.Frames[i].identifiedObjects.append(new_obj)
                 video.markercount += 1
 
-        for obj in video.Frames[i-1].identified_objects:
-            if not obj in video.Frames[i].identified_objects:
+        for obj in video.Frames[i-1].identifiedObjects:
+            if not obj in video.Frames[i].identifiedObjects:
                 obj.status = 'out'
                 obj.LastKnownPos = obj.positions[frames[i-1].id]
 
@@ -462,7 +458,7 @@ def frametreatement(frame:np.array, c:int) -> tuple:
             extremas, borders = objects_identification(NB_im, settings.definition, settings.step)
             isOK = True
         except RecursionError:
-            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
+            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='\r')
             settings.definition += 1
     if isOK:
         return extremas, NB_im, borders
@@ -625,7 +621,7 @@ def rate_rgb(pixel:list, c:int) -> float:
         composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
-    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
+    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 0.1)
 
 def prep(image:np.array, definition:int, tol:float, c:int) -> np.array:
     """
@@ -693,7 +689,7 @@ def draw_rectangle_NB(image:np.array, extremas:dict, rectanglewidth:int) -> np.a
 def draw_cross_color(image:np.array, frame:Frame, crosswidth:int) -> np.array:
     L = len(image)
     l = len(image[0])
-    for obj in frame.identified_objects :
+    for obj in frame.identifiedObjects :
         x = int(obj.positions[frame.id][0])
         y = int(obj.positions[frame.id][1])
         for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
@@ -820,6 +816,7 @@ def verif_settings ():
             elif which == '4':
                 print()
                 settings.tol += float(input('\nTolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
+                settings.tol = round(settings.tol, 3)
             elif which == 'pres':
                 print()
                 sys.setrecursionlimit(int(input('setrecursionlimit : ')))
@@ -893,51 +890,47 @@ def videodownload(video):
 def datadownload():
     global video
     create_dir('csv')
-    print('\nSauvegarde de la data en cours ...', end='')
-    nom_colonnes = ['frame', 'time']
-    objects = []
-    frames = video.Frames
-    for frame in frames:
-        for obj in frame.identified_objects:
-            if obj not in objects:
-                objects.append(obj)
-                nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
-    dos = open(paths['csv'] + '/positions objets.csv', 'w')
-    array = csv.DictWriter(dos, fieldnames=nom_colonnes)
-    array.writeheader()
-    for frame in frames:
-        dico = {'frame': frame.id, 'time': round(int(frame.id.split('.')[1]) / video.Framerate, 3)}
-        for obj in frame.identified_objects:
-            dico['X' + obj.id] = video.scale * obj.positions[frame.id][0]
-            dico['Y' + obj.id] = video.scale * obj.positions[frame.id][1]
-        array.writerow(dico)
-    dos.close()
+    print('\nSauvegarde de la data en cours ...', end='\r')
+    file = open(paths['csv'] + '/positions objets.csv', 'w')
+    firstLine = 'frame, time, '
+    for i in range(video.markercount):
+        firstLine += 'X'+str(i) + ', Y'+str(i) + ', '
+    file.write(firstLine[:-2] + '\n')
+    for frame in video.Frames :
+        temps = str(round(int(frame.id.split('.')[1]) / video.Framerate, 3))
+        newLine = frame.id + ', ' + temps + ', '
+        for obj in frame.identifiedObjects :
+            newLine += str(video.scale * obj.positions[frame.id][0]) + ', '
+            newLine += str(video.scale * obj.positions[frame.id][1]) + ', '
+        file.write(newLine[:-2] + '\n')
+    file.close()
+
     t.sleep(1)
-    print('\rSauvegarde de la data --------------------------------------------- OK')
+    print('Sauvegarde de la data --------------------------------------------- OK')
     return None
 
 def framesdownload(video, crosswidth):
     create_dir('non treated frames')
     create_dir('treated frames')
-    print('\nSauvegarde des frames en cours ...', end='')
+    print('\nSauvegarde des frames en cours ...', end='\r')
     for frame in video.frames:
         name = paths['non treated frames'] + '/frame' + str(int(frame.id.split('.')[1])) + '.jpg'
         cv2.imwrite(name, frame.array)
         name = paths['treated frames'] + '/frame' + str(int(frame.id.split('.')[1])) + '.jpg'
         im = draw_cross_color(frame.array, frame.identified_objects, crosswidth)
         cv2.imwrite(name, im)
-    print('\rSauvegarde des frames --------------------------------------------- OK')
+    print('Sauvegarde des frames --------------------------------------------- OK')
     return None
 
 def create_video(video, crosswidth):
     global pas
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate, video.Framessize)
-    print('\nSauvegarde de la vidéo en cours ...', end='')
+    print('\nSauvegarde de la vidéo en cours ...', end='\r')
     for frame in video.Frames:
         img = draw_cross_color(frame.array, frame, crosswidth)
         # img = Add_pas(img, pas)
         out.write(img)
-    print('\rSauvegarde de la vidéo -------------------------------------------- OK')
+    print('Sauvegarde de la vidéo -------------------------------------------- OK')
     return None
 
 main()
