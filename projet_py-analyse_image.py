@@ -1,6 +1,6 @@
 import numpy as np
-import cv2 as cv2
-import csv as csv
+import cv2
+import csv
 import pymediainfo as mi
 import os as os             # intégré à python par défaut
 import sys as sys           # intégré à python par défaut
@@ -16,7 +16,8 @@ class Break (Exception):
 
 class Settings:
     def __init__(self, video):
-        sys.setrecursionlimit(50) # permet de gérer la precision du système
+
+        sys.setrecursionlimit(100) # permet de gérer la precision du système
         self.tol = 0.4             # est réglable lors de l'execution
         self.definition = 1        # est automatiquement réglé par le programme
         self.step = 1              # est automatiquement réglé par le programme
@@ -38,10 +39,7 @@ class Video:
     def __init__(self):
 
         self.id = None
-
-        create_dir('bac')
         self.videoinput()
-        delete_dir('bac')
 
         self.Frames = self.get_frames()
         self.Framerate = self.get_framerate()
@@ -50,7 +48,6 @@ class Video:
         self.markerscolor = None
         self.orientation = None
         self.lenref = None
-
         self.markerscolor_input()
         self.orientation_input()
         self.ref_input()
@@ -58,29 +55,31 @@ class Video:
         self.scale = None
         self.markercount = None
 
+
     def videoinput(self) :
+        create_dir('bac')
         isempty = True
-        print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='\r')
+        print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='')
         while isempty:
             if len(os.listdir(paths['bac'])) != 0:
                 isempty = False
             t.sleep(0.5)
         bac = os.listdir(paths['bac'])
-        if len(bac) == 1 and bac[0].split('.')[1] == 'mp4':
-            video = bac[0].split('.')[0]
-            paths['vidéoinput'] = paths['bac'] + '/' + video + '.mp4'
+        ext = bac[0].split('.')[1]
+        if len(bac) == 1 and (ext == 'mp4' or ext == 'mov'):
+            video = bac[0]
+            paths['vidéoinput'] = paths['bac'] + '/' + video
             create_dir('video storage')
             sht.copy2(paths['vidéoinput'], paths['video storage'])
             self.id = str(video)
-        elif len(bac) == 1 and bac[0].split('.')[1] != 'mp4':
+            delete_dir('bac')
+        elif len(bac) == 1 and ext != 'mp4' and ext != 'mov' :
             print('Veuillez fournir une vidéo au format mp4')
             delete_dir('bac')
-            create_dir('bac')
             self.videoinput()
         elif len(bac) > 1:
             print("Veuillez ne placer qu'un document dans le bac")
             delete_dir('bac')
-            create_dir('bac')
             self.videoinput()
 
     def get_frames(self):
@@ -89,9 +88,9 @@ class Video:
         et les valeurs sont les images (tableaux de type uint8).
         """
         frames = []
-        cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id + '.mp4')
+        cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id)
         frame_number = 0
-        print('Récupération de la vidéo en cours ...', end='\r')
+        print('\rRécupération de la vidéo en cours ...', end='')
         while True:
             ret, frame = cam.read()
             if ret:
@@ -101,7 +100,7 @@ class Video:
                 break
         cam.release()
         cv2.destroyAllWindows()
-        print('Récupération de la vidéo ------------------------------------------ OK')
+        print('\rRécupération de la vidéo ------------------------------------------ OK')
         t.sleep(0.1)
         return frames
 
@@ -110,7 +109,7 @@ class Video:
         Renvoie le nombre de frames par secondes de la vidéo passée en entrée du
             script.
         """
-        media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id + '.mp4')
+        media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id)
         tracks = media_info.tracks
         for i in tracks:
             if i.track_type == 'Video':
@@ -122,7 +121,7 @@ class Video:
         Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de
         la video.
         """
-        media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id + '.mp4')
+        media_info=mi.MediaInfo.parse(paths['video storage']+'/'+self.id)
         video_tracks = media_info.video_tracks[0]
         framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
         return framessize
@@ -215,7 +214,7 @@ def main():
             else:
                 verif_settings()
                 settings.definition, settings.step = 1, 1
-                video.Frames[0].iidentifiedObjects = []
+                video.Frames[0].identifiedObjects = []
 
         # Une fois que tout est bon on traite la vidéo
         videotreatement()
@@ -265,6 +264,7 @@ def calibration():
         print('\nIl y a un problème, veuillez vérifiez les réglages')
         verif_settings()
         settings.definition, settings.step = 1, 1
+        video.Frames[0].identifiedObjects = []
         calibration()
         return None
 
@@ -277,7 +277,7 @@ def calibration():
         video.Frames[0].identifiedObjects.append(new_obj)
         video.markercount += 1
 
-    print('Traitement -------------------------------------------------------- OK')
+    print('\rTraitement -------------------------------------------------------- OK')
 
     images_names = []
     create_dir('calib')
@@ -303,7 +303,7 @@ def calibration():
 
     print("\nAffichage du résultat (une fenêtre a dû s'ouvrir)", end='\r')
     calib_show(images_names)
-    print('Validation du résultat -------------------------------------------- OK')
+    print('\rValidation du résultat -------------------------------------------- OK')
     t.sleep(0.1)
     sht.rmtree(paths['calib'])
 
@@ -372,11 +372,11 @@ def videotreatement() -> None:
 
         if t.time() - T >= 1 :
             progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
-            print('\rTraitement en cours :', str(progression), '% (' + waiting_time(i, len(frames), Ti) + ')', end='\r')
+            print('\rTraitement en cours :', str(progression), '% (' + waiting_time(i, len(frames), Ti) + ')', end='')
             T = t.time()
 
     t.sleep(0.1)
-    print('Traitement de ' + video.id + ' ' + '-'*( 67-15-len(video.id) ) + ' OK')
+    print('\rTraitement de ' + video.id + ' ' + '-'*( 67-15-len(video.id) ) + ' OK')
 
     return None
 
@@ -458,7 +458,7 @@ def frametreatement(frame:np.array, c:int) -> tuple:
             extremas, borders = objects_identification(NB_im, settings.definition, settings.step)
             isOK = True
         except RecursionError:
-            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='\r')
+            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
             settings.definition += 1
     if isOK:
         return extremas, NB_im, borders
@@ -815,7 +815,7 @@ def verif_settings ():
                 video.ref_input()
             elif which == '4':
                 print()
-                settings.tol += float(input('\nTolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
+                settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
                 settings.tol = round(settings.tol, 3)
             elif which == 'pres':
                 print()
@@ -881,7 +881,7 @@ def reboot():
 
 def videodownload(video):
     create_dir('vidéodl')
-    source = paths['video storage']  + '/' + video.id + '.mp4'
+    source = paths['video storage']  + '/' + video.id
     destination = paths['vidéodl'] + '/vidéo' + '.mp4'
     sht.copy2(source, destination)
     sht.rmtree(paths['video storage'])
@@ -890,23 +890,27 @@ def videodownload(video):
 def datadownload():
     global video
     create_dir('csv')
-    print('\nSauvegarde de la data en cours ...', end='\r')
-    file = open(paths['csv'] + '/positions objets.csv', 'w')
-    firstLine = 'frame, time, '
-    for i in range(video.markercount):
-        firstLine += 'X'+str(i) + ', Y'+str(i) + ', '
-    file.write(firstLine[:-2] + '\n')
-    for frame in video.Frames :
-        temps = str(round(int(frame.id.split('.')[1]) / video.Framerate, 3))
-        newLine = frame.id + ', ' + temps + ', '
-        for obj in frame.identifiedObjects :
-            newLine += str(video.scale * obj.positions[frame.id][0]) + ', '
-            newLine += str(video.scale * obj.positions[frame.id][1]) + ', '
-        file.write(newLine[:-2] + '\n')
-    file.close()
-
+    print('\nSauvegarde de la data en cours ...', end='')
+    nom_colonnes = ['frame', 'time']
+    objects = []
+    frames = video.Frames
+    for frame in frames:
+        for obj in frame.identifiedObjects:
+            if obj not in objects:
+                objects.append(obj)
+                nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
+    dos = open(paths['csv'] + '/positions objets.csv', 'w')
+    array = csv.DictWriter(dos, fieldnames=nom_colonnes)
+    array.writeheader()
+    for frame in frames:
+        dico = {'frame': frame.id, 'time': round(int(frame.id.split('.')[1]) / video.Framerate, 3)}
+        for obj in frame.identifiedObjects:
+            dico['X' + obj.id] = video.scale * obj.positions[frame.id][0]
+            dico['Y' + obj.id] = video.scale * obj.positions[frame.id][1]
+        array.writerow(dico)
+    dos.close()
     t.sleep(1)
-    print('Sauvegarde de la data --------------------------------------------- OK')
+    print('\rSauvegarde de la data --------------------------------------------- OK')
     return None
 
 def framesdownload(video, crosswidth):
