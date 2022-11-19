@@ -2,11 +2,12 @@ import numpy as np
 import cv2
 import csv
 import pymediainfo as mi
-import os as os             # intégré à python par défaut
-import sys as sys           # intégré à python par défaut
+import os                   # intégré à python par défaut
+import sys                  # intégré à python par défaut
 import time as t            # intégré à python par défaut
 import getpass as gp        # intégré à python par défaut
 import shutil as sht        # intégré à python par défaut
+import inspect
 
 
 stoplist = ['stop', 'quit', 'abandon', 'kill']
@@ -17,16 +18,19 @@ class Break (Exception):
 class Settings:
     def __init__(self, video):
 
-        sys.setrecursionlimit(100) # permet de gérer la precision du système
+        self.precision = 100       # permet de gérer la precision du système
         self.tol = 0.4             # est réglable lors de l'execution
+        self.maxdef = 15           # abaissement de la definition maximal
         self.definition = 1        # est automatiquement réglé par le programme
         self.step = 1              # est automatiquement réglé par le programme
-        self.maxdef = 15           # abaissement de la definition maximal
+        sys.setrecursionlimit(self.precision)
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.minsize = int(video.Framessize[1] / 170)
-        self.maxdist = int(video.Framessize[1] / (0.25 * video.Framerate))
-        self.bordure_size = int(video.Framessize[1] /  video.Framerate * 2)
+        # self.maxdist = int(video.Framessize[1] / (0.25 * video.Framerate) * 5)
+        # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
+        self.maxdist = int(Framessize[1] / Framerate * 10)
+        self.bordure_size = 0
         self.crosswidth = int(video.Framessize[1] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
@@ -39,6 +43,7 @@ class Video:
     def __init__(self):
 
         self.id = None
+        self.name = None
         self.videoinput()
 
         self.Frames = self.get_frames()
@@ -46,20 +51,17 @@ class Video:
         self.Framessize = self.get_framessize()
 
         self.markerscolor = None
-        self.orientation = None
         self.lenref = None
         self.markerscolor_input()
-        self.orientation_input()
         self.ref_input()
 
         self.scale = None
         self.markercount = None
 
-
     def videoinput(self) :
         create_dir('bac')
         isempty = True
-        print('\nPlacez la vidéo (.mp4) à étudier dans le bac sur votre bureau.', end='')
+        print('Placez la vidéo à étudier dans le bac sur votre bureau.', end='')
         while isempty:
             if len(os.listdir(paths['bac'])) != 0:
                 isempty = False
@@ -72,25 +74,26 @@ class Video:
             create_dir('video storage')
             sht.copy2(paths['vidéoinput'], paths['video storage'])
             self.id = str(video)
+            self.name = ''.join( tuple( video.split('́') ) )
             delete_dir('bac')
         elif len(bac) == 1 and ext != 'mp4' and ext != 'mov' :
-            print('Veuillez fournir une vidéo au format mp4')
+            print('Veuillez fournir une vidéo au format mp4', end='\r')
             delete_dir('bac')
             self.videoinput()
         elif len(bac) > 1:
-            print("Veuillez ne placer qu'un document dans le bac")
+            print("Veuillez ne placer qu'un document dans le bac", end='\r')
             delete_dir('bac')
             self.videoinput()
 
     def get_frames(self):
         """
-        Renvoie un dictionaire où les clés sont les numéros de frames
-        et les valeurs sont les images (tableaux de type uint8).
+        Renvoie une listes contenatnt l'ensembles des frames (tableaux de type
+        uint8) dans le même ordre que dans la vidéo étudiée.
         """
         frames = []
         cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id)
         frame_number = 0
-        print('\rRécupération de la vidéo en cours ...', end='')
+        print('\rRécupération de la vidéo en cours ...', end='\r')
         while True:
             ret, frame = cam.read()
             if ret:
@@ -100,14 +103,14 @@ class Video:
                 break
         cam.release()
         cv2.destroyAllWindows()
-        print('\rRécupération de la vidéo ------------------------------------------ OK')
+        print('Récupération de la vidéo ------------------------------------------ OK', end='\n\n')
         t.sleep(0.1)
         return frames
 
     def get_framerate(self):
         """
         Renvoie le nombre de frames par secondes de la vidéo passée en entrée du
-            script.
+        script.
         """
         media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id)
         tracks = media_info.tracks
@@ -123,44 +126,35 @@ class Video:
         """
         media_info=mi.MediaInfo.parse(paths['video storage']+'/'+self.id)
         video_tracks = media_info.video_tracks[0]
-        framessize = [int(video_tracks.sampled_width), int(video_tracks.sampled_height)]
+        w = int(video_tracks.sampled_width)
+        h = int(video_tracks.sampled_height)
+        framessize = (w, h)
         return framessize
 
-    def markerscolor_input(self):
+    def markerscolor_input(self) -> None:
+        """
+        Récupère au près de l'utilisateur la couleur des repères placés sur
+        l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
+        markerscolor de la vidéo.
+        """
         global stoplist
         while True :
-            c = input('\nCouleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
+            c = input('Couleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
             if c in ['1', '2', '3']:
                 c = int(c)-1
                 self.markerscolor = c
-                break
+                return None
             elif c in stoplist :
                 raise Break
             else:
                 print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-    def orientation_input(self):
-        global stoplist
-        Framessize = self.Framessize
-        while True:
-            mode = input('La vidéo est en mode (1=landscape, 2=portrait) : ')
-            if mode in ['1', '2']:
-                if mode == '1':
-                    height = min(Framessize)
-                    width = max(Framessize)
-                elif mode == '2':
-                    height = max(Framessize)
-                    width = min(Framessize)
-                Framessize = (width, height)
-                self.Framessize = Framessize
-                self.orientation = int(mode)
-                break
-            elif mode in stoplist :
-                raise Break
-            else:
-                print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
     def ref_input(self):
+        """
+        Récupère au près de l'utilisateur la distances séparant les deux
+        premiers repères placés sur l'objet étudiée sur la vidéo et assigne
+        cette valeur à l'attribut lenref de la vidéo.
+        """
         global stoplist
         while True:
             l = input('Longueur entre les deux premiers repères(cm) : ')
@@ -170,7 +164,7 @@ class Video:
                 else :
                     lenref = float(l)
                     self.lenref = lenref
-                    break
+                    return None
             except ValueError :
                 print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
@@ -195,7 +189,7 @@ def main():
     """
     global video, settings # pour pouvoir accéder à ces données une fois le  traitement finit.
 
-    print('\nInitialisation de la procédure')
+    print('Initialisation de la procédure', end='\n\n')
 
     try :
 
@@ -247,28 +241,30 @@ def cleaner():
 def calibration():
     """
     À effectuer avant le traitement de l'ensemble de la vidéo pour vérifier le
-        bon réglage de l'ensmeble des paramètres.
+    bon réglage de l'ensmeble des paramètres.
     """
     global video, settings
 
-    print('\nTraitement en cours ...', end='\r')
+    print()
+    print('Traitement en cours ...', end='\r')
     first = copy_im(video.Frames[0].array)
 
     try :
-        detected = frametreatement(first, video.markerscolor)
-        extremas = detected[0]
+
+        detected = frametreatement(first)
+        extremas = rectifyer(detected[0], settings.minsize)
+        positions = position(extremas)
+
         settings.step = Pas(extremas, settings.definition)
-        positions = position( rectifyer(detected[0], settings.minsize) )
-        detScale(video, positions)
+        detScale(video.lenref, positions)
+
     except SettingError :
-        print('\nIl y a un problème, veuillez vérifiez les réglages')
+        print('Il y a un problème, veuillez vérifiez les réglages', end='\n\n' )
         verif_settings()
         settings.definition, settings.step = 1, 1
         video.Frames[0].identifiedObjects = []
         calibration()
         return None
-
-
 
     video.markercount = 0
     for obj in positions :
@@ -277,8 +273,9 @@ def calibration():
         video.Frames[0].identifiedObjects.append(new_obj)
         video.markercount += 1
 
-    print('\rTraitement -------------------------------------------------------- OK')
-
+    print('Traitement -------------------------------------------------------- OK')
+    t.sleep(0.1)
+    print('\nCréation des visuels en cours ...', end='\r')
     images_names = []
     create_dir('calib')
 
@@ -286,47 +283,36 @@ def calibration():
     images_names.append('color_im')
     fill_calibdir(color_im, 'color_im')
 
-    NB_im = cv2.resize(detected[1], video.Framessize)
+    reduced = reducer(color_im, settings.definition)
+    NB_im = visu_reduced(reduced)
+    NB_im = cv2.resize(NB_im, video.Framessize)
     images_names.append('NB_im')
     fill_calibdir(NB_im, 'NB_im')
 
-    treated_NB = visu_detection(NB_im, detected[2])
+    treated_NB = visu_detection(NB_im, detected[1])
     treated_NB = draw_rectangle_NB(treated_NB, extremas, settings.rectanglewidth)
     images_names.append('treated_NB')
     fill_calibdir(treated_NB, 'treated_NB')
 
     # treated_color = Add_pas(color_im, pas)
     treated_color = draw_cross_color(color_im, video.Frames[0], settings.crosswidth)
-    treated_color = Add_scale(treated_color, video.scale,settings.crosswidth, settings.bordure_size, video.markerscolor)
+    treated_color = Add_scale(treated_color, video.scale, settings.crosswidth, video.markerscolor)
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print("\nAffichage du résultat (une fenêtre a dû s'ouvrir)", end='\r')
+    print("Affichage du résultat (une fenêtre a dû s'ouvrir)", end='\r')
     calib_show(images_names)
-    print('\rValidation du résultat -------------------------------------------- OK')
+    print('Validation du résultat -------------------------------------------- OK')
     t.sleep(0.1)
     sht.rmtree(paths['calib'])
 
     return None
 
-def copy_im (image:np.array) -> np.array:
-    '''
-    copie l'image passée en argument de manière a défaire le lien entre les
-        objets.
-    '''
-    L = len(image)
-    l = len(image[0])
-    newIm = []
-    for y in range (L):
-        newLine = []
-        for x in range(l):
-            newLine.append(image[y][x])
-        newIm.append(newLine)
-    return np.uint8(newIm)
 
 def fill_calibdir(image:np.array, image_name:str):
     '''
-    permet d'enregistrer l'image passée en argument dans le dossier de calibration
+    Permet d'enregistrer l'image passée en argument dans le dossier de
+    calibration
     '''
     cv2.imwrite(paths['calib'] + '/' + image_name + '.jpg', image)
     return None
@@ -351,7 +337,6 @@ def videotreatement() -> None:
     """
     global video, settings
     frames = video.Frames
-    markerscolor = video.markerscolor
     minsize, maxdist = settings.minsize, settings.maxdist
     bordure_size = settings.bordure_size
 
@@ -361,22 +346,24 @@ def videotreatement() -> None:
     for i in range(1, len(frames)): # frame 0 deja traitée durant l'initialisation
         try :
 
-            objects_extremums = frametreatement(frames[i].array, markerscolor)[0]
-            objects_extremums = rectifyer(objects_extremums, minsize)
-            positions = position(objects_extremums)
+            markers_extremums = frametreatement(frames[i].array)[0]
+            markers_extremums = rectifyer(markers_extremums, minsize)
+            positions = position(markers_extremums)
 
             object_tracker(video, i, positions, maxdist, bordure_size)
 
         except SettingError :
-            print('problèmes dans les réglages')
+            print('\rproblèmes dans les réglages')
 
         if t.time() - T >= 1 :
-            progression = round((int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100, 1)
-            print('\rTraitement en cours :', str(progression), '% (' + waiting_time(i, len(frames), Ti) + ')', end='')
+            progr = (int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100
+            progr = str(round(progr))
+            tleft = waiting_time(i, len(frames), Ti)
+            print('Traitement en cours : ' +progr+ ' % (' +tleft+ ')', end='\r')
             T = t.time()
 
     t.sleep(0.1)
-    print('\rTraitement de ' + video.id + ' ' + '-'*( 67-15-len(video.id) ) + ' OK')
+    print('Traitement de ' + video.name + ' ' + '-'*( 67-15-len(video.name) ) + ' OK', end='\n\n')
 
     return None
 
@@ -389,8 +376,8 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
         distances_list = {}
         x1, y1 = positions[obj1][0], positions[obj1][1]
 
-        for obj2 in video.Frames[i-1].identifiedObjects:
-            x2, y2 = obj2.positions[video.Frames[i-1].id][0], obj2.positions[video.Frames[i-1].id][1]
+        for obj2 in frames[i-1].identifiedObjects:
+            x2, y2 = obj2.positions[frames[i-1].id][0], obj2.positions[frames[i-1].id][1]
             d = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
             distances_list[obj2] = d
 
@@ -438,9 +425,11 @@ def waiting_time(i, N, Ti):
     secondes = str(int(d%60))
     if int(secondes) < 10 :
         secondes = '0' + secondes
+
     return minutes + 'min ' + secondes + 'sec'
 
-def frametreatement(frame:np.array, c:int) -> tuple:
+
+def frametreatement(frame:np.array) -> tuple:
     """
     frame : image à traiter (tableau uint8).
     tol : seuil à partir duquel on détecte un objet.
@@ -454,14 +443,24 @@ def frametreatement(frame:np.array, c:int) -> tuple:
     isOK = False
     while not isOK and settings.definition <= settings.maxdef :
         try:
-            NB_im = prep(frame, settings.definition, settings.tol, c)
-            extremas, borders = objects_identification(NB_im, settings.definition, settings.step)
+            image = reducer(frame, settings.definition)
+            extremas, borders = objects_identification(image)
             isOK = True
         except RecursionError:
-            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
+            print('Définition trop élevée, tentative avec une défintion plus faible', end='\r')
+            t.sleep(0.1)
             settings.definition += 1
+
     if isOK:
-        return extremas, NB_im, borders
+        definition = settings.definition
+        for obj in extremas:
+            xmin, ymin = extremas[obj][0]*definition, extremas[obj][1]*definition
+            xmax, ymax = extremas[obj][2]*definition, extremas[obj][3]*definition
+            extremas[obj] = [xmin, ymin, xmax, ymax]
+            for i in range (len(borders[obj])):
+                x, y = borders[obj][i][0]*definition, borders[obj][i][1]*definition
+                borders[obj][i] = [x, y]
+        return extremas, borders
     else:
         raise SettingError
 
@@ -469,55 +468,43 @@ def frametreatement(frame:np.array, c:int) -> tuple:
 
 # Frame manipulation tools
 
-def objects_identification(image:np.array, definition:int, pas:int) -> dict:
+def objects_identification(image:np.array) -> tuple :
     """
-    image : image à traiter.
-    defintion : facteur avec lequel on réduit notre frame pour simplifier le
-        traitement.
-    pas :  distance entre chaque pixel que l'on va tester.
+    image : frame à traiter.
+    """
 
-    Regroupe tout les objets de l'image dans un dictionnaire.
-    image : image en N&B sous la forme d'un array de 0 et 255.
-    """
+    global video, settings
+    global at_borders
+    pas = settings.step
+    definition = settings.definition
+    tol = settings.tol
+    markerscolor = video.markerscolor
     h = len(image)
     w = len(image[0])
     extremas = {}
     borders = {}
     n = 0
 
-    for j in range(int(h/pas)):
-        for i in range(int(w/pas)):
-            if image[j*pas][i*pas] == 255:
+    for j in range(0, h, pas):
+        for i in range(0, w, pas):
 
-                element_in = False
-                for obj in extremas :
-                    if  extremas[obj][1] <= j*pas <= extremas[obj][3] and extremas[obj][0] <= i*pas <= extremas[obj][2]:
-                        element_in = True
+            element_in = False
+            for obj in extremas :
+                HorizontalAlignement = extremas[obj][1] <= j <= extremas[obj][3]
+                VerticalAlignement = extremas[obj][0] <= i <= extremas[obj][2]
+                if VerticalAlignement and HorizontalAlignement :
+                    element_in = True
 
-                if not element_in :
-                    extremas[n], borders[n] = discovery(image, [i*pas, j*pas])
-                    n += 1
-
-    for obj in extremas:
-        xmin, ymin = extremas[obj][0], extremas[obj][1]
-        xmax, ymax = extremas[obj][2], extremas[obj][3]
-        extremas[obj] = [xmin*definition, ymin*definition, xmax*definition, ymax*definition]
-        for i in range (len(borders[obj])):
-            x, y = borders[obj][i][0], borders[obj][i][1]
-            borders[obj][i] = [x*definition, y*definition]
+            if not element_in and rate_rgb(image[j][i], markerscolor) > tol :
+                depart = [i, j]
+                object = [depart]
+                init_extr = [depart[0], depart[1], depart[0], depart[1]]
+                at_border = False
+                extremas[n], borders[n] = detection(image, depart, object, init_extr)
+                n += 1
 
     return extremas, borders
 
-def discovery(image:np.array, depart:list) -> list:
-    '''
-    Permet l'initialisation pour la fonction recursive visiter.
-    '''
-    global at_border
-    object = [depart]
-    init_extr = [depart[0], depart[1], depart[0], depart[1]]
-    at_border = False
-
-    return detection(image, depart, object, init_extr)
 
 def detection(image, depart: list, object: list, extr: list) -> list:
     """
@@ -545,13 +532,15 @@ def detection(image, depart: list, object: list, extr: list) -> list:
 
     return extr, object
 
+
 def get_neighbours(image:np.array, pixel:list) -> list:
     """
     Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la
-        recherche d'objet.
+    recherche d'objet.
     image : image en N&B.
     pixel : sous la forme [j,i].
     """
+    global video, settings
     global at_border
     x, y = pixel[0], pixel[1]
     h = len(image)
@@ -567,7 +556,7 @@ def get_neighbours(image:np.array, pixel:list) -> list:
     is_border = False
     outsiders = []
     for n in neighbours_coordinates :
-        if image[n[1]][n[0]] == 0 :
+        if rate_rgb(image[n[1]][n[0]], video.markerscolor) < settings.tol :
             is_border = True
             at_border = True
             outsiders.append(n)
@@ -584,6 +573,7 @@ def get_neighbours(image:np.array, pixel:list) -> list:
 
     return L_neighbours
 
+
 def position(extremas:dict) -> list:
     """
     Récupère la position d'un objet à partir des extremas.
@@ -598,16 +588,21 @@ def position(extremas:dict) -> list:
         position[obj] = [x, y]
     return position
 
+
 def rectifyer(extremas:dict, minsize:int) -> dict:
     """
     Rectifie quelques erreurs.
     """
     # On supprime les objets trop petits, probablement issus d'erreurs.
-    problematic_objects = []
+    tosmall_objects = []
+
     for obj in extremas:
-        if extremas[obj][2] - extremas[obj][0] < minsize or extremas[obj][3] - extremas[obj][1] < minsize:
-            problematic_objects.append(obj)
-    for obj in problematic_objects:
+        if extremas[obj][2] - extremas[obj][0] < minsize :
+            tosmall_objects.append(obj)
+        elif extremas[obj][3] - extremas[obj][1] < minsize :
+            tosmall_objects.append(obj)
+
+    for obj in tosmall_objects:
         del extremas[obj]
     return extremas
 
@@ -623,29 +618,23 @@ def rate_rgb(pixel:list, c:int) -> float:
     assert c in [0, 1, 2]
     return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 0.1)
 
-def prep(image:np.array, definition:int, tol:float, c:int) -> np.array:
+
+def reducer(image:np.array, definition:int) -> np.array:
     """
     image : image de depart.
     Definition : l'image finale contiendra 1/definition² pixels de l'image
-        initiale.
-
-    Renvoie une image en noir et blanc
+    initiale.
     """
-    assert 0 < definition
-    assert type(definition) == int
     simplified_im = []
     h = len(image)
     w = len(image[0])
-    for i in range(int(h / definition)):
+    for i in range(0, h, definition):
         line = []
-        for j in range(int(w / definition)):
-            pixel = image[i * definition][j * definition]
-            if rate_rgb(pixel, c) < tol:
-                line.append(0)
-            else:
-                line.append(255)
+        for j in range(0, w, definition):
+            line.append(image[i][j])
         simplified_im.append(line)
     return np.uint8(simplified_im)
+
 
 def Pas (extr:dict, definition:int):
     '''
@@ -657,17 +646,85 @@ def Pas (extr:dict, definition:int):
     L = list(extr.keys())
     if len(L) == 0:
         raise SettingError
-    min = extr[L[0]][2]-extr[L[0]][0]
+    min = extr[L[0]][2] - extr[L[0]][0]
     for el in extr :
-        if extr[el][2]-extr[el][0] < min :
-            min = extr[el][2]-extr[el][0]
-        if extr[el][3]-extr[el][1] < min :
-            min = extr[el][3]-extr[el][1]
-    return int(min/(definition* 3)) + 1 # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
+        if extr[el][2] - extr[el][0] < min :
+            min = extr[el][2] - extr[el][0]
+        if extr[el][3] - extr[el][1] < min :
+            min = extr[el][3] - extr[el][1]
+    return int(min/(definition * 4)) # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
+
+
+def detScale (lenref:float, positions:dict) -> float:
+    '''
+    positions : dictionaire contenant les positions de chaque repère sur
+        chacune des frames.
+    lenref : longeur de reférance sur laquelle on s'appuie pour définir
+        l'échelle
+
+    Renvoie l'échelle de la vidéo en cm par nb de pixel
+    '''
+    if len(positions) >= 2 :
+        a = list(positions.keys())[0]
+        b = list(positions.keys())[1]
+        apos, bpos = positions[a], positions[b]
+        xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
+        scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
+    else :
+        scale = 1
+    video.scale = scale
+    return None
+
 
 
 
 # indicateurs visiuels sur la vidéo
+
+def copy_im (image:np.array) -> np.array:
+    '''
+    Copie l'image passée en argument de manière a défaire le lien entre les
+    objets.
+    '''
+    L = len(image)
+    l = len(image[0])
+    newIm = []
+    for y in range (L):
+        newLine = []
+        for x in range(l):
+            newLine.append(image[y][x])
+        newIm.append(newLine)
+    return np.uint8(newIm)
+
+def draw_cross_color(image:np.array, frame:Frame, crosswidth:int) -> np.array:
+    L = len(image)
+    l = len(image[0])
+    for obj in frame.identifiedObjects :
+        x = int(obj.positions[frame.id][0])
+        y = int(obj.positions[frame.id][1])
+        for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
+            for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
+                if 0<=i<l and 0<=n<L :
+                    image[n][i] = [0, 255, 0]
+        for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
+            for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
+                if 0 <= n < l and 0 <= j < L :
+                    image[j][n] = [0, 255, 0]
+    return np.uint8(image)
+
+def visu_reduced(image:np.array) -> np.array :
+    global video, settings
+    h = len(image)
+    w = len(image[0])
+    newIm = []
+    for j in range(h):
+        newLine = []
+        for i in range(w):
+            if rate_rgb(image[j][i], video.markerscolor) > settings.tol:
+                newLine.append(255)
+            else :
+                newLine.append(0)
+        newIm.append(newLine)
+    return np.uint8(newIm)
 
 def draw_rectangle_NB(image:np.array, extremas:dict, rectanglewidth:int) -> np.array:
     L = len(image)
@@ -686,22 +743,6 @@ def draw_rectangle_NB(image:np.array, extremas:dict, rectanglewidth:int) -> np.a
                     image[j % L][(xmin - n) % l], image[j % L][(xmax + n) % l] = 255, 255
     return np.uint8(image)
 
-def draw_cross_color(image:np.array, frame:Frame, crosswidth:int) -> np.array:
-    L = len(image)
-    l = len(image[0])
-    for obj in frame.identifiedObjects :
-        x = int(obj.positions[frame.id][0])
-        y = int(obj.positions[frame.id][1])
-        for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
-            for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
-                if 0<=i<l and 0<=n<L :
-                    image[n][i] = [0, 255, 0]
-        for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
-            for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
-                if 0 <= n < l and 0 <= j < L :
-                    image[j][n] = [0, 255, 0]
-    return np.uint8(image)
-
 def Add_pas (image:np.array, pas:int) -> np.array:
     if pas >= 2 :
         for j in range (int(len(image)/pas)):
@@ -709,15 +750,15 @@ def Add_pas (image:np.array, pas:int) -> np.array:
                 image[j*pas][i*pas] = [0, 0, 0]
     return np.uint8(image)
 
-def Add_scale(image:np.array, scale:float, crosswidth:int, bordure_size:int, c:int) -> np.array:
+def Add_scale(image:np.array, scale:float, crosswidth:int, c:int) -> np.array:
     L = len(image)
     l = len(image[0])
     color = [0, 0, 0]
     color[video.markerscolor] = 255
     for i in range(int(1/scale)):
         for j in range(crosswidth):
-            image[(j+L-bordure_size+10) % L][(bordure_size+i) % l] = color
-    cv2.putText(image, '1cm', (bordure_size, L-bordure_size-3), cv2.FONT_HERSHEY_SIMPLEX, 1, color)
+            image[j+L-int( L/20 )][i + int( l/10 )] = color
+    cv2.putText(image, '1cm', (int(l/10) , L-int(L/20 + L/100)), cv2.FONT_HERSHEY_SIMPLEX, int(l/1000), color)
     return np.uint8(image)
 
 def visu_detection (image:np.array, borders:list) -> np.array:
@@ -798,22 +839,18 @@ def verif_settings ():
     global video, settings
     while True :
         print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
-        print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
-        print('3 longueur de référence : ', video.lenref, 'cm')
-        print('4 tolérance : ', settings.tol)
-        which = input('quel réglage vous semble-t-il éroné (0=aucun, 1, 2, 3, 4) ? ')
-        if which in ['0', '1', '2', '3', '4', 'pres']:
+        print('2 longueur de référence : ', video.lenref, 'cm')
+        print('3 tolérance : ', settings.tol)
+        which = input('quel est le réglage qui vous semble éroné (0=aucun, 1, 2, 3) ? ')
+        if which in ['0', '1', '2', '3', 'pres']:
             if which == '0':
                 pass
             elif which == '1':
                 video.markerscolor_input()
             elif which == '2':
                 print()
-                video.orientation_input()
-            elif which == '3':
-                print()
                 video.ref_input()
-            elif which == '4':
+            elif which == '3':
                 print()
                 settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
                 settings.tol = round(settings.tol, 3)
@@ -839,27 +876,6 @@ def yn(question):
             raise Break
         else:
             print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-def detScale (video:Video, positions:dict) -> float:
-    '''
-    positions : dictionaire contenant les positions de chaque repère sur
-        chacune des frames.
-    lenref : longeur de reférance sur laquelle on s'appuie pour définir
-        l'échelle
-
-    Renvoie l'échelle de la vidéo en cm par nb de pixel
-    '''
-    lenref = video.lenref
-    if len(positions) >= 2 :
-        a = list(positions.keys())[0]
-        b = list(positions.keys())[1]
-        apos, bpos = positions[a], positions[b]
-        xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
-        scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
-    else :
-        scale = 1
-    video.scale = scale
-    return scale
 
 
 # Récupération des résultats du traitement
@@ -890,7 +906,7 @@ def videodownload(video):
 def datadownload():
     global video
     create_dir('csv')
-    print('\nSauvegarde de la data en cours ...', end='')
+    print('Sauvegarde de la data en cours ...', end='\r')
     nom_colonnes = ['frame', 'time']
     objects = []
     frames = video.Frames
@@ -910,7 +926,29 @@ def datadownload():
         array.writerow(dico)
     dos.close()
     t.sleep(1)
-    print('\rSauvegarde de la data --------------------------------------------- OK')
+
+    settingsdownload()
+
+    print('Sauvegarde de la data --------------------------------------------- OK')
+    return None
+
+def settingsdownload():
+    global settings, video
+    doc = open(paths['csv'] + '/settings.csv', 'w')
+
+    doc.write('------SETTINGS------\n')
+    for atr in inspect.getmembers(settings):
+        if atr[0][0] != '_' and not inspect.ismethod(atr[1]):
+            line = atr[0] + ' '*(14-len(atr[0])) + ' : ' + str(atr[1]) + '\n'
+            doc.write(line)
+
+    doc.write('\n-------VIDEO--------\n')
+    for atr in inspect.getmembers(video):
+        if atr[0][0] != '_' and not inspect.ismethod(atr[1]):
+            if not atr[0] == 'Frames':
+                line = atr[0] + ' '*(14-len(atr[0])) + ' : ' + str(atr[1]) + '\n'
+                doc.write(line)
+    doc.close()
     return None
 
 def framesdownload(video, crosswidth):
@@ -929,12 +967,14 @@ def framesdownload(video, crosswidth):
 def create_video(video, crosswidth):
     global pas
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate, video.Framessize)
-    print('\nSauvegarde de la vidéo en cours ...', end='\r')
+    print()
+    print('Sauvegarde de la vidéo en cours ...', end='\r')
     for frame in video.Frames:
         img = draw_cross_color(frame.array, frame, crosswidth)
         # img = Add_pas(img, pas)
         out.write(img)
-    print('Sauvegarde de la vidéo -------------------------------------------- OK')
+    print('Sauvegarde de la vidéo -------------------------------------------- OK', end='\n')
     return None
 
+print()
 main()
