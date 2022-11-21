@@ -79,11 +79,11 @@ class Video:
             self.name = ''.join( tuple( video.split('́') ) )
             delete_dir('bac')
         elif len(bac) == 1 and ext != 'mp4' and ext != 'mov' :
-            print('Veuillez fournir une vidéo au format mp4', end='\r')
+            print('\rVeuillez fournir une vidéo au format mp4', end='')
             delete_dir('bac')
             self.videoinput()
         elif len(bac) > 1:
-            print("Veuillez ne placer qu'un document dans le bac", end='\r')
+            print("\rVeuillez ne placer qu'un document dans le bac", end='')
             delete_dir('bac')
             self.videoinput()
 
@@ -95,7 +95,7 @@ class Video:
         frames = []
         cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id)
         frame_number = 0
-        print('\rRécupération de la vidéo en cours ...', end='\r')
+        print('\rRécupération de la vidéo en cours ...', end='')
         while True:
             ret, frame = cam.read()
             if ret:
@@ -105,7 +105,7 @@ class Video:
                 break
         cam.release()
         cv2.destroyAllWindows()
-        print('Récupération de la vidéo ------------------------------------------ OK', end='\n\n')
+        print('\rRécupération de la vidéo ------------------------------------------ OK', end='\n\n')
         t.sleep(0.1)
         return frames
 
@@ -210,7 +210,8 @@ class Object:
 def main():
     """
     """
-    global video, settings # pour pouvoir accéder à ces données une fois le  traitement finit.
+    global video, settings # pour pouvoir accéder à ces données une fois le
+                           # traitement finit.
 
     print('Initialisation de la procédure', end='\n\n')
 
@@ -269,7 +270,7 @@ def calibration():
     global video, settings
 
     print()
-    print('Traitement en cours ...', end='\r')
+    print('Traitement en cours ...', end='')
     first = copy_im(video.Frames[0].array)
 
     try :
@@ -296,9 +297,9 @@ def calibration():
         video.Frames[0].identifiedObjects.append(new_obj)
         video.markercount += 1
 
-    print('Traitement -------------------------------------------------------- OK')
+    print('\rTraitement -------------------------------------------------------- OK', end='\n\n')
     t.sleep(0.1)
-    print('\nCréation des visuels en cours ...', end='\r')
+    print('Création des visuels en cours ...', end='')
     images_names = []
     create_dir('calib')
 
@@ -323,9 +324,9 @@ def calibration():
     images_names.append('treated_color')
     fill_calibdir(treated_color, 'treated_color')
 
-    print("Affichage du résultat (une fenêtre a dû s'ouvrir)", end='\r')
+    print("\rAffichage du résultat (une fenêtre a dû s'ouvrir)", end='')
     calib_show(images_names)
-    print('Validation du résultat -------------------------------------------- OK')
+    print('\rValidation du résultat -------------------------------------------- OK', end='\n')
     t.sleep(0.1)
     sht.rmtree(paths['calib'])
 
@@ -382,7 +383,7 @@ def videotreatement() -> None:
             progr = (int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100
             progr = str(round(progr))
             tleft = waiting_time(i, len(frames), Ti)
-            print('Traitement en cours : ' +progr+ ' % (' +tleft+ ')', end='\r')
+            print('\rTraitement en cours : ' +progr+ ' % (' +tleft+ ')', end='')
             T = t.time()
 
     t.sleep(0.1)
@@ -470,7 +471,7 @@ def frametreatement(frame:np.array) -> tuple:
             extremas, borders = objects_identification(image)
             isOK = True
         except RecursionError:
-            print('Définition trop élevée, tentative avec une défintion plus faible', end='\r')
+            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
             t.sleep(0.1)
             settings.definition += 1
 
@@ -498,15 +499,14 @@ def objects_identification(image:np.array) -> tuple :
 
     global video, settings
     global at_borders
-    pas = settings.step
-    definition = settings.definition
-    tol = settings.tol
+    pas, definition, tol = settings.step, settings.definition, settings.tol
     markerscolor = video.markerscolor
     h = len(image)
     w = len(image[0])
     extremas = {}
     borders = {}
     n = 0
+
 
     for j in range(0, h, pas):
         for i in range(0, w, pas):
