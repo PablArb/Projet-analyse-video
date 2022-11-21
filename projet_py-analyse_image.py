@@ -29,7 +29,7 @@ class Settings:
         self.minsize = int(video.Framessize[1] / 170)
         # self.maxdist = int(video.Framessize[1] / (0.25 * video.Framerate) * 5)
         # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
-        self.maxdist = int(Framessize[1] / Framerate * 10)
+        self.maxdist = int(video.Framessize[1] / video.Framerate * 10)
         self.bordure_size = 0
         self.crosswidth = int(video.Framessize[1] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
@@ -51,8 +51,10 @@ class Video:
         self.Framessize = self.get_framessize()
 
         self.markerscolor = None
+        self.orientation = None
         self.lenref = None
         self.markerscolor_input()
+        self.orientation_input()
         self.ref_input()
 
         self.scale = None
@@ -148,6 +150,27 @@ class Video:
                 raise Break
             else:
                 print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+
+    def orientation_input(self):
+            global stoplist
+            Framessize = self.Framessize
+            while True:
+                mode = input('La vidéo est en mode (1=landscape, 2=portrait) : ')
+                if mode in ['1', '2']:
+                    if mode == '1':
+                        height = min(Framessize)
+                        width = max(Framessize)
+                    elif mode == '2':
+                        height = max(Framessize)
+                        width = min(Framessize)
+                    Framessize = (width, height)
+                    self.Framessize = Framessize
+                    self.orientation = int(mode)
+                    break
+                elif mode in stoplist :
+                    raise Break
+                else:
+                    print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
     def ref_input(self):
         """
@@ -259,7 +282,7 @@ def calibration():
         detScale(video.lenref, positions)
 
     except SettingError :
-        print('Il y a un problème, veuillez vérifiez les réglages', end='\n\n' )
+        print('Il y a un problème, veuillez vérifiez les réglages', end='\n' )
         verif_settings()
         settings.definition, settings.step = 1, 1
         video.Frames[0].identifiedObjects = []
@@ -839,18 +862,23 @@ def verif_settings ():
     global video, settings
     while True :
         print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
-        print('2 longueur de référence : ', video.lenref, 'cm')
-        print('3 tolérance : ', settings.tol)
+        print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
+        print('3 longueur de référence : ', video.lenref, 'cm')
+        print('4 tolérance : ', settings.tol)
         which = input('quel est le réglage qui vous semble éroné (0=aucun, 1, 2, 3) ? ')
         if which in ['0', '1', '2', '3', 'pres']:
             if which == '0':
                 pass
             elif which == '1':
+                print()
                 video.markerscolor_input()
             elif which == '2':
                 print()
-                video.ref_input()
+                video.orientation_input()
             elif which == '3':
+                print()
+                video.ref_input()
+            elif which == '4':
                 print()
                 settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
                 settings.tol = round(settings.tol, 3)
@@ -906,7 +934,7 @@ def videodownload(video):
 def datadownload():
     global video
     create_dir('csv')
-    print('Sauvegarde de la data en cours ...', end='\r')
+    print('Sauvegarde de la data en cours ...', end='')
     nom_colonnes = ['frame', 'time']
     objects = []
     frames = video.Frames
@@ -929,7 +957,7 @@ def datadownload():
 
     settingsdownload()
 
-    print('Sauvegarde de la data --------------------------------------------- OK')
+    print('\rSauvegarde de la data --------------------------------------------- OK')
     return None
 
 def settingsdownload():
@@ -954,26 +982,26 @@ def settingsdownload():
 def framesdownload(video, crosswidth):
     create_dir('non treated frames')
     create_dir('treated frames')
-    print('\nSauvegarde des frames en cours ...', end='\r')
+    print('\nSauvegarde des frames en cours ...', end='')
     for frame in video.frames:
         name = paths['non treated frames'] + '/frame' + str(int(frame.id.split('.')[1])) + '.jpg'
         cv2.imwrite(name, frame.array)
         name = paths['treated frames'] + '/frame' + str(int(frame.id.split('.')[1])) + '.jpg'
         im = draw_cross_color(frame.array, frame.identified_objects, crosswidth)
         cv2.imwrite(name, im)
-    print('Sauvegarde des frames --------------------------------------------- OK')
+    print('\rSauvegarde des frames --------------------------------------------- OK')
     return None
 
 def create_video(video, crosswidth):
     global pas
     out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate, video.Framessize)
     print()
-    print('Sauvegarde de la vidéo en cours ...', end='\r')
+    print('Sauvegarde de la vidéo en cours ...', end='')
     for frame in video.Frames:
         img = draw_cross_color(frame.array, frame, crosswidth)
         # img = Add_pas(img, pas)
         out.write(img)
-    print('Sauvegarde de la vidéo -------------------------------------------- OK', end='\n')
+    print('\rSauvegarde de la vidéo -------------------------------------------- OK', end='\n')
     return None
 
 print()
