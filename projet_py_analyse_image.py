@@ -1,24 +1,24 @@
 import numpy as np
 import cv2
-import csv
 import pymediainfo as mi
 import os                   # intégré à python par défaut
 import sys                  # intégré à python par défaut
 import time as t            # intégré à python par défaut
-import getpass as gp        # intégré à python par défaut
 import shutil as sht        # intégré à python par défaut
-import inspect
+from IHM import * 
 
 
-stoplist = ['stop', 'quit', 'abandon', 'kill']
+
 class Break (Exception):
     pass
 
+class SettingError (Exception):
+    pass
 
 class Settings:
     def __init__(self, video):
 
-        self.precision = 1000       # permet de gérer la precision du système
+        self.precision = 100       # permet de gérer la precision du système
         self.tol = 0.4             # est réglable lors de l'execution
         self.maxdef = 15           # abaissement de la definition maximal
         self.definition = 1        # est automatiquement réglé par le programme
@@ -34,14 +34,15 @@ class Settings:
         self.crosswidth = int(video.Framessize[1] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
-class SettingError (Exception):
-    pass
 
 
-class Video:
+
+class Video(object):
 
     def __init__(self):
 
+        self.paths = paths
+        
         self.id = None
         self.name = None
         self.videoinput()
@@ -61,40 +62,43 @@ class Video:
         self.markercount = None
         self.computationDuration = None
 
-    def videoinput(self) :
-        create_dir('bac')
+        
+        
+    def videoinput(self) -> None:
+        self.paths.create_dir('bac')
         isempty = True
         print('Placez la vidéo à étudier dans le bac sur votre bureau.', end='')
         while isempty:
-            if len(os.listdir(paths['bac'])) != 0:
+            if len(os.listdir(self.paths.bac)) != 0:
                 isempty = False
             t.sleep(0.5)
-        bac = os.listdir(paths['bac'])
+        bac = os.listdir(self.paths.bac)
         ext = bac[0].split('.')[1]
         if len(bac) == 1 and (ext == 'mp4' or ext == 'mov'):
             video = bac[0]
-            paths['vidéoinput'] = paths['bac'] + '/' + video
-            create_dir('video storage')
-            sht.copy2(paths['vidéoinput'], paths['video storage'])
+            self.paths.vidéoinput = self.paths.bac + '/' + video
+            self.paths.create_dir('videoStorage')
+            sht.copy2(self.paths.vidéoinput, self.paths.videoStorage)
             self.id = str(video)
             self.name = ''.join( tuple( video.split('́') ) )
-            delete_dir('bac')
+            self.paths.delete_dir('bac')
+            return None
         elif len(bac) == 1 and ext != 'mp4' and ext != 'mov' :
             print('\rVeuillez fournir une vidéo au format mp4', end='')
-            delete_dir('bac')
+            self.paths.delete_dir('bac')
             self.videoinput()
         elif len(bac) > 1:
             print("\rVeuillez ne placer qu'un document dans le bac", end='')
-            delete_dir('bac')
+            self.paths.delete_dir('bac')
             self.videoinput()
 
-    def get_frames(self):
+    def get_frames(self) -> list:
         """
         Renvoie une listes contenatnt l'ensembles des frames (tableaux de type
         uint8) dans le même ordre que dans la vidéo étudiée.
         """
         frames = []
-        cam = cv2.VideoCapture(paths['video storage'] + '/' + self.id)
+        cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)
         frame_number = 0
         print('\rRécupération de la vidéo en cours ...', end='')
         while True:
@@ -110,12 +114,12 @@ class Video:
         t.sleep(0.1)
         return frames
 
-    def get_framerate(self):
+    def get_framerate(self) -> float:
         """
         Renvoie le nombre de frames par secondes de la vidéo passée en entrée du
         script.
         """
-        media_info = mi.MediaInfo.parse(paths['video storage'] + '/' + self.id)
+        media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
         tracks = media_info.tracks
         for i in tracks:
             if i.track_type == 'Video':
@@ -127,7 +131,7 @@ class Video:
         Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de
         la video.
         """
-        media_info=mi.MediaInfo.parse(paths['video storage']+'/'+self.id)
+        media_info=mi.MediaInfo.parse(self.paths.videoStorage + '/'+self.id)
         video_tracks = media_info.video_tracks[0]
         w = int(video_tracks.sampled_width)
         h = int(video_tracks.sampled_height)
@@ -152,7 +156,7 @@ class Video:
             else:
                 print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-    def orientation_input(self):
+    def orientation_input(self) -> None:
             global stoplist
             Framessize = self.Framessize
             while True:
@@ -167,13 +171,14 @@ class Video:
                     Framessize = (width, height)
                     self.Framessize = Framessize
                     self.orientation = int(mode)
+                    return None
                     break
                 elif mode in stoplist :
                     raise Break
                 else:
                     print('Vous devez avoir fait une erreur, veuillez rééssayer.')
 
-    def ref_input(self):
+    def ref_input(self) -> None:
         """
         Récupère au près de l'utilisateur la distances séparant les deux
         premiers repères placés sur l'objet étudiée sur la vidéo et assigne
@@ -206,57 +211,12 @@ class Object:
         self.positions = {}
         self.LastKnownPos = None
 
-
-# main
-def main():
-    """
-    """
-    global video, settings # pour pouvoir accéder à ces données une fois le
-                           # traitement finit.
-
-    print('Initialisation de la procédure', end='\n\n')
-
-    try :
-
-        # On récupère la vidéo et ses caractéristiques
-        video = Video()
-
-        # On definit les réglages par défault
-        settings = Settings(video)
-
-        # On traite la première frame  pour vérifier que les reglages sont bons
-        isOK = False
-        while not isOK:
-            calibration()
-            if yn('Le traitement est-il bon ?'):
-                isOK = True
-            else:
-                verif_settings()
-                settings.definition, settings.step = 1, 1
-                video.Frames[0].identifiedObjects = []
-
-        # Une fois que tout est bon on traite la vidéo
-        videotreatement()
-
-        # On télécharge les données
-        reboot()
-        datadownload()
-
-        if yn("Voulez vous télécharger les résultats de l'étude ?"):
-            resultsdownload(video, settings.crosswidth)
-
-        print('\nProcédure terminée')
-
-    except (Break, KeyboardInterrupt):
-        print('\n\nProcédure terminée')
-
-    cleaner()
-    return None
-
-def cleaner():
+def cleaner(video:Video):
     sys.setrecursionlimit(1000)
+    if video == None:
+        return None
     for i in range(3):
-        delete_dir(L_paths[i])
+        video.paths.delete_dir(video.paths.pathsList[i])
     return None
 
 
@@ -357,7 +317,7 @@ def videotreatement() -> None:
     print()
 
     for i in range(1, len(frames)): # frame 0 traitée durant l'initialisation
-        try :""
+        try :
 
             markers_extremums = frametreatement(frames[i].array, i)[0]
             markers_extremums = rectifyer(markers_extremums, minsize)
@@ -492,9 +452,11 @@ def objects_identification(image:np.array, i:int) -> tuple :
     """
 
     global video, settings
-    global at_borders
-    pas, definition, tol = settings.step, settings.definition, settings.tol
-    maxdist = settings.maxdist
+    global at_border
+    pas, tol = settings.step, settings.tol
+# =============================================================================
+#     maxdist = settings.maxdist
+# =============================================================================
     markerscolor = video.markerscolor
     h = len(image)
     w = len(image[0])
@@ -502,16 +464,18 @@ def objects_identification(image:np.array, i:int) -> tuple :
     borders = {}
     n = 0
 
-    if i > 0:
-        PrevFrame = video.Frames[i-1]
-        AreasToExplore = []
-        for obj in PrevFrame.identifiedObjects :
-            [x, y] = obj.positions[PrevFrame.id]
-            if x - maxdist < 0 : xmin = 0
-            else : xmin = x-maxdist
-            if y - maxdist < 0 : ymin = 0
-            else : ymin = y - maxdist
-            NewArea = []
+# =============================================================================
+#     if i > 0:
+#         PrevFrame = video.Frames[i-1]
+#         AreasToExplore = []
+#         for obj in PrevFrame.identifiedObjects :
+#             [x, y] = obj.positions[PrevFrame.id]
+#             if x - maxdist < 0 : xmin = 0
+#             else : xmin = x-maxdist
+#             if y - maxdist < 0 : ymin = 0
+#             else : ymin = y - maxdist
+#             NewArea = []
+# =============================================================================
 
 
     for j in range(0, h, pas):
@@ -645,7 +609,7 @@ def rate_rgb(pixel:list, c:int) -> float:
         composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
-    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 0.1)
+    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
 
 
 def reducer(image:np.array, definition:int) -> np.array:
@@ -674,7 +638,7 @@ def Pas (extr:dict, definition:int):
     '''
     L = list(extr.keys())
     if len(L) == 0:
-        raise SettingError
+        return 1
     min = extr[L[0]][2] - extr[L[0]][0]
     for el in extr :
         if extr[el][2] - extr[el][0] < min :
@@ -807,61 +771,6 @@ def visu_detection (image:np.array, borders:list) -> np.array:
     return np.uint8(image)
 
 
-
-# path gestion
-
-user = gp.getuser()
-paths = {}
-L_paths = ['bac', 'calib', 'video storage', 'data']
-paths[L_paths[0]] = '/Users/' + user + '/Desktop/bac'
-paths[L_paths[1]] = '/Users/' + user + '/Desktop/.##calibdir##'
-paths[L_paths[2]] = '/Users/' + user + '/Desktop/.##temporary storage##'
-paths[L_paths[3]] = '/Users/' + user + '/Desktop/data'
-
-if os.name == 'nt':
-    for el in L_paths:
-        paths[el] = 'C:'+paths[el]
-
-def add_subdata_dirs(video:str) -> None:
-    '''
-    video : nom de la video passée en entrée du script.
-
-    Permet d'ajouter les dossier propre à la vidéo dans le dossier data (où les
-        données sont stockées).
-    '''
-    paths['csv'] = paths['data'] + '/' + video + '/csv'
-    paths['vidéodl'] = paths['data'] + '/' + video + '/vidéo'
-    paths['frames'] = paths['data'] + '/' + video + '/frames'
-    paths['treated frames'] = paths['frames'] + '/treated'
-    paths['non treated frames'] = paths['frames'] + '/non treated'
-    return None
-
-def create_dir(dir:str) -> None:
-    '''
-    dir : nom du dossier à créer.
-
-    Permet de créer le dossier dont le nom est passé en argument à l'endroit
-        qui lui est prédestiné dans paths.
-    '''
-    p = paths[dir]
-    if not os.path.exists(p):
-        os.makedirs(p)
-    return None
-
-def delete_dir(dir:str) -> None:
-    '''
-    dir : nom du dossier à supprimer.
-
-    Permet de supprimer le dossier dont le nom est passé en argument à l'endroit
-        qui lui est prédestiné dans paths.
-    '''
-    p = paths[dir]
-    if os.path.exists(p) :
-        sht.rmtree(p)
-    return None
-
-
-
 # fonctions permettant l'IHM
 
 def verif_settings ():
@@ -897,124 +806,43 @@ def verif_settings ():
         else:
             print ('vous devez avoir fait une erreur, veuillez réessayer')
 
-def yn(question):
-    assert type(question) == str
-    while True:
-        yn = input('\n' + question + ' [y]/n : ')
-        if yn in ['y', '', 'n']:
-            if yn == 'y' or yn == '':
-                return True
-            elif yn == 'n':
-                return False
-        elif yn in stoplist :
-            raise Break
+
+
+print('Initialisation de la procédure', end='\n\n')
+video = None
+
+try :
+
+    # On récupère la vidéo et ses caractéristiques
+    video = Video()
+
+    # On definit les réglages par défault
+    settings = Settings(video)
+
+    # On traite la première frame  pour vérifier que les reglages sont bons
+    isOK = False
+    while not isOK:
+        calibration()
+        if yn('Le traitement est-il bon ?'):
+            isOK = True
         else:
-            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+            verif_settings()
+            settings.definition, settings.step = 1, 1
+            video.Frames[0].identifiedObjects = []
 
+    # Une fois que tout est bon on traite la vidéo
+    videotreatement()
 
-# Récupération des résultats du traitement
+    # On télécharge les données
+    reboot(video)
+    datadownload(video, settings)
 
-def resultsdownload(video, crosswidth):
-    videodownload(video)
-    create_video(video, crosswidth)
-    # framesdownload(video, crosswidth)
-    return None
+    if yn("Voulez vous télécharger les résultats de l'étude ?"):
+        resultsdownload(video, settings.crosswidth)
 
-def reboot():
-    global video
-    add_subdata_dirs(video.id)
-    delete_dir('csv')
-    delete_dir('frames')
-    delete_dir('vidéodl')
-    add_subdata_dirs(video.id)
-    return None
+    print('\nProcédure terminée')
 
-def videodownload(video):
-    create_dir('vidéodl')
-    source = paths['video storage']  + '/' + video.id
-    destination = paths['vidéodl'] + '/vidéo' + '.mp4'
-    sht.copy2(source, destination)
-    sht.rmtree(paths['video storage'])
-    return None
+except (Break, KeyboardInterrupt):
+    print('\n\nProcédure terminée')
 
-def datadownload():
-    global video
-    create_dir('csv')
-    print('Sauvegarde de la data en cours ...', end='')
-    nom_colonnes = ['frame', 'time']
-    objects = []
-    frames = video.Frames
-    for frame in frames:
-        for obj in frame.identifiedObjects:
-            if obj not in objects:
-                objects.append(obj)
-                nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
-    dos = open(paths['csv'] + '/positions objets.csv', 'w')
-    array = csv.DictWriter(dos, fieldnames=nom_colonnes)
-    array.writeheader()
-    for frame in frames:
-        time = round(int(frame.id.split('.')[1]) / video.Framerate, 3)
-        dico = {'frame': ' ' + frame.id, 'time': ' ' + str(time)}
-        for obj in frame.identifiedObjects:
-            dico['X' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][0])
-            dico['Y' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][1])
-        array.writerow(dico)
-    dos.close()
-    t.sleep(1)
-
-    settingsdownload()
-
-    print('\rSauvegarde de la data --------------------------------------------- OK')
-    return None
-
-def settingsdownload():
-    global settings, video
-    doc = open(paths['csv'] + '/settings.csv', 'w')
-
-    doc.write('------SETTINGS------\n')
-    for atr in inspect.getmembers(settings):
-        if atr[0][0] != '_' and not inspect.ismethod(atr[1]):
-            line = atr[0] + ' '*(19-len(atr[0])) + ' : ' + str(atr[1]) + '\n'
-            doc.write(line)
-
-    doc.write('\n-------VIDEO--------\n')
-    for atr in inspect.getmembers(video):
-        if atr[0][0] != '_' and not inspect.ismethod(atr[1]):
-            if not atr[0] == 'Frames':
-                line = atr[0] + ' '*(19-len(atr[0])) + ' : ' + str(atr[1]) + '\n'
-                doc.write(line)
-    doc.close()
-    return None
-
-def framesdownload(video, crosswidth):
-    create_dir('non treated frames')
-    create_dir('treated frames')
-    print('\nSauvegarde des frames en cours ...', end='')
-    for frame in video.frames:
-        name = paths['non treated frames'] + '/frame' + str(int(frame.id.split('.')[1])) + '.jpg'
-        cv2.imwrite(name, frame.array)
-        name = paths['treated frames'] + '/frame' + str(int(frame.id.split('.')[1])) + '.jpg'
-        im = draw_cross_color(frame.array, frame.identified_objects, crosswidth)
-        cv2.imwrite(name, im)
-    print('\rSauvegarde des frames --------------------------------------------- OK')
-    return None
-
-def create_video(video, crosswidth):
-    global pas
-    out = cv2.VideoWriter(paths['vidéodl'] + '/vidéo traitée' + '.mp4', cv2.VideoWriter_fourcc(*'mp4v'), video.Framerate, video.Framessize)
-    print()
-    print('Sauvegarde de la vidéo en cours ...', end='')
-    for frame in video.Frames:
-        img = draw_cross_color(frame.array, frame, crosswidth)
-        # img = Add_pas(img, pas)
-        out.write(img)
-    print('\rSauvegarde de la vidéo -------------------------------------------- OK', end='\n')
-    return None
-
-
-
-
-
-
-print()
-main()
+cleaner(video)
