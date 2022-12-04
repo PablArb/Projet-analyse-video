@@ -5,7 +5,7 @@ import os                   # intégré à python par défaut
 import sys                  # intégré à python par défaut
 import time as t            # intégré à python par défaut
 import shutil as sht        # intégré à python par défaut
-from IHM import * 
+from IHM import paths, visu, download, yn, stoplist
 
 
 
@@ -44,7 +44,7 @@ class Video(object):
         self.paths = paths
         
         self.id = None
-        self.name = None
+        self.name = None # id où l'on a supprimé le 'é' souvent présent dans vidéo
         self.videoinput()
 
         self.Frames = self.get_frames()
@@ -211,14 +211,6 @@ class Object:
         self.positions = {}
         self.LastKnownPos = None
 
-def cleaner(video:Video):
-    sys.setrecursionlimit(1000)
-    if video == None:
-        return None
-    for i in range(3):
-        video.paths.delete_dir(video.paths.pathsList[i])
-    return None
-
 
 
 # Calibration fcts
@@ -232,7 +224,7 @@ def calibration():
 
     print()
     print('Traitement en cours ...', end='')
-    first = copy_im(video.Frames[0].array)
+    first = visu.copy_im(video.Frames[0].array)
 
     try :
 
@@ -269,22 +261,21 @@ def calibration():
     print('Création des visuels en cours ...', end='')
     visualisations = []
 
-    color_im = copy_im(first)
+    color_im = visu.copy_im(first)
     visualisations.append(color_im)
 
     NB_im = reducer(color_im, settings.definition)
-    NB_im = visu_reduced(NB_im)
+    NB_im = visu.visu_reduced(video, settings, NB_im, rate_rgb)
     NB_im = cv2.resize(NB_im, video.Framessize)
     visualisations.append(NB_im)
 
-    treated_NB = copy_im(NB_im)
-    treated_NB = visu_detection(treated_NB, detected[1])
-    treated_NB = draw_rectangle_NB(treated_NB, extremas, rectanglewidth)
+    treated_NB = visu.copy_im(NB_im)
+    treated_NB = visu.visu_detection(treated_NB, detected[1])
+    treated_NB = visu.draw_rectangle_NB(treated_NB, extremas, rectanglewidth)
     visualisations.append(treated_NB)
 
-    treated_color = copy_im(first)
-    treated_color = draw_cross_color(treated_color, video.Frames[0], crosswidth)
-    treated_color = Add_scale(treated_color, scale, crosswidth, markerscolor)
+    treated_color = visu.draw_cross_color(video.Frames[0], crosswidth, copy=True)
+    treated_color = visu.Add_scale(treated_color, scale, crosswidth, markerscolor)
     visualisations.append(treated_color)
 
     for im in visualisations :
@@ -668,109 +659,6 @@ def detScale (lenref:float, positions:dict) -> float:
     video.scale = scale
     return None
 
-
-
-
-# indicateurs visiuels sur la vidéo
-
-def copy_im (image:np.array) -> np.array:
-    '''
-    Copie l'image passée en argument de manière a défaire le lien entre les
-    objets.
-    '''
-    h = len(image)
-    w = len(image[0])
-    newIm = []
-    for y in range (h):
-        newLine = []
-        for x in range(w):
-            newLine.append(image[y][x])
-        newIm.append(newLine)
-    return np.uint8(newIm)
-
-def draw_cross_color(image:np.array, frame:Frame, crosswidth:int) -> np.array:
-    h = len(image)
-    w = len(image[0])
-    for obj in frame.identifiedObjects :
-        x = int(obj.positions[frame.id][0])
-        y = int(obj.positions[frame.id][1])
-        for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
-            for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
-                if 0<=i<w and 0<=n<h :
-                    image[n][i] = [0, 255, 0]
-        for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
-            for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
-                if 0 <= n < w and 0 <= j < h :
-                    image[j][n] = [0, 255, 0]
-    return np.uint8(image)
-
-def visu_reduced(image:np.array) -> np.array :
-    global video, settings
-    h = len(image)
-    w = len(image[0])
-    newIm = []
-    for j in range(h):
-        newLine = []
-        for i in range(w):
-            if rate_rgb(image[j][i], video.markerscolor) > settings.tol:
-                newLine.append(255)
-            else :
-                newLine.append(0)
-        newIm.append(newLine)
-    return np.uint8(newIm)
-
-def draw_rectangle_NB(image:np.array, extremas:dict, rectanglewidth:int) -> np.array:
-    h = len(image)
-    w = len(image[0])
-    marge = 4
-    for key in extremas:
-        xmin, ymin = int(extremas[key][0])-marge, int(extremas[key][1])-marge
-        xmax, ymax = int(extremas[key][2])+marge, int(extremas[key][3])+marge
-        for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
-            for n in range(rectanglewidth + 1):
-                if 0 <= i < w and 0 <= ymin-n < h and 0 <= ymin+n < h :
-                    image[(ymin - n) % h][i % w], image[(ymax + n) % h][i % w] = 255, 255
-        for j in range(ymin - rectanglewidth, ymax + rectanglewidth + 1):
-            for n in range(rectanglewidth + 1):
-                if 0 <= xmin-n < w and 0 <= xmin+n < w and 0 <= j < h :
-                    image[j % h][(xmin - n) % w], image[j % h][(xmax + n) % w] = 255, 255
-    return np.uint8(image)
-
-def Add_pas (image:np.array, pas:int) -> np.array:
-    if pas >= 2 :
-        for j in range (int(len(image)/pas)):
-            for i in range (int(len(image[j])/pas)):
-                image[j*pas][i*pas] = [0, 0, 0]
-    return np.uint8(image)
-
-def Add_scale(image:np.array, scale:float, crosswidth:int, c:int) -> np.array:
-    h = len(image)
-    w = len(image[0])
-    color = [0, 0, 0]
-    color[video.markerscolor] = 255
-    for i in range(int(1/scale)):
-        for j in range(crosswidth):
-            image[j+h-int( h/20 )][i + int( w/10 )] = color
-    cv2.putText(image, '1cm', (int(w/10) , h-int(h/20 + h/100)), cv2.FONT_HERSHEY_SIMPLEX, int(w/1000), color)
-    return np.uint8(image)
-
-def visu_detection (image:np.array, borders:list) -> np.array:
-    global definition
-    h = len(image)
-    w = len(image[0])
-    for j in range(h) :
-        for i in range(w):
-            if image[j][i] == 255:
-                image[j][i] = 100
-    for obj in borders:
-        for pixel in borders[obj] :
-            for i in range (-1, 2):
-                for j in range (-1, 2):
-                    if 0 <= pixel[1] < h-j and 0 <= pixel[0] < w-i :
-                        image[pixel[1]+j][pixel[0]+i] = 255
-    return np.uint8(image)
-
-
 # fonctions permettant l'IHM
 
 def verif_settings ():
@@ -806,9 +694,15 @@ def verif_settings ():
         else:
             print ('vous devez avoir fait une erreur, veuillez réessayer')
 
+def cleaner(video:Video):
+    sys.setrecursionlimit(1000)
+    if video == None:
+        return None
+    video.paths.delete_dir(video.paths.videoStorage)
+    return None
 
 
-print('Initialisation de la procédure', end='\n\n')
+print('\nInitialisation de la procédure\n')
 video = None
 
 try :
@@ -834,15 +728,15 @@ try :
     videotreatement()
 
     # On télécharge les données
-    reboot(video)
-    datadownload(video, settings)
+    download.reboot(video)
+    download.data(video, settings)
 
     if yn("Voulez vous télécharger les résultats de l'étude ?"):
-        resultsdownload(video, settings.crosswidth)
+        download.results(video, settings.crosswidth)
 
     print('\nProcédure terminée')
 
 except (Break, KeyboardInterrupt):
     print('\n\nProcédure terminée')
 
-cleaner(video)
+# cleaner(video)
