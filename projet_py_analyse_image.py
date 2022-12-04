@@ -265,17 +265,17 @@ def calibration():
     visualisations.append(color_im)
 
     NB_im = reducer(color_im, settings.definition)
-    NB_im = visu.visu_reduced(video, settings, NB_im, rate_rgb)
+    NB_im = visu.reduced(video, settings, NB_im, rate_rgb)
     NB_im = cv2.resize(NB_im, video.Framessize)
     visualisations.append(NB_im)
 
     treated_NB = visu.copy_im(NB_im)
-    treated_NB = visu.visu_detection(treated_NB, detected[1])
-    treated_NB = visu.draw_rectangle_NB(treated_NB, extremas, rectanglewidth)
+    treated_NB = visu.detection(treated_NB, detected[1])
+    treated_NB = visu.rectangle_NB(treated_NB, extremas, rectanglewidth)
     visualisations.append(treated_NB)
 
-    treated_color = visu.draw_cross_color(video.Frames[0], crosswidth, copy=True)
-    treated_color = visu.Add_scale(treated_color, scale, crosswidth, markerscolor)
+    treated_color = visu.cross_color(video.Frames[0], crosswidth, copy=True)
+    treated_color = visu.scale(treated_color, scale, crosswidth, markerscolor)
     visualisations.append(treated_color)
 
     for im in visualisations :
