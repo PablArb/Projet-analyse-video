@@ -1,216 +1,10 @@
 import numpy as np
 import cv2
-import pymediainfo as mi
-import os                   # intégré à python par défaut
 import sys                  # intégré à python par défaut
 import time as t            # intégré à python par défaut
-import shutil as sht        # intégré à python par défaut
-from IHM import paths, visu, download, yn, stoplist
-
-
-
-class Break (Exception):
-    pass
-
-class SettingError (Exception):
-    pass
-
-class Settings:
-    def __init__(self, video):
-
-        self.precision = 100       # permet de gérer la precision du système
-        self.tol = 0.4             # est réglable lors de l'execution
-        self.maxdef = 15           # abaissement de la definition maximal
-        self.definition = 1        # est automatiquement réglé par le programme
-        self.step = 1              # est automatiquement réglé par le programme
-        sys.setrecursionlimit(self.precision)
-
-        # On définit la taille des indicateurs visuels / taille de l'image
-        self.minsize = int(video.Framessize[1] / 170)
-        # self.maxdist = int(video.Framessize[1] / (0.25 * video.Framerate) * 5)
-        # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
-        self.maxdist = int(video.Framessize[1] / video.Framerate * 10)
-        self.bordure_size = 0
-        self.crosswidth = int(video.Framessize[1] / 500)
-        self.rectanglewidth = int(video.Framessize[1] / 1250)
-
-
-
-
-class Video(object):
-
-    def __init__(self):
-
-        self.paths = paths
-        
-        self.id = None
-        self.name = None # id où l'on a supprimé le 'é' souvent présent dans vidéo
-        self.videoinput()
-
-        self.Frames = self.get_frames()
-        self.Framerate = self.get_framerate()
-        self.Framessize = self.get_framessize()
-
-        self.markerscolor = None
-        self.orientation = None
-        self.lenref = None
-        self.markerscolor_input()
-        self.orientation_input()
-        self.ref_input()
-
-        self.scale = None
-        self.markercount = None
-        self.computationDuration = None
-
-        
-        
-    def videoinput(self) -> None:
-        self.paths.create_dir('bac')
-        isempty = True
-        print('Placez la vidéo à étudier dans le bac sur votre bureau.', end='')
-        while isempty:
-            if len(os.listdir(self.paths.bac)) != 0:
-                isempty = False
-            t.sleep(0.5)
-        bac = os.listdir(self.paths.bac)
-        ext = bac[0].split('.')[1]
-        if len(bac) == 1 and (ext == 'mp4' or ext == 'mov'):
-            video = bac[0]
-            self.paths.vidéoinput = self.paths.bac + '/' + video
-            self.paths.create_dir('videoStorage')
-            sht.copy2(self.paths.vidéoinput, self.paths.videoStorage)
-            self.id = str(video)
-            self.name = ''.join( tuple( video.split('́') ) )
-            self.paths.delete_dir('bac')
-            return None
-        elif len(bac) == 1 and ext != 'mp4' and ext != 'mov' :
-            print('\rVeuillez fournir une vidéo au format mp4', end='')
-            self.paths.delete_dir('bac')
-            self.videoinput()
-        elif len(bac) > 1:
-            print("\rVeuillez ne placer qu'un document dans le bac", end='')
-            self.paths.delete_dir('bac')
-            self.videoinput()
-
-    def get_frames(self) -> list:
-        """
-        Renvoie une listes contenatnt l'ensembles des frames (tableaux de type
-        uint8) dans le même ordre que dans la vidéo étudiée.
-        """
-        frames = []
-        cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)
-        frame_number = 0
-        print('\rRécupération de la vidéo en cours ...', end='')
-        while True:
-            ret, frame = cam.read()
-            if ret:
-                frames.append(Frame('frame.' + str(frame_number), frame))
-                frame_number += 1
-            else:
-                break
-        cam.release()
-        cv2.destroyAllWindows()
-        print('\rRécupération de la vidéo ------------------------------------------ OK', end='\n\n')
-        t.sleep(0.1)
-        return frames
-
-    def get_framerate(self) -> float:
-        """
-        Renvoie le nombre de frames par secondes de la vidéo passée en entrée du
-        script.
-        """
-        media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
-        tracks = media_info.tracks
-        for i in tracks:
-            if i.track_type == 'Video':
-                framerate = float(i.frame_rate)
-        return framerate
-
-    def get_framessize(self) -> tuple:
-        """
-        Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de
-        la video.
-        """
-        media_info=mi.MediaInfo.parse(self.paths.videoStorage + '/'+self.id)
-        video_tracks = media_info.video_tracks[0]
-        w = int(video_tracks.sampled_width)
-        h = int(video_tracks.sampled_height)
-        framessize = (w, h)
-        return framessize
-
-    def markerscolor_input(self) -> None:
-        """
-        Récupère au près de l'utilisateur la couleur des repères placés sur
-        l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
-        markerscolor de la vidéo.
-        """
-        global stoplist
-        while True :
-            c = input('Couleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
-            if c in ['1', '2', '3']:
-                c = int(c)-1
-                self.markerscolor = c
-                return None
-            elif c in stoplist :
-                raise Break
-            else:
-                print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-    def orientation_input(self) -> None:
-            global stoplist
-            Framessize = self.Framessize
-            while True:
-                mode = input('La vidéo est en mode (1=landscape, 2=portrait) : ')
-                if mode in ['1', '2']:
-                    if mode == '1':
-                        height = min(Framessize)
-                        width = max(Framessize)
-                    elif mode == '2':
-                        height = max(Framessize)
-                        width = min(Framessize)
-                    Framessize = (width, height)
-                    self.Framessize = Framessize
-                    self.orientation = int(mode)
-                    return None
-                    break
-                elif mode in stoplist :
-                    raise Break
-                else:
-                    print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-    def ref_input(self) -> None:
-        """
-        Récupère au près de l'utilisateur la distances séparant les deux
-        premiers repères placés sur l'objet étudiée sur la vidéo et assigne
-        cette valeur à l'attribut lenref de la vidéo.
-        """
-        global stoplist
-        while True:
-            l = input('Longueur entre les deux premiers repères(cm) : ')
-            try :
-                if l in stoplist:
-                    raise Break
-                else :
-                    lenref = float(l)
-                    self.lenref = lenref
-                    return None
-            except ValueError :
-                print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-class Frame:
-    def __init__(self, id, array):
-        self.id = id
-        self.array = array
-        self.AreasOfInterest = []
-        self.identifiedObjects = []
-
-class Object:
-    def __init__(self, id):
-        self.id = id
-        self.status = 'in'
-        self.positions = {}
-        self.LastKnownPos = None
-
+from IHM import visu, download, interact
+from ERRORS import Break, SettingError
+from VideoTreatment import Video, Object, Settings
 
 
 # Calibration fcts
@@ -237,7 +31,7 @@ def calibration():
 
     except SettingError :
         print('\rIl y a un problème, veuillez vérifiez les réglages', end='\n' )
-        verif_settings()
+        interact.verif_settings(video, settings)
         settings.definition, settings.step = 1, 1
         video.Frames[0].identifiedObjects = []
         calibration()
@@ -257,6 +51,7 @@ def calibration():
     crosswidth = settings.crosswidth
     markerscolor =  video.markerscolor
     scale = video.scale
+    frame = video.Frames[0]
 
     print('Création des visuels en cours ...', end='')
     visualisations = []
@@ -274,7 +69,8 @@ def calibration():
     treated_NB = visu.rectangle_NB(treated_NB, extremas, rectanglewidth)
     visualisations.append(treated_NB)
 
-    treated_color = visu.cross_color(video.Frames[0], crosswidth, copy=True)
+    pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
+    treated_color = visu.cross_color(first, pos, crosswidth, copy=True)
     treated_color = visu.scale(treated_color, scale, crosswidth, markerscolor)
     visualisations.append(treated_color)
 
@@ -323,7 +119,7 @@ def videotreatement() -> None:
             progr = (int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100
             progr = str(round(progr))
             tleft = waiting_time(i, len(frames), Ti)
-            print('\rTraitement en cours : ' +progr+ ' % (' +tleft+ ')', end='')
+            print('\033[2K\033[1GTraitement en cours : ' +progr+ ' % (' +tleft+ ')', end='')
             T = t.time()
 
     t.sleep(0.1)
@@ -659,46 +455,12 @@ def detScale (lenref:float, positions:dict) -> float:
     video.scale = scale
     return None
 
-# fonctions permettant l'IHM
-
-def verif_settings ():
-    global video, settings
-    while True :
-        print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
-        print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
-        print('3 longueur de référence : ', video.lenref, 'cm')
-        print('4 tolérance : ', settings.tol)
-        which = input('quel est le réglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) ? ')
-        if which in ['0', '1', '2', '3', '4', 'pres']:
-            if which == '0':
-                pass
-            elif which == '1':
-                print()
-                video.markerscolor_input()
-            elif which == '2':
-                print()
-                video.orientation_input()
-            elif which == '3':
-                print()
-                video.ref_input()
-            elif which == '4':
-                print()
-                settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
-                settings.tol = round(settings.tol, 3)
-            elif which == 'pres':
-                print()
-                sys.setrecursionlimit(int(input('setrecursionlimit : ')))
-            return None
-        elif which in stoplist :
-            raise Break
-        else:
-            print ('vous devez avoir fait une erreur, veuillez réessayer')
 
 def cleaner(video:Video):
     sys.setrecursionlimit(1000)
     if video == None:
         return None
-    video.paths.delete_dir(video.paths.videoStorage)
+    video.paths.delete_dir('videoStorage')
     return None
 
 
@@ -709,6 +471,9 @@ try :
 
     # On récupère la vidéo et ses caractéristiques
     video = Video()
+    interact.markerscolor_input(video)
+    interact.orientation_input(video)
+    interact.ref_input(video)
 
     # On definit les réglages par défault
     settings = Settings(video)
@@ -716,11 +481,13 @@ try :
     # On traite la première frame  pour vérifier que les reglages sont bons
     isOK = False
     while not isOK:
+        # Tant que le traitement n'est pas satisfaisant on recommence cette étape
         calibration()
-        if yn('Le traitement est-il bon ?'):
+        if interact.yn('Le traitement est-il bon ?'):
             isOK = True
         else:
-            verif_settings()
+            # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les réglages
+            interact.verif_settings(video, settings)
             settings.definition, settings.step = 1, 1
             video.Frames[0].identifiedObjects = []
 
@@ -731,12 +498,13 @@ try :
     download.reboot(video)
     download.data(video, settings)
 
-    if yn("Voulez vous télécharger les résultats de l'étude ?"):
+    if interact.yn("Voulez vous télécharger les résultats de l'étude ?"):
         download.results(video, settings.crosswidth)
 
     print('\nProcédure terminée')
 
 except (Break, KeyboardInterrupt):
+    cleaner(video)
     print('\n\nProcédure terminée')
 
 # cleaner(video)
