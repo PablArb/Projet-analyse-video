@@ -6,104 +6,19 @@ Created on Thu Dec  1 21:06:13 2022
 @author: pabloarb
 """
 
-import csv, os, cv2, inspect
+import csv, cv2, inspect, sys
 import numpy as np
 import shutil as sht
-import getpass as gp
 import time as t
-
-
-class Video(object):
-    pass
-class Settings(object):
-    pass
-class Frame(object):
-    pass
-class Break(Exception):
-    pass
-
-
-def yn(question:str) -> bool :
-    assert type(question) == str
-    while True:
-        yn = input('\n' + question + ' [y]/n : ')
-        if yn in ['y', '', 'n']:
-            if yn == 'y' or yn == '':
-                return True
-            elif yn == 'n':
-                return False
-        elif yn in stoplist :
-            raise Break
-        else:
-            print('Vous devez avoir fait une erreur, veuillez rééssayer.')
-
-
-
-
-# définition des paths utiles 
-class Paths :
-    
-    def create_dir(self, dir:str) -> None :
-        '''
-        dir : nom du dossier à créer.
-        Permet de créer le dossier dont le nom est passé en argument.
-        '''
-        attr = self.__dict__
-        if dir in attr :
-            p = attr[dir]
-        else : 
-            raise AttributeError
-        if not os.path.exists(p):
-            os.makedirs(p)
-        return None
-    
-    def delete_dir(self, dir:str) -> None :
-        '''
-        dir : nom du dossier à supprimer.
-        Permet de supprimer le dossier dont le nom est passé en argument.
-        '''
-        attr = self.__dict__
-        if dir in attr :
-           if os.path.exists(attr[dir]) :
-               sht.rmtree(attr[dir])
-        else : 
-           raise AttributeError
-        
-        return None
-    
-    def add_subdata_dirs(self, video:str) -> None:
-        '''
-        video : nom de la video passée en entrée du script.
-        Permet d'ajouter les dossier propre à la vidéo dans le dossier data
-        (où les résultats de l'étude sont stockés).
-        '''
-        self.csv = self.data + '/' + video + '/csv'
-        self.videodl = self.data + '/' + video + '/vidéo'
-        self.frames = self.data + '/' + video + '/frames'
-        self.TreatedFrames = self.frames + '/treated'
-        self.NonTreatedFrames = self.frames + '/non treated'
-        return None
-
-class MacosPaths (Paths):
-    def __init__(self):
-        self.pathList = ['bac', 'videoStorage', 'data']
-        self.bac = '/Users/'+user+'/Desktop/bac'
-        self.videoStorage = '/Users/'+user+'/Desktop/.##temporary storage##'
-        self.data = '/Users/'+user+'/Desktop/TIPE/data video'
-   
-class WIndowsPaths (Paths):
-    def __init__(self):
-        self.pathList = ['bac', 'videoStorage', 'data']
-        self.bac = 'C:/Users/'+user+'/Desktop/bac'
-        self.videoStorage = 'C:/Users/'+user+'/Desktop/.##temporary storage##'
-        self.data = '/C:Users/'+user+'/Desktop/TIPE/data video'
-
+from ERRORS import Break
+from VideoTreatment import Video, Settings 
 
 
 class Visu :
     
     def copy_im(self, image:np.array) -> np.array:
         '''
+        image : tableau numpy.
         Copie l'image passée en argument de manière a casser le lien entre les
         objets.
         '''
@@ -117,16 +32,28 @@ class Visu :
             newIm.append(newLine)
         return np.uint8(newIm)
     
-    def cross_color(self, frame:Frame, crosswidth:int, copy=False) -> np.array:
+    def cross_color(self, image:np.array, pos:list, crosswidth:int, copy=False) -> np.array:
+        '''
+        image : np.array, imaghe sur laquelle on veut ajouter les croix vertes
+        pos : list, positions ou l'on veut tracer ces croix sous forme [[x, y]]
+        crosswidth : int, largeur des traits e la croix (qq pixels)
+        copy : bool, optional, permet de defaire le lien
+            DESCRIPTION. The default is False.
+
+        Returns
+        -------
+        TYPE
+            DESCRIPTION.
+
+        '''
         if copy:
-            image = self.copy_im(frame.array)
-        else:
-            image = frame.array
+            image = self.copy_im(image)
+
         h = len(image)
         w = len(image[0])
-        for obj in frame.identifiedObjects :
-            x = int(obj.positions[frame.id][0])
-            y = int(obj.positions[frame.id][1])
+        for obj in pos :
+            x = int(obj[0])
+            y = int(obj[1])
             for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
                 for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
                     if 0<=i<w and 0<=n<h :
@@ -238,7 +165,8 @@ class Download :
         print()
         print('Sauvegarde de la vidéo en cours ...', end='')
         for frame in video.Frames:
-            img = visu.draw_cross_color(frame, crosswidth)
+            pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
+            img = visu.cross_color(frame.array, pos, crosswidth)
             # img = Add_pas(img, pas)
             out.write(img)
         out.release()
@@ -306,16 +234,119 @@ class Download :
         print('\rSauvegarde des frames --------------------------------------------- OK')
         return None
 
+class Interact :
+    
+    def test(class1, class2):
+        global a, b
+        a, b = class1, class2
+        return None
+    
+    def __init__(self):
+        self.stoplist = ['stop', 'quit', 'abandon', 'kill']
+    
+    def verif_settings(self, video:Video, settings:Settings):
+        while True :
+            print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
+            print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
+            print('3 longueur de référence : ', video.lenref, 'cm')
+            print('4 tolérance : ', settings.tol)
+            which = input('quel est le réglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) ? ')
+            if which in ['0', '1', '2', '3', '4', 'pres']:
+                if which == '0':
+                    pass
+                elif which == '1':
+                    print()
+                    self.markerscolor_input()
+                elif which == '2':
+                    print()
+                    self.orientation_input()
+                elif which == '3':
+                    print()
+                    self.ref_input()
+                elif which == '4':
+                    print()
+                    settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
+                    settings.tol = round(settings.tol, 3)
+                elif which == 'pres':
+                    print()
+                    sys.setrecursionlimit(int(input('setrecursionlimit : ')))
+                return None
+            elif which in self.stoplist :
+                raise Break
+            else:
+                print ('vous devez avoir fait une erreur, veuillez réessayer')
+                
+    def yn(self, question:str) -> bool :
+        assert type(question) == str
+        while True:
+            yn = input('\n' + question + ' [y]/n : ')
+            if yn in ['y', '', 'n']:
+                if yn == 'y' or yn == '':
+                    return True
+                elif yn == 'n':
+                    return False
+            elif yn in self.stoplist :
+                raise Break
+            else:
+                print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+    
+    def markerscolor_input(self, video:Video) -> None:
+        """
+        Récupère au près de l'utilisateur la couleur des repères placés sur
+        l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
+        markerscolor de la vidéo.
+        """
+        while True :
+            c = input('Couleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
+            if c in ['1', '2', '3']:
+                c = int(c)-1
+                video.markerscolor = c
+                return None
+            elif c in self.stoplist :
+                raise Break
+            else:
+                print('Vous devez avoir fait une erreur, veuillez rééssayer.\n')
 
-stoplist = ['stop', 'quit', 'abandon', 'kill']
+    def orientation_input(self, video:Video) -> None:
+            Framessize = video.Framessize
+            while True:
+                mode = input('La vidéo est en mode (1=landscape, 2=portrait) : ')
+                if mode in ['1', '2']:
+                    if mode == '1':
+                        height = min(Framessize)
+                        width = max(Framessize)
+                    elif mode == '2':
+                        height = max(Framessize)
+                        width = min(Framessize)
+                    Framessize = (width, height)
+                    video.Framessize = Framessize
+                    video.orientation = int(mode)
+                    return None
+                    break
+                elif mode in self.stoplist :
+                    raise Break
+                else:
+                    print('Vous devez avoir fait une erreur, veuillez rééssayer.\n')
 
-user = gp.getuser()
-if os.name == 'nt':
-    paths = WIndowsPaths()
-elif os.name == 'posix':
-    paths = MacosPaths()
-else :
-    pass
+    def ref_input(self, video:Video) -> None:
+        """
+        Récupère au près de l'utilisateur la distances séparant les deux
+        premiers repères placés sur l'objet étudiée sur la vidéo et assigne
+        cette valeur à l'attribut lenref de la vidéo.
+        """
+        while True:
+            l = input('Longueur entre les deux premiers repères(cm) : ')
+            try :
+                if l in interact.stoplist:
+                    raise Break
+                else :
+                    lenref = float(l)
+                    video.lenref = lenref
+                    return None
+            except ValueError :
+                print('Vous devez avoir fait une erreur, veuillez rééssayer.\n')
+                
 
 visu = Visu()
 download = Download()
+interact = Interact()
