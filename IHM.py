@@ -136,10 +136,10 @@ class Visu :
 
 class Download :
     
-    def results(self, video:Video, crosswidth:int) -> None :
+    def results(self, video:Video) -> None :
         self.video(video)
-        self.treatedVideo(video, crosswidth)
-        # framesdownload(video, crosswidth)
+        self.treatedVideo(video)
+        # framesdownload(video)
         return None
     
     def reboot(self, video:Video) -> None:
@@ -158,7 +158,8 @@ class Download :
         sht.rmtree(video.paths.videoStorage)
         return None
     
-    def treatedVideo(self, video:Video, crosswidth:int) -> None:
+    def treatedVideo(self, video:Video) -> None:
+        crosswidth = video.settings.crosswidth
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(path, ext, video.Framerate, video.Framessize)
@@ -173,7 +174,8 @@ class Download :
         print('\rSauvegarde de la vidéo -------------------------------------------- OK', end='\n')
         return None
     
-    def data(self, video:Video, settings:Settings) -> None:
+    def data(self, video:Video) -> None:
+        settings = video.settings
         video.paths.create_dir('csv')
         print('Sauvegarde de la data en cours ...', end='')
         nom_colonnes = ['frame', 'time']
@@ -221,7 +223,7 @@ class Download :
         doc.close()
         return None
     
-    def frames(self, video:Video, crosswidth:int) -> None:
+    def frames(self, video:Video) -> None:
         video.paths.create_dir('non treated frames')
         video.paths.create_dir('treated frames')
         print('\nSauvegarde des frames en cours ...', end='')
@@ -229,6 +231,7 @@ class Download :
             name = video.paths.NonTreatedFrames + str(frame.id) + '.jpg'
             cv2.imwrite(name, frame.array)
             name = video.paths.TreatedFrames + str(frame.id) + '.jpg'
+            crosswidth = video.settings.crosswidth
             im = visu.cross_color(frame.array, frame.identified_objects, crosswidth)
             cv2.imwrite(name, im)
         print('\rSauvegarde des frames --------------------------------------------- OK')
@@ -244,7 +247,8 @@ class Interact :
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
     
-    def verif_settings(self, video:Video, settings:Settings):
+    def verif_settings(self, video:Video):
+        settings = video.settings
         while True :
             print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
             print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
