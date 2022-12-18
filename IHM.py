@@ -40,11 +40,6 @@ class Visu :
         copy : bool, optional, permet de defaire le lien
             DESCRIPTION. The default is False.
 
-        Returns
-        -------
-        TYPE
-            DESCRIPTION.
-
         '''
         if copy:
             image = self.copy_im(image)
@@ -64,14 +59,18 @@ class Visu :
                         image[j][n] = [0, 255, 0]
         return np.uint8(image)
     
-    def reduced(self, video, settings, image:np.array, rate_rgb) -> np.array:
+    def rate_rgb(self, pixel:list, c:int) -> float:
+        assert c in [0, 1, 2]
+        return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
+    
+    def reduced(self, video, settings, image:np.array) -> np.array:
         h = len(image)
         w = len(image[0])
         newIm = []
         for j in range(h):
             newLine = []
             for i in range(w):
-                if rate_rgb(image[j][i], video.markerscolor) > settings.tol:
+                if self.rate_rgb(image[j][i], video.markerscolor) > settings.tol:
                     newLine.append(255)
                 else :
                     newLine.append(0)
