@@ -35,8 +35,6 @@ class Settings:
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
 
-
-
 class Video(object):
 
     def __init__(self):
@@ -153,7 +151,49 @@ class Object:
         self.positions = {}
         self.LastKnownPos = None
 
+class Calib:
+    
+    def detPas (self, video, extr:dict, definition:int):
+        '''
+        extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
+            dictionaire où chaque clef correspond à un objet,
+            la valeure qui lui est associée est la liste des 4 coordonées
+            extremales entourant l'objet.
+        '''
+        L = list(extr.keys())
+        if len(L) == 0:
+            return 1
+        min = extr[L[0]][2] - extr[L[0]][0]
+        for el in extr :
+            if extr[el][2] - extr[el][0] < min :
+                min = extr[el][2] - extr[el][0]
+            if extr[el][3] - extr[el][1] < min :
+                min = extr[el][3] - extr[el][1]
+        video.settings.step = int(min/(definition * 4)) # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
+        return None
 
+
+    def detScale (self, video, lenref:float, positions:dict) -> float:
+        '''
+        positions : dictionaire contenant les positions de chaque repère sur
+            chacune des frames.
+        lenref : longeur de reférance sur laquelle on s'appuie pour définir
+            l'échelle
+
+        Renvoie l'échelle de la vidéo en cm par nb de pixel
+        '''
+        if len(positions) >= 2 :
+            a = list(positions.keys())[0]
+            b = list(positions.keys())[1]
+            apos, bpos = positions[a], positions[b]
+            xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
+            scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
+        else :
+            scale = 1
+        video.scale = scale
+        return None
+    
+    
 # Traitement tools
 
 def videotreatement(video) -> None:
@@ -164,7 +204,7 @@ def videotreatement(video) -> None:
     frames = video.Frames
     settings = video.settings
     markerscolor = video.markerscolor
-    minsize, maxdist = settings.minsize, settings.maxdist
+    maxdist = settings.maxdist
     bordure_size = settings.bordure_size
 
     Ti, T = t.time(), t.time()
@@ -174,7 +214,6 @@ def videotreatement(video) -> None:
         try :
 
             markers_extremums = frametreatement(frames[i].array, settings, markerscolor, i)[0]
-            markers_extremums = rectifyer(markers_extremums, minsize)
             positions = position(markers_extremums)
 
             object_tracker(video, i, positions, maxdist, bordure_size)
@@ -195,76 +234,6 @@ def videotreatement(video) -> None:
     video.computationDuration = round(t.time()-Ti, 1)
 
     return None
-
-
-def object_tracker(video, i, positions, maxdist, bordure_size):
-    frames = video.Frames
-
-    for obj1 in positions :
-
-        identified = False
-        distances_list = {}
-        x1, y1 = positions[obj1][0], positions[obj1][1]
-
-        for obj2 in frames[i-1].identifiedObjects:
-
-            x2 = obj2.positions[frames[i-1].id][0]
-            y2 = obj2.positions[frames[i-1].id][1]
-
-            d = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-            distances_list[obj2] = d
-
-        if len(distances_list) != 0:
-            min_key = min(distances_list, key=distances_list.get)
-            distance = distances_list[min_key]
-            if distance < maxdist:
-                identified = True
-                video.Frames[i].identifiedObjects.append(min_key)
-                min_key.positions[video.Frames[i].id] = positions[obj1]
-
-        if not identified :
-            if in_bordure(bordure_size, positions[obj1]):
-                new_obj = Object('obj-'+str(video.markercount))
-                new_obj.positions[video.Frames[i].id] = [x1, y1]
-                video.Frames[i].identifiedObjects.append(new_obj)
-                video.markercount += 1
-
-        for obj in video.Frames[i-1].identifiedObjects:
-            if not obj in video.Frames[i].identifiedObjects:
-                obj.status = 'out'
-                obj.LastKnownPos = obj.positions[frames[i-1].id]
-
-# =============================================================================
-# def in_bordure (bordure_size, pos):
-#     # Les objets apparaissant aux bordures de l'écran ne seront pas considérés
-#     # comme des erreurs mais comme des nouveaux objets entrant dans le chant de
-#     # la caméra.
-# 
-#     BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
-#     BandeBas = [i for i in range(video.Framessize[1] - bordure_size, video.Framessize[1] + 1)]
-#     BandeDroite = [i for i in range(video.Framessize[0] - bordure_size, video.Framessize[0] + 1)]
-# 
-#     x1, y1 = pos[0], pos[1]
-#     if x1 in BandeGaucheHaut or x1 in BandeDroite:
-#         return True
-#     if y1 in BandeGaucheHaut or y1 in BandeBas:
-#         return True
-#     else :
-#         return False
-# =============================================================================
-
-def waiting_time(i, N, Ti):
-    d = t.time()-Ti
-    d = round((N-i)*(d/i), 1)
-    minutes = str(int(d//60))
-    if int(minutes) < 10 :
-        minutes = '0' + minutes
-    secondes = str(int(d%60))
-    if int(secondes) < 10 :
-        secondes = '0' + secondes
-
-    return minutes + 'min ' + secondes + 'sec'
-
 
 def frametreatement(frame:np.array, settings, mc, i:int) -> tuple:
     """
@@ -298,9 +267,21 @@ def frametreatement(frame:np.array, settings, mc, i:int) -> tuple:
     else:
         raise SettingError
 
-
-
-# Frame manipulation tools
+def reducer(image:np.array, definition:int) -> np.array:
+    """
+    image : image de depart.
+    Definition : l'image finale contiendra 1/definition² pixels de l'image
+    initiale.
+    """
+    simplified_im = []
+    h = len(image)
+    w = len(image[0])
+    for i in range(0, h, definition):
+        line = []
+        for j in range(0, w, definition):
+            line.append(image[i][j])
+        simplified_im.append(line)
+    return np.uint8(simplified_im)
 
 def objects_identification(image:np.array, settings, mc, i:int) -> tuple :
     """
@@ -349,6 +330,16 @@ def objects_identification(image:np.array, settings, mc, i:int) -> tuple :
 
     return extremas, borders
 
+def rate_rgb(pixel:list, c:int) -> float:
+    """
+    pixel : élement de l'image d'origine sous la forme [r, g, b].
+    c = 0(rouge), 1(vert) ou 2(bleu).
+
+    Calcul le poids relatif de la composante c du pixel pixel parmis les
+        composantes rgb qui le définissent.
+    """
+    assert c in [0, 1, 2]
+    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
 
 def detection(image, depart:list, object:list, extr:list, mc, tol) -> list:
     """
@@ -416,22 +407,6 @@ def get_neighbours(image:np.array, pixel:list, mc, tol) -> list:
 
     return L_neighbours
 
-
-def position(extremas:dict) -> list:
-    """
-    Récupère la position d'un objet à partir des extremas.
-    Renvoie un dictionnaire où les clefs sont les noms des ifférents objets
-        détectés sur la frame étudiée et les valeurs sont les coordonées
-        du 'centre' de l'objet.
-    """
-    position = {}
-    for obj in extremas:
-        x = (extremas[obj][0] + extremas[obj][2]) / 2
-        y = (extremas[obj][1] + extremas[obj][3]) / 2
-        position[obj] = [x, y]
-    return position
-
-
 def rectifyer(extremas:dict, minsize:int) -> dict:
     """
     Rectifie quelques erreurs.
@@ -449,31 +424,85 @@ def rectifyer(extremas:dict, minsize:int) -> dict:
         del extremas[obj]
     return extremas
 
-
-def rate_rgb(pixel:list, c:int) -> float:
+def position(extremas:dict) -> list:
     """
-    pixel : élement de l'image d'origine sous la forme [r, g, b].
-    c = 0(rouge), 1(vert) ou 2(bleu).
-
-    Calcul le poids relatif de la composante c du pixel pixel parmis les
-        composantes rgb qui le définissent.
+    Récupère la position d'un objet à partir des extremas.
+    Renvoie un dictionnaire où les clefs sont les noms des ifférents objets
+        détectés sur la frame étudiée et les valeurs sont les coordonées
+        du 'centre' de l'objet.
     """
-    assert c in [0, 1, 2]
-    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
+    position = {}
+    for obj in extremas:
+        x = (extremas[obj][0] + extremas[obj][2]) / 2
+        y = (extremas[obj][1] + extremas[obj][3]) / 2
+        position[obj] = [x, y]
+    return position
+
+def object_tracker(video, i, positions, maxdist, bordure_size):
+    frames = video.Frames
+    framessize = video.Framessize
+    for obj1 in positions :
+
+        identified = False
+        distances_list = {}
+        x1, y1 = positions[obj1][0], positions[obj1][1]
+
+        for obj2 in frames[i-1].identifiedObjects:
+
+            x2 = obj2.positions[frames[i-1].id][0]
+            y2 = obj2.positions[frames[i-1].id][1]
+
+            d = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+            distances_list[obj2] = d
+
+        if len(distances_list) != 0:
+            min_key = min(distances_list, key=distances_list.get)
+            distance = distances_list[min_key]
+            if distance < maxdist:
+                identified = True
+                video.Frames[i].identifiedObjects.append(min_key)
+                min_key.positions[video.Frames[i].id] = positions[obj1]
+
+        if not identified :
+            if in_bordure(framessize, bordure_size, positions[obj1]):
+                new_obj = Object('obj-'+str(video.markercount))
+                new_obj.positions[video.Frames[i].id] = [x1, y1]
+                video.Frames[i].identifiedObjects.append(new_obj)
+                video.markercount += 1
+
+        for obj in video.Frames[i-1].identifiedObjects:
+            if not obj in video.Frames[i].identifiedObjects:
+                obj.status = 'out'
+                obj.LastKnownPos = obj.positions[frames[i-1].id]
+
+def in_bordure (framessize, bordure_size, pos):
+    # Les objets apparaissant aux bordures de l'écran ne seront pas considérés
+    # comme des erreurs mais comme des nouveaux objets entrant dans le chant de
+    # la caméra.
+
+    BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
+    BandeBas = [i for i in range(framessize[1] - bordure_size, framessize[1] + 1)]
+    BandeDroite = [i for i in range(framessize[0] - bordure_size, framessize[0] + 1)]
+
+    x1, y1 = pos[0], pos[1]
+    if x1 in BandeGaucheHaut or x1 in BandeDroite:
+        return True
+    if y1 in BandeGaucheHaut or y1 in BandeBas:
+        return True
+    else :
+        return False
+
+def waiting_time(i, N, Ti):
+    d = t.time()-Ti
+    d = round((N-i)*(d/i), 1)
+    minutes = str(int(d//60))
+    if int(minutes) < 10 :
+        minutes = '0' + minutes
+    secondes = str(int(d%60))
+    if int(secondes) < 10 :
+        secondes = '0' + secondes
+
+    return minutes + 'min ' + secondes + 'sec'
 
 
-def reducer(image:np.array, definition:int) -> np.array:
-    """
-    image : image de depart.
-    Definition : l'image finale contiendra 1/definition² pixels de l'image
-    initiale.
-    """
-    simplified_im = []
-    h = len(image)
-    w = len(image[0])
-    for i in range(0, h, definition):
-        line = []
-        for j in range(0, w, definition):
-            line.append(image[i][j])
-        simplified_im.append(line)
-    return np.uint8(simplified_im)
+calib = Calib()
