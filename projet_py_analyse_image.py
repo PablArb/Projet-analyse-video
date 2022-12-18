@@ -1,10 +1,11 @@
 import cv2
-import sys                  # intégré à python par défaut
-import time as t            # intégré à python par défaut
+import sys
+import time as t
 from IHM import visu, download, interact
 from ERRORS import Break, SettingError
 from VideoTreatment import Video, Object
-from VideoTreatment import videotreatement, frametreatement ,rectifyer, position, reducer
+from VideoTreatment import calib, position, reducer
+from VideoTreatment import videotreatement, frametreatement
 
 
 # Calibration fcts
@@ -21,11 +22,11 @@ def calibration(video):
     try :
 
         detected = frametreatement(video.Frames[0].array, settings, video.markerscolor, 0)
-        extremas = rectifyer(detected[0], settings.minsize)
-        positions = position(extremas)
-
-        detPas(extremas, settings.definition)
-        detScale(video.lenref, positions)
+        extremums = detected[0]
+        positions = position(extremums)
+        
+        calib.detPas(video, extremums, settings.definition)
+        calib.detScale(video, video.lenref, positions)
 
     except SettingError :
         print('\rIl y a un problème, veuillez vérifiez les réglages', end='\n' )
@@ -59,13 +60,13 @@ def calibration(video):
     visualisations.append(color_im)
 
     NB_im = reducer(color_im, settings.definition)
-    NB_im = visu.reduced(video, settings, NB_im, rate_rgb)
+    NB_im = visu.reduced(video, settings, NB_im)
     NB_im = cv2.resize(NB_im, video.Framessize)
     visualisations.append(NB_im)
 
     treated_NB = visu.copy_im(NB_im)
     treated_NB = visu.detection(treated_NB, detected[1])
-    treated_NB = visu.rectangle_NB(treated_NB, extremas, rectanglewidth)
+    treated_NB = visu.rectangle_NB(treated_NB, extremums, rectanglewidth)
     visualisations.append(treated_NB)
 
     pos = [obj.positions[first.id] for obj in first.identifiedObjects]
@@ -84,47 +85,6 @@ def calibration(video):
     print('\rValidation du résultat -------------------------------------------- OK', end='\n')
     t.sleep(0.1)
 
-    return None
-
-
-def detPas (extr:dict, definition:int):
-    '''
-    extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
-        dictionaire où chaque clef correspond à un objet,
-        la valeure qui lui est associée est la liste des 4 coordonées
-        extremales entourant l'objet.
-    '''
-    L = list(extr.keys())
-    if len(L) == 0:
-        return 1
-    min = extr[L[0]][2] - extr[L[0]][0]
-    for el in extr :
-        if extr[el][2] - extr[el][0] < min :
-            min = extr[el][2] - extr[el][0]
-        if extr[el][3] - extr[el][1] < min :
-            min = extr[el][3] - extr[el][1]
-    video.settings.step = int(min/(definition * 4)) # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
-    return None
-
-
-def detScale (lenref:float, positions:dict) -> float:
-    '''
-    positions : dictionaire contenant les positions de chaque repère sur
-        chacune des frames.
-    lenref : longeur de reférance sur laquelle on s'appuie pour définir
-        l'échelle
-
-    Renvoie l'échelle de la vidéo en cm par nb de pixel
-    '''
-    if len(positions) >= 2 :
-        a = list(positions.keys())[0]
-        b = list(positions.keys())[1]
-        apos, bpos = positions[a], positions[b]
-        xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
-        scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
-    else :
-        scale = 1
-    video.scale = scale
     return None
 
 
