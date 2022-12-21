@@ -11,7 +11,7 @@ import numpy as np
 import time as t
 import shutil as sht
 import pymediainfo as mi
-from ERRORS import paths, SettingError
+from Base import paths, SettingError
 
 
 
