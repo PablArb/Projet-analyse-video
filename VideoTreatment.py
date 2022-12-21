@@ -54,7 +54,7 @@ class Video(object):
         self.lenref = None
 
         self.scale = None
-        self.markercount = None
+        self.markercount = 0
         self.computationDuration = None
         
         self.settings = Settings(self)
@@ -153,13 +153,14 @@ class Object:
 
 class Calib:
     
-    def detPas (self, video, extr:dict, definition:int):
+    def detPas (self, video, extr:dict):
         '''
         extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
             dictionaire où chaque clef correspond à un objet,
             la valeure qui lui est associée est la liste des 4 coordonées
             extremales entourant l'objet.
         '''
+        definition = video.settings.definition
         L = list(extr.keys())
         if len(L) == 0:
             return 1
@@ -173,7 +174,7 @@ class Calib:
         return None
 
 
-    def detScale (self, video, lenref:float, positions:dict) -> float:
+    def detScale (self, video, positions:dict) -> float:
         '''
         positions : dictionaire contenant les positions de chaque repère sur
             chacune des frames.
@@ -182,6 +183,7 @@ class Calib:
 
         Renvoie l'échelle de la vidéo en cm par nb de pixel
         '''
+        lenref = video.lenref
         if len(positions) >= 2 :
             a = list(positions.keys())[0]
             b = list(positions.keys())[1]
@@ -193,6 +195,11 @@ class Calib:
         video.scale = scale
         return None
     
+    def reboot(self, video, i:int)-> None :
+        video.settings.definition = 1
+        video.settings.step = 1
+        video.Frames[i].identifiedObjects = []
+        return None
     
 # Traitement tools
 
