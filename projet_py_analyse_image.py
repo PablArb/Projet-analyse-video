@@ -1,6 +1,7 @@
 import cv2
 import sys
 import time as t
+import shutil as sht
 from IHM import visu, download, interact
 from ERRORS import Break, SettingError
 from VideoTreatment import Video, Object
@@ -88,10 +89,14 @@ def calibration(video):
     return None
 
 
-def cleaner(video:Video):
+def cleaner(video:Video, isOK=True):
     sys.setrecursionlimit(1000)
     if video == None:
         return None
+    if not isOK :
+        src = video.paths.videoStorage
+        dst = video.paths.desktop
+        sht.copy2(src, dst)
     video.paths.delete_dir('videoStorage')
     return None
 
@@ -129,11 +134,12 @@ try :
 
     if interact.yn("Voulez vous télécharger les résultats de l'étude ?"):
         download.results(video)
-
+    
+    cleaner(video)
     print('\nProcédure terminée')
 
 except (Break, KeyboardInterrupt):
-    cleaner(video)
+    cleaner(video, isOK=False)
     print('\n\nProcédure terminée')
 
 # cleaner(video)
