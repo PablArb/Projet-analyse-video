@@ -11,7 +11,7 @@ import numpy as np
 import shutil as sht
 import time as t
 from Base import Break
-from VideoTreatment import Video, Settings 
+from VideoTreatment import Video 
 
 
 class Visu :
@@ -19,8 +19,9 @@ class Visu :
     def copy_im(self, image:np.array) -> np.array:
         '''
         image : tableau numpy.
-        Copie l'image passée en argument de manière a casser le lien entre les
-        objets.
+        
+            Copie l'image passée en argument de manière a casser le lien entre
+        les objets.
         '''
         h = len(image)
         w = len(image[0])
@@ -34,12 +35,13 @@ class Visu :
     
     def cross_color(self, image:np.array, pos:list, crosswidth:int, copy=False) -> np.array:
         '''
-        image : np.array, imaghe sur laquelle on veut ajouter les croix vertes
-        pos : list, positions ou l'on veut tracer ces croix sous forme [[x, y]]
-        crosswidth : int, largeur des traits e la croix (qq pixels)
-        copy : bool, optional, permet de defaire le lien
-            DESCRIPTION. The default is False.
-
+        image       : np.array, imaghe sur laquelle on veut ajouter les croix.
+        pos         : positions ou l'on veut tracer ces croix sous forme [[x, y]]
+        crosswidth  : largeur des traits e la croix (qq pixels)
+        copy        : optional, indique s'il est necéssaire de défaire le lien
+            entre l'image d'origine et l'image traitée par la suite.
+        
+        Trace les croix aux positions des repères detectés.
         '''
         if copy:
             image = self.copy_im(image)
@@ -63,7 +65,15 @@ class Visu :
         assert c in [0, 1, 2]
         return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
     
-    def reduced(self, mc, tol, definition, image:np.array) -> np.array:
+    def reduced(self, mc:int, tol:float, definition:int, image:np.array) -> np.array:
+        '''
+        mc          : markerscolor, couleur des repères de l'image étudiée.
+        tol         : seuil de détection des couleurs.
+        definition  : taux de réduction de l'image.
+        image       : image étudiée.
+
+        Crée un apercu de ce que percoit l'algorythme.
+        '''
         h = len(image)
         w = len(image[0])
         newIm = []
@@ -78,6 +88,13 @@ class Visu :
         return np.uint8(newIm)
     
     def rectangle_NB(self, image:np.array, extremas:dict, rectanglewidth:int) -> np.array:
+        '''
+        image           : image étudiée.
+        extremas        : coordonées extremales des repères.
+        rectanglewidth  : largeur du contour tracé autour des repères detectés.
+
+        Crée un apercu de ce que detecte l'algorythme.
+        '''
         h = len(image)
         w = len(image[0])
         marge = 4
@@ -101,11 +118,19 @@ class Visu :
                     image[j*pas][i*pas] = [0, 0, 0]
         return np.uint8(image)
     
-    def scale(self, image:np.array, scale:float, crosswidth:int, c:int) -> np.array:
+    def scale(self, image:np.array, scale:float, crosswidth:int, mc:int) -> np.array:
+        '''
+        image       : image étudiée.
+        scale       : échelle de la vidéo.
+        crosswidth  : largeur des traits des croix tracées sur la l'image.
+        mc          : markerscolor, couleur des repères sur l'image étudiée.
+                
+        Crée un apercu de l'échelle utilisée pour le traitement de la vidéo.
+        '''
         h = len(image)
         w = len(image[0])
         color = [0, 0, 0]
-        color[c] = 255
+        color[mc] = 255
         for i in range(int(1/scale)):
             for j in range(crosswidth):
                 image[j+h-int( h/20 )][i + int( w/10 )] = color
@@ -116,6 +141,14 @@ class Visu :
         return np.uint8(image)
     
     def detection (self, image:np.array, borders:list, copy=False) -> np.array:
+        '''
+        image    : image étudiée.
+        borders  : contours des repères detectés.
+        copy     : optionel, permet de defaire le lien entre l'image créée et 
+            l'image original.
+            
+        Crée un apercu de ce que l'algorythme détecte.
+        '''
         if copy :
             image = self.copy_im(image)
         h = len(image)
@@ -175,7 +208,6 @@ class Download :
         return None
     
     def data(self, video:Video) -> None:
-        settings = video.settings
         video.paths.create_dir('csv')
         print('Sauvegarde de la data en cours ...', end='')
         nom_colonnes = ['frame', 'time']
@@ -199,13 +231,14 @@ class Download :
         dos.close()
         t.sleep(1)
     
-        self.settings(video, settings)
+        self.settings(video)
     
         print('\rSauvegarde de la data --------------------------------------------- OK')
         return None
     
-    def settings(self, video:Video, settings:Settings) -> None:
-    
+    def settings(self, video:Video) -> None:
+        
+        settings = video.settings
         doc = open(video.paths.csv + '/settings.csv', 'w')
     
         doc.write('------SETTINGS------\n')
@@ -281,6 +314,12 @@ class Interact :
                 print ('vous devez avoir fait une erreur, veuillez réessayer')
                 
     def yn(self, question:str) -> bool :
+        '''
+        question : question posée à l'utilisateur
+        
+            Pose une question fermée à l'utilisateur et renvoie un booléen en 
+        fonction de sa réponse.
+        '''
         assert type(question) == str
         while True:
             yn = input('\n' + question + ' [y]/n : ')
