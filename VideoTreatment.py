@@ -62,6 +62,7 @@ class Video(object):
     def videoinput(self) -> None:
         '''
         Pas d'argument.
+        
         Récupère la vidéo auprès de l'utilisateur.
         '''
         self.paths.create_dir('bac')
@@ -96,7 +97,8 @@ class Video(object):
     def get_frames(self) -> list:
         """
         Pas d'argument.
-        Renvoie une liste contenant l'ensemble des frames (tableaux de type
+        
+            Renvoie une liste contenant l'ensemble des frames (tableaux de type
         uint8) dans le même ordre que dans la vidéo étudiée.
         """
         frames = []
@@ -119,6 +121,7 @@ class Video(object):
     def get_framerate(self) -> float:
         """
         Pas d'argument.
+        
         Renvoie le nombre de frames par secondes de la vidéo étudiée.
         """
         media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
@@ -131,8 +134,9 @@ class Video(object):
     def get_framessize(self) -> tuple:
         """
         Pas d'argument.
-        Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de
-        la vidéo.
+        
+            Renvoie un tuple de deux valeurs : la hauteur et largeur des frames
+        de la vidéo.
         """
         media_info=mi.MediaInfo.parse(self.paths.videoStorage + '/'+self.id)
         video_tracks = media_info.video_tracks[0]
@@ -165,8 +169,8 @@ class Calib:
             la valeure qui lui est associée est la liste des 4 coordonées
             extremales entourant l'objet.
             
-        associe à l'attribut step des reglages de la vidéo l'intervalle le plus
-        large l'étude reste faisable.
+            Associe à l'attribut step des reglages de la vidéo l'intervalle le 
+        plus large tel que l'étude reste faisable.
         '''
         definition = video.settings.definition
         L = list(extr.keys())
@@ -211,12 +215,12 @@ class Calib:
     
 # Traitement tools
 
-def videotreatement(video:Video) -> None:
+def videotreatment(video:Video) -> None:
     """
     video : vidéo étudiée.
         
-    Permet le traitement de l'ensemble des frames qui constituent la vidéo ainsi
-        que le suivi des objets.
+        Permet le traitement de l'ensemble des frames qui constituent la vidéo 
+    ainsi que le suivi des objets.
     """
     frames = video.Frames
     settings = video.settings
@@ -260,8 +264,8 @@ def frametreatement(frame:np.array, settings:Settings, mc:int, i:int) -> tuple:
     mc          : markerscolor, couleur des repères sur la frame étudiée.
     i           : numméro de la frame que l'on traite.
     
-    Traite la frame passée en argument.(renvoie les postions des repères qui y 
-                                        sont detectés)
+        Traite la frame passée en argument.(renvoie les postions des repères 
+    qui y sont detectés)
     """
     isOK = False
     
@@ -363,8 +367,8 @@ def rate_rgb(pixel:list, c:int) -> float:
     pixel : élement de l'image d'origine sous la forme [r, g, b].
         c = 0(rouge), 1(vert) ou 2(bleu).
 
-    Calcul le poids relatif de la composante c du pixel parmis les
-        composantes rgb qui le définissent.
+        Calcul le poids relatif de la composante c du pixel parmis les
+    composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
     return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
@@ -379,8 +383,8 @@ def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float
     mc      : markerscolor, couleur des repères qui constituent les objets à detecter.
     tol     : seuil de detection des couleurs. 
     
-    Regroupe tous les pixels appartenant a un même objets (forme blanche ici)
-        dans une liste.
+        Regroupe tous les pixels appartenant a un même objets (forme blanche 
+    ici) dans une liste.
     """
     if start not in obj:            # but: récupérer un encadrement de objet
         obj.append(start)
@@ -405,8 +409,8 @@ def get_neighbours(image:np.array, pixel:list, mc:int, tol:float) -> list:
     pixel   : sous la forme [j,i].
     mc      : markerscolor, couleur des repères sur l'image étudiée.
     
-    Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la
-        recherche d'objet.
+        Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre 
+    de la recherche d'objet.
     """
     global at_border
     x, y = pixel[0], pixel[1]
@@ -466,10 +470,10 @@ def position(extremas:dict) -> list:
     extremas    : dictionaire contenant les coordonnées extremales des repères 
         détectés sur une frame.
     
-    Détermine la position d'un objet à partir des extremas.
+        Détermine la position d'un objet à partir des extremas.
     Renvoie un dictionnaire où les clefs sont les noms des différents objets
-        détectés sur la frame étudiée et les valeurs sont les coordonées
-        du 'centre' de l'objet.
+    détectés sur la frame étudiée et les valeurs sont les coordonées du
+    'centre' de l'objet.
     """
     position = {}
     for obj in extremas:
