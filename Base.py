@@ -24,7 +24,8 @@ class Paths :
     def create_dir(self, dir:str) -> None :
         '''
         dir : nom du dossier à créer.
-        Permet de créer le dossier dont le nom est passé en argument.
+        
+        Crée le dossier dont le nom est passé en argument.
         '''
         attr = self.__dict__
         if dir in attr :
@@ -38,7 +39,8 @@ class Paths :
     def delete_dir(self, dir:str) -> None :
         '''
         dir : nom du dossier à supprimer.
-        Permet de supprimer le dossier dont le nom est passé en argument.
+        
+        Supprime le dossier dont le nom est passé en argument.
         '''
         attr = self.__dict__
         if dir in attr :
@@ -52,8 +54,9 @@ class Paths :
     def add_subdata_dirs(self, video:str) -> None:
         '''
         video : nom de la video passée en entrée du script.
-        Permet d'ajouter les dossier propre à la vidéo dans le dossier data
-        (où les résultats de l'étude sont stockés).
+        
+            Ajoute les dossier propre à la vidéo dans le dossier data (où les
+        résultats de l'étude sont stockés).
         '''
         self.csv = self.data + '/' + video + '/csv'
         self.videodl = self.data + '/' + video + '/vidéo'
