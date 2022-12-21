@@ -18,7 +18,7 @@ from Base import paths, SettingError
 class Settings:
     def __init__(self, video):
 
-        self.precision = 100       # permet de gérer la precision du système
+        self.precision = 200       # permet de gérer la precision du système
         self.tol = 0.4             # est réglable lors de l'execution
         self.maxdef = 15           # abaissement de la definition maximal
         self.definition = 1        # est automatiquement réglé par le programme
@@ -27,10 +27,9 @@ class Settings:
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.minsize = int(video.Framessize[1] / 170)
-        # self.maxdist = int(video.Framessize[1] / (0.25 * video.Framerate) * 5)
-        # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
         self.maxdist = int(video.Framessize[1] / video.Framerate * 10)
         self.bordure_size = 0
+        # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
         self.crosswidth = int(video.Framessize[1] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
@@ -41,26 +40,30 @@ class Video(object):
 
         self.paths = paths
         
-        self.id = None
-        self.name = None # id où l'on a supprimé le 'é' souvent présent dans vidéo
+        self.id = None #titre de la vidéo 
         self.videoinput()
 
-        self.Frames = self.get_frames()
-        self.Framerate = self.get_framerate()
-        self.Framessize = self.get_framessize()
+        self.Frames = self.get_frames() #liste contenant les frames de la vidéo
+        self.Framerate = self.get_framerate() # nombre de frame par seconde
+        self.Framessize = self.get_framessize() # taille des frames
 
-        self.markerscolor = None
-        self.orientation = None
-        self.lenref = None
+        self.markerscolor = None #couleur des repères visuels sur la video
+        self.orientation = None #orientation de la video (paysage ou portrait)
+        self.lenref = None #longueur de référence associée à la video
 
-        self.scale = None
-        self.markercount = 0
-        self.computationDuration = None
+        self.scale = None #rapport distance sur nombre de pixel
+        self.markercount = 0 #nombre de repères détectés sur la vidéo
+        self.computationDuration = None #temps mis par l'algorythme pour 
+                                        #effectuer le traitement
         
-        self.settings = Settings(self)
+        self.settings = Settings(self) #réglages associés à la vidéo
         
         
     def videoinput(self) -> None:
+        '''
+        Pas d'argument.
+        Récupère la vidéo auprès de l'utilisateur.
+        '''
         self.paths.create_dir('bac')
         isempty = True
         print('\rPlacez la vidéo à étudier dans le bac sur votre bureau.', end='')
@@ -76,7 +79,6 @@ class Video(object):
             self.paths.create_dir('videoStorage')
             sht.copy2(self.paths.vidéoinput, self.paths.videoStorage)
             self.id = str(video)
-            self.name = ''.join( tuple( video.split('́') ) )
             self.paths.delete_dir('bac')
             return None
         elif len(_bac) == 1 and ext != 'mp4' and ext != 'mov' :
@@ -93,7 +95,8 @@ class Video(object):
 
     def get_frames(self) -> list:
         """
-        Renvoie une listes contenatnt l'ensembles des frames (tableaux de type
+        Pas d'argument.
+        Renvoie une liste contenant l'ensemble des frames (tableaux de type
         uint8) dans le même ordre que dans la vidéo étudiée.
         """
         frames = []
@@ -115,8 +118,8 @@ class Video(object):
 
     def get_framerate(self) -> float:
         """
-        Renvoie le nombre de frames par secondes de la vidéo passée en entrée du
-        script.
+        Pas d'argument.
+        Renvoie le nombre de frames par secondes de la vidéo étudiée.
         """
         media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
         tracks = media_info.tracks
@@ -127,8 +130,9 @@ class Video(object):
 
     def get_framessize(self) -> tuple:
         """
+        Pas d'argument.
         Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de
-        la video.
+        la vidéo.
         """
         media_info=mi.MediaInfo.parse(self.paths.videoStorage + '/'+self.id)
         video_tracks = media_info.video_tracks[0]
@@ -153,12 +157,16 @@ class Object:
 
 class Calib:
     
-    def detPas (self, video, extr:dict):
+    def detPas (self, video:Video, extr:dict) -> None:
         '''
-        extre : {0: [xmin, ymin, xmax, ymax], 1: ... }
+        video   : vidéo étudiée.
+        extr    : {0: [xmin, ymin, xmax, ymax], 1: ... },
             dictionaire où chaque clef correspond à un objet,
             la valeure qui lui est associée est la liste des 4 coordonées
             extremales entourant l'objet.
+            
+        associe à l'attribut step des reglages de la vidéo l'intervalle le plus
+        large l'étude reste faisable.
         '''
         definition = video.settings.definition
         L = list(extr.keys())
@@ -174,14 +182,14 @@ class Calib:
         return None
 
 
-    def detScale (self, video, positions:dict) -> float:
+    def detScale (self, video:Video, positions:dict) -> float:
         '''
-        positions : dictionaire contenant les positions de chaque repère sur
-            chacune des frames.
-        lenref : longeur de reférance sur laquelle on s'appuie pour définir
-            l'échelle
+        positions   : dictionaire contenant les positions de chaque repère sur
+            une des frames.
+        lenref      : longeur de reférance sur laquelle on s'appuie pour 
+            définir l'échelle.
 
-        Renvoie l'échelle de la vidéo en cm par nb de pixel
+        Renvoie l'échelle de la vidéo en cm par nb de pixel.
         '''
         lenref = video.lenref
         if len(positions) >= 2 :
@@ -195,7 +203,7 @@ class Calib:
         video.scale = scale
         return None
     
-    def reboot(self, video, i:int)-> None :
+    def reboot(self, video:Video, i:int)-> None :
         video.settings.definition = 1
         video.settings.step = 1
         video.Frames[i].identifiedObjects = []
@@ -203,16 +211,19 @@ class Calib:
     
 # Traitement tools
 
-def videotreatement(video) -> None:
+def videotreatement(video:Video) -> None:
     """
+    video : vidéo étudiée.
+        
     Permet le traitement de l'ensemble des frames qui constituent la vidéo ainsi
-        que le suivi des objets
+        que le suivi des objets.
     """
     frames = video.Frames
     settings = video.settings
-    markerscolor = video.markerscolor
+    mc = video.markerscolor
     maxdist = settings.maxdist
     bordure_size = settings.bordure_size
+    
 
     Ti, T = t.time(), t.time()
     print()
@@ -220,8 +231,8 @@ def videotreatement(video) -> None:
     for i in range(1, len(frames)): # frame 0 traitée durant l'initialisation
         try :
 
-            markers_extremums = frametreatement(frames[i].array, settings, markerscolor, i)[0]
-            positions = position(markers_extremums)
+            markers_extr = frametreatement(frames[i].array, settings, mc, i)[0]
+            positions = position(markers_extr)
 
             object_tracker(video, i, positions, maxdist, bordure_size)
 
@@ -234,19 +245,23 @@ def videotreatement(video) -> None:
             tleft = waiting_time(i, len(frames), Ti)
             print('\033[2K\033[1GTraitement en cours : ' +progr+ ' % (' +tleft+ ')', end='')
             T = t.time()
-
-    t.sleep(0.1)
-    print('\rTraitement de ' + video.name + ' ' + '-'*( 67-15-len(video.name) ) + ' OK', end='\n\n')
+            
+    name = ''.join( tuple( video.id.split('́') ) )
+    print('\rTraitement de ' + name + ' ' + '-'*( 82-len(name) ) + ' OK', end='\n\n')
 
     video.computationDuration = round(t.time()-Ti, 1)
 
     return None
 
-def frametreatement(frame:np.array, settings, mc, i:int) -> tuple:
+def frametreatement(frame:np.array, settings:Settings, mc:int, i:int) -> tuple:
     """
-    frame : image à traiter (tableau uint8).
-    i : numméro de la frame que l'on traite.
-    Permet le traitement de la frame passée en argument.
+    frame       : image à traiter (tableau uint8).
+    settings    : paramètres avec lesquels la frame est traitée.
+    mc          : markerscolor, couleur des repères sur la frame étudiée.
+    i           : numméro de la frame que l'on traite.
+    
+    Traite la frame passée en argument.(renvoie les postions des repères qui y 
+                                        sont detectés)
     """
     isOK = False
     
@@ -276,9 +291,11 @@ def frametreatement(frame:np.array, settings, mc, i:int) -> tuple:
 
 def reducer(image:np.array, definition:int) -> np.array:
     """
-    image : image de depart.
-    Definition : l'image finale contiendra 1/definition² pixels de l'image
-    initiale.
+    image       : image de depart.
+    Definition  : l'image finale contiendra 1/definition² pixels de l'image
+        initiale.
+        
+    Réduit la l'image afin de réduire la quantité d'information à traiter.
     """
     simplified_im = []
     h = len(image)
@@ -290,10 +307,14 @@ def reducer(image:np.array, definition:int) -> np.array:
         simplified_im.append(line)
     return np.uint8(simplified_im)
 
-def objects_identification(image:np.array, settings, mc, i:int) -> tuple :
+def objects_identification(image:np.array, settings:Settings, mc:int, i:int) -> tuple :
     """
-    image : frame à traiter.
-    i : indice de l'image à traiter.
+    image       : frame à traiter.
+    settings    : paramètres avec lesquels l'image sera traitée.
+    mc          : markerscolor, couleur des repères sur l'image étudiée.
+    i           : indice de l'image à traiter.
+    
+    Detecte les repères présents sur l'image passée en argument.
     """
     global at_border
     pas, tol = settings.step, settings.tol
@@ -340,47 +361,52 @@ def objects_identification(image:np.array, settings, mc, i:int) -> tuple :
 def rate_rgb(pixel:list, c:int) -> float:
     """
     pixel : élement de l'image d'origine sous la forme [r, g, b].
-    c = 0(rouge), 1(vert) ou 2(bleu).
+        c = 0(rouge), 1(vert) ou 2(bleu).
 
-    Calcul le poids relatif de la composante c du pixel pixel parmis les
+    Calcul le poids relatif de la composante c du pixel parmis les
         composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
     return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
 
-def detection(image, depart:list, object:list, extr:list, mc, tol) -> list:
+def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float) -> list:
     """
+    image   : image étudiée.
+    start   : pixel duquel on va partir pour 'explorer' notre objet, 
+                sous la forme [j,i].
+    obj     : liste contenant tout les pixels appartenants au même objet.
+    extr    : coordonées extremales de l'objet.
+    mc      : markerscolor, couleur des repères qui constituent les objets à detecter.
+    tol     : seuil de detection des couleurs. 
+    
     Regroupe tous les pixels appartenant a un même objets (forme blanche ici)
-        sous la forme d'une liste.
-    image : image en N&B.
-    depart : pixel duquel on va partir pour 'explorer' notre objet,
-        sous la forme [j,i].
-    objet : liste contenant tout les pixels appartenants au même objet.
+        dans une liste.
     """
-    if depart not in object:            # but: récupérer un encadrement de objet
-        object.append(depart)
-        if depart[0] < extr[0]:
-            extr[0] = depart[0]
-        elif depart[1] < extr[1]:
-            extr[1] = depart[1]
-        if depart[0] > extr[2]:
-            extr[2] = depart[0]
-        elif depart[1] > extr[3]:
-            extr[3] = depart[1]
+    if start not in obj:            # but: récupérer un encadrement de objet
+        obj.append(start)
+        if start[0] < extr[0]:
+            extr[0] = start[0]
+        elif start[1] < extr[1]:
+            extr[1] = start[1]
+        if start[0] > extr[2]:
+            extr[2] = start[0]
+        elif start[1] > extr[3]:
+            extr[3] = start[1]
 
-    for pixel in get_neighbours(image, depart, mc, tol):
-        if pixel not in object:
-            detection(image, pixel, object, extr, mc, tol)
+    for pixel in get_neighbours(image, start, mc, tol):
+        if pixel not in obj:
+            detection(image, pixel, obj, extr, mc, tol)
+    return extr, obj
 
-    return extr, object
 
-
-def get_neighbours(image:np.array, pixel:list, mc, tol) -> list:
+def get_neighbours(image:np.array, pixel:list, mc:int, tol:float) -> list:
     """
+    image   : image étudiée.
+    pixel   : sous la forme [j,i].
+    mc      : markerscolor, couleur des repères sur l'image étudiée.
+    
     Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la
-    recherche d'objet.
-    image : image en N&B.
-    pixel : sous la forme [j,i].
+        recherche d'objet.
     """
     global at_border
     x, y = pixel[0], pixel[1]
@@ -416,7 +442,11 @@ def get_neighbours(image:np.array, pixel:list, mc, tol) -> list:
 
 def rectifyer(extremas:dict, minsize:int) -> dict:
     """
-    Rectifie quelques erreurs.
+    extremas    : dictionaire contenant les coordonnées extremales des repères 
+        détectés sur une frame.
+    minsize     : Taille minimale acceptée pour un objet.
+    
+    Rectifie quelques erreurs, élimine le bruit.
     """
     # On supprime les objets trop petits, probablement issus d'erreurs.
     tosmall_objects = []
@@ -433,8 +463,11 @@ def rectifyer(extremas:dict, minsize:int) -> dict:
 
 def position(extremas:dict) -> list:
     """
-    Récupère la position d'un objet à partir des extremas.
-    Renvoie un dictionnaire où les clefs sont les noms des ifférents objets
+    extremas    : dictionaire contenant les coordonnées extremales des repères 
+        détectés sur une frame.
+    
+    Détermine la position d'un objet à partir des extremas.
+    Renvoie un dictionnaire où les clefs sont les noms des différents objets
         détectés sur la frame étudiée et les valeurs sont les coordonées
         du 'centre' de l'objet.
     """
@@ -446,6 +479,18 @@ def position(extremas:dict) -> list:
     return position
 
 def object_tracker(video, i, positions, maxdist, bordure_size):
+    '''
+    video           : vidéo étudiée.
+    i               : indice de la frame étudiée dans la liste contenant
+        l'ensemble des frames de la vidéo.
+    maxdist         : distance à partir de laquelle un objet ayant parcouru 
+        cette distance d'une frame à la suivante n'est pas considérer comme un 
+        même objet.
+    bordure_size    :  largeure des bordure autor de la frame permettant de 
+        detecter les repères entrant dans le champ de la caméra.
+        
+    Effectue le suivi des repère d'une frame à la suivante.
+    '''
     frames = video.Frames
     framessize = video.Framessize
     for obj1 in positions :
