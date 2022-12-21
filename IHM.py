@@ -63,14 +63,14 @@ class Visu :
         assert c in [0, 1, 2]
         return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
     
-    def reduced(self, video, settings, image:np.array) -> np.array:
+    def reduced(self, mc, tol, definition, image:np.array) -> np.array:
         h = len(image)
         w = len(image[0])
         newIm = []
-        for j in range(h):
+        for j in range(0, h, definition):
             newLine = []
-            for i in range(w):
-                if self.rate_rgb(image[j][i], video.markerscolor) > settings.tol:
+            for i in range(0, w, definition):
+                if self.rate_rgb(image[j][i], mc) > tol:
                     newLine.append(255)
                 else :
                     newLine.append(0)
@@ -115,8 +115,9 @@ class Visu :
         cv2.putText(image, '1cm', location, font, size, color)
         return np.uint8(image)
     
-    def detection (self, image:np.array, borders:list) -> np.array:
-        global definition
+    def detection (self, image:np.array, borders:list, copy=False) -> np.array:
+        if copy :
+            image = self.copy_im(image)
         h = len(image)
         w = len(image[0])
         for j in range(h) :
