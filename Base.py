@@ -66,7 +66,7 @@ class MacosPaths (Paths):
     def __init__(self):
         self.desktop = '/Users/'+user+'/Desktop'
         self.bac = '/Users/'+user+'/Desktop/bac'
-        self.videoStorage = '/Users/'+user+'/Desktop/.##temporary storage##'
+        self.videoStorage = '/Users/'+user+'/.##temporary storage##'
         self.data = '/Users/'+user+'/Desktop/mes exp TIPE/data video'
    
 class WIndowsPaths (Paths):
