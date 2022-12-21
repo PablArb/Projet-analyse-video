@@ -3,7 +3,7 @@ import sys
 import time as t
 import shutil as sht
 from IHM import visu, download, interact
-from ERRORS import Break, SettingError
+from Base import Break, SettingError
 from VideoTreatment import Video, Object
 from VideoTreatment import calib, position, reducer
 from VideoTreatment import videotreatement, frametreatement
