@@ -18,6 +18,8 @@ class SettingError (Exception):
 
 # définition des paths utiles 
 class Paths :
+    def __init__(self):
+        self.pathList = ['desktop','bac', 'videoStorage', 'data']
     
     def create_dir(self, dir:str) -> None :
         '''
@@ -62,7 +64,6 @@ class Paths :
 
 class MacosPaths (Paths):
     def __init__(self):
-        self.pathList = ['desktop','bac', 'videoStorage', 'data']
         self.desktop = '/Users/'+user+'/Desktop'
         self.bac = '/Users/'+user+'/Desktop/bac'
         self.videoStorage = '/Users/'+user+'/Desktop/.##temporary storage##'
@@ -70,7 +71,7 @@ class MacosPaths (Paths):
    
 class WIndowsPaths (Paths):
     def __init__(self):
-        self.pathList = ['bac', 'videoStorage', 'data']
+        self.desktop = 'C:Users/'+user+'/Desktop'
         self.bac = 'C:/Users/'+user+'/Desktop/bac'
         self.videoStorage = 'C:/Users/'+user+'/Desktop/.##temporary storage##'
         self.data = '/C:Users/'+user+'/Desktop/TIPE/data video'
