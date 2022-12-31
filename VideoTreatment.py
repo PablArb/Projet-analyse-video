@@ -11,7 +11,7 @@ import numpy as np
 import time as t
 import shutil as sht
 import pymediainfo as mi
-from Base import paths, SettingError
+from Base import paths, mess, SettingError, Break
 
 
 
@@ -19,7 +19,7 @@ class Settings:
     def __init__(self, video):
 
         self.precision = 200       # permet de gérer la precision du système
-        self.tol = 0.4             # est réglable lors de l'execution
+        self.tol = 40.0            # est réglable lors de l'execution
         self.maxdef = 15           # abaissement de la definition maximal
         self.definition = 1        # est automatiquement réglé par le programme
         self.step = 1              # est automatiquement réglé par le programme
@@ -43,10 +43,10 @@ class Video(object):
         self.id = None #titre de la vidéo 
         self.videoinput()
 
-        self.Frames = self.get_frames() #liste contenant les frames de la vidéo
         self.Framerate = self.get_framerate() # nombre de frame par seconde
         self.Framessize = self.get_framessize() # taille des frames
-
+        self.Frames = self.get_frames() #liste contenant les frames de la vidéo
+        
         self.markerscolor = None #couleur des repères visuels sur la video
         self.orientation = None #orientation de la video (paysage ou portrait)
         self.lenref = None #longueur de référence associée à la video
@@ -67,7 +67,7 @@ class Video(object):
         '''
         self.paths.create_dir('bac')
         isempty = True
-        print('\rPlacez la vidéo à étudier dans le bac sur votre bureau.', end='')
+        print(mess.B_vi, end='')
         while isempty:
             if len(os.listdir(self.paths.bac)) != 0:
                 isempty = False
@@ -83,40 +83,18 @@ class Video(object):
             self.paths.delete_dir('bac')
             return None
         elif len(_bac) == 1 and ext != 'mp4' and ext != 'mov' :
-            print('\rVeuillez fournir une vidéo au format mp4')
+            print(mess.P_vi1, end='')
             source = self.paths.bac + '/' + _bac[0]
             destination = self.paths.desktop + '/' + _bac[0]
             sht.copy2(source, destination)
             self.paths.delete_dir('bac')
             self.videoinput()
         elif len(_bac) > 1:
-            print("\rVeuillez ne placer qu'un document dans le bac", end='')
+            print(mess.P_vi2, end='')
             self.paths.delete_dir('bac')
             self.videoinput()
 
-    def get_frames(self) -> list:
-        """
-        Pas d'argument.
-        
-            Renvoie une liste contenant l'ensemble des frames (tableaux de type
-        uint8) dans le même ordre que dans la vidéo étudiée.
-        """
-        frames = []
-        cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)
-        frame_number = 0
-        print('\rRécupération de la vidéo en cours ...', end='')
-        while True:
-            ret, frame = cam.read()
-            if ret:
-                frames.append(Frame('frame.' + str(frame_number), frame))
-                frame_number += 1
-            else:
-                break
-        cam.release()
-        cv2.destroyAllWindows()
-        print('\rRécupération de la vidéo ------------------------------------------ OK', end='\n\n')
-        t.sleep(0.1)
-        return frames
+    
 
     def get_framerate(self) -> float:
         """
@@ -144,6 +122,29 @@ class Video(object):
         h = int(video_tracks.sampled_height)
         framessize = (w, h)
         return framessize
+    
+    def get_frames(self) -> list:
+        """
+        Pas d'argument.
+        
+            Renvoie une liste contenant l'ensemble des frames (tableaux de type
+        uint8) dans le même ordre que dans la vidéo étudiée.
+        """
+        frames = []
+        cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)
+        frame_number = 0
+        print(mess.B_gf, end='')
+        while True:
+            ret, frame = cam.read()
+            if ret:
+                frames.append(Frame('frame.' + str(frame_number), frame))
+                frame_number += 1
+            else:
+                break
+        cam.release()
+        cv2.destroyAllWindows()
+        print(mess.E_gf, end='')
+        return frames
 
 class Frame:
     def __init__(self, id, array):
@@ -230,28 +231,26 @@ def videotreatment(video:Video) -> None:
     
 
     Ti, T = t.time(), t.time()
-    print()
 
     for i in range(1, len(frames)): # frame 0 traitée durant l'initialisation
         try :
 
             markers_extr = frametreatement(frames[i].array, settings, mc, i)[0]
             positions = position(markers_extr)
-
+            
             object_tracker(video, i, positions, maxdist, bordure_size)
 
         except SettingError :
-            print('\rproblèmes dans les réglages')
+            raise Break
 
         if t.time() - T >= 1 :
             progr = (int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100
             progr = str(round(progr))
             tleft = waiting_time(i, len(frames), Ti)
-            print('\033[2K\033[1GTraitement en cours : ' +progr+ ' % (' +tleft+ ')', end='')
+            print(mess.S_vt +progr+ ' % (' +tleft+ ')', end='')
             T = t.time()
-            
-    name = ''.join( tuple( video.id.split('́') ) )
-    print('\rTraitement de ' + name + ' ' + '-'*( 82-len(name) ) + ' OK', end='\n\n')
+        
+    print(mess.E_vt, end='')
 
     video.computationDuration = round(t.time()-Ti, 1)
 
@@ -275,7 +274,7 @@ def frametreatement(frame:np.array, settings:Settings, mc:int, i:int) -> tuple:
             extremas, borders = objects_identification(image, settings, mc, i)
             isOK = True
         except RecursionError:
-            print('\rDéfinition trop élevée, tentative avec une défintion plus faible', end='')
+            print(mess.P_rec, end='')
             settings.definition += 1
 
     if isOK:
@@ -371,7 +370,7 @@ def rate_rgb(pixel:list, c:int) -> float:
     composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
-    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
+    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1) * 100
 
 def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float) -> list:
     """
