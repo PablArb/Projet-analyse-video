@@ -9,8 +9,7 @@ Created on Thu Dec  1 21:06:13 2022
 import csv, cv2, inspect, sys
 import numpy as np
 import shutil as sht
-import time as t
-from Base import Break
+from Base import Break, mess
 from VideoTreatment import Video 
 
 
@@ -63,7 +62,7 @@ class Visu :
     
     def rate_rgb(self, pixel:list, c:int) -> float:
         assert c in [0, 1, 2]
-        return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1)
+        return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1) * 100
     
     def reduced(self, mc:int, tol:float, definition:int, image:np.array) -> np.array:
         '''
@@ -196,20 +195,18 @@ class Download :
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
         out = cv2.VideoWriter(path, ext, video.Framerate, video.Framessize)
-        print()
-        print('Sauvegarde de la vidéo en cours ...', end='')
+        print(mess.B_vdl, end='')
         for frame in video.Frames:
             pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
             img = visu.cross_color(frame.array, pos, crosswidth)
             # img = Add_pas(img, pas)
             out.write(img)
         out.release()
-        print('\rSauvegarde de la vidéo -------------------------------------------- OK', end='\n')
+        print(mess.E_vdl, end='\n')
         return None
     
     def data(self, video:Video) -> None:
         video.paths.create_dir('csv')
-        print('Sauvegarde de la data en cours ...', end='')
         nom_colonnes = ['frame', 'time']
         objects = []
         frames = video.Frames
@@ -229,11 +226,10 @@ class Download :
                 dico['Y' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][1])
             array.writerow(dico)
         dos.close()
-        t.sleep(1)
     
         self.settings(video)
     
-        print('\rSauvegarde de la data --------------------------------------------- OK')
+        print(mess.E_ddl)
         return None
     
     def settings(self, video:Video) -> None:
@@ -267,15 +263,10 @@ class Download :
             crosswidth = video.settings.crosswidth
             im = visu.cross_color(frame.array, frame.identified_objects, crosswidth)
             cv2.imwrite(name, im)
-        print('\rSauvegarde des frames --------------------------------------------- OK')
+        print(mess.E_fdl)
         return None
 
 class Interact :
-    
-    def test(class1, class2):
-        global a, b
-        a, b = class1, class2
-        return None
     
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
@@ -283,23 +274,23 @@ class Interact :
     def verif_settings(self, video:Video):
         settings = video.settings
         while True :
-            print('\n1 couleur des repères :', ['bleue', 'verte', 'rouge'][video.markerscolor])
-            print('2 orientation de la vidéo :', ['landscape', 'portrait'][video.orientation-1])
-            print('3 longueur de référence : ', video.lenref, 'cm')
-            print('4 tolérance : ', settings.tol)
-            which = input('quel est le réglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) ? ')
+            print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
+            print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation-1], end='')
+            print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
+            print(mess.S_vs4 + str(settings.tol), end='')
+            which = input(mess.I_vs)
             if which in ['0', '1', '2', '3', '4', 'pres']:
                 if which == '0':
                     pass
                 elif which == '1':
                     print()
-                    self.markerscolor_input()
+                    self.markerscolor_input(video)
                 elif which == '2':
                     print()
-                    self.orientation_input()
+                    self.orientation_input(video)
                 elif which == '3':
                     print()
-                    self.ref_input()
+                    self.ref_input(video)
                 elif which == '4':
                     print()
                     settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
@@ -311,7 +302,7 @@ class Interact :
             elif which in self.stoplist :
                 raise Break
             else:
-                print ('vous devez avoir fait une erreur, veuillez réessayer')
+                print (mess.P_vs)
                 
     def yn(self, question:str) -> bool :
         '''
@@ -322,7 +313,7 @@ class Interact :
         '''
         assert type(question) == str
         while True:
-            yn = input('\n' + question + ' [y]/n : ')
+            yn = input(question + ' [y]/n : ')
             if yn in ['y', '', 'n']:
                 if yn == 'y' or yn == '':
                     return True
@@ -331,7 +322,7 @@ class Interact :
             elif yn in self.stoplist :
                 raise Break
             else:
-                print('Vous devez avoir fait une erreur, veuillez rééssayer.')
+                print(mess.P_vs)
     
     def markerscolor_input(self, video:Video) -> None:
         """
@@ -340,7 +331,7 @@ class Interact :
         markerscolor de la vidéo.
         """
         while True :
-            c = input('Couleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : ')
+            c = input(mess.I_mc)
             if c in ['1', '2', '3']:
                 c = int(c)-1
                 video.markerscolor = c
@@ -348,12 +339,12 @@ class Interact :
             elif c in self.stoplist :
                 raise Break
             else:
-                print('Vous devez avoir fait une erreur, veuillez rééssayer.\n')
+                print(mess.P_vs, end='')
 
     def orientation_input(self, video:Video) -> None:
             Framessize = video.Framessize
             while True:
-                mode = input('La vidéo est en mode (1=landscape, 2=portrait) : ')
+                mode = input(mess.I_or)
                 if mode in ['1', '2']:
                     if mode == '1':
                         height = min(Framessize)
@@ -369,7 +360,7 @@ class Interact :
                 elif mode in self.stoplist :
                     raise Break
                 else:
-                    print('Vous devez avoir fait une erreur, veuillez rééssayer.\n')
+                    print(mess.P_vs, end='')
 
     def ref_input(self, video:Video) -> None:
         """
@@ -378,7 +369,7 @@ class Interact :
         cette valeur à l'attribut lenref de la vidéo.
         """
         while True:
-            l = input('Longueur entre les deux premiers repères(cm) : ')
+            l = input(mess.I_ref)
             try :
                 if l in interact.stoplist:
                     raise Break
@@ -387,7 +378,7 @@ class Interact :
                     video.lenref = lenref
                     return None
             except ValueError :
-                print('Vous devez avoir fait une erreur, veuillez rééssayer.\n')
+                print(mess.P_vs, end='')
                 
 
 visu = Visu()
