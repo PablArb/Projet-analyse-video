@@ -103,21 +103,23 @@ class Mess :
         self.B_cal = '\nTraitement en cours ...'
         # potential recursion limit issue
         # potential setting issue
-        self.E_cal = '\rTraitement -------------------------------------------------------- OK\n\n'
+        self.E_cal = '\rTraitement -------------------------------------------------------- OK\n'
         
         self.B_vis = 'Création des visuels en cours ...'
         self.S_vis = "\rAffichage du résultat (une fenêtre a dû s'ouvrir)"
-        self.E_vis = '\rValidation du résultat -------------------------------------------- OK\n\n'
+        self.E_vis = '\rValidation du résultat -------------------------------------------- OK\n'
+        self.S_dur = 'Estimation de la durée du traitement : '
         
-        self.I_val = 'Le traitement est-il bon ?'
+        self.I_val = '\n\nLe traitement est-il bon ?'
         # potential setting issue
         self.P_set = '\rproblèmes dans les réglages'
         
         self.S_vt  = '\033[2K\033[1GTraitement en cours : '
-        self.E_vt  = '\rTraitement de la vidéo -------------------------------------------- OK\n\n'
+        self.E_vt  = '\rTraitement de la vidéo -------------------------------------------- OK\n'
+        self.S_dvt = 'Durée du traitement : '
         
         self.I_dl  = "Voulez vous télécharger les résultats de l'étude ?"
-        self.E_ddl = '\rSauvegarde de la data --------------------------------------------- OK\n'
+        self.E_ddl = '\n\nSauvegarde de la data --------------------------------------------- OK'
         self.B_vdl = '\nSauvegarde de la vidéo en cours ...'
         self.E_vdl = '\rSauvegarde de la vidéo -------------------------------------------- OK'
         self.E_fdl = '\rSauvegarde des frames --------------------------------------------- OK'
@@ -132,7 +134,7 @@ class Mess :
         self.S_vs3 = '\n3 longueur de référence : '
         self.S_vs4 = '\n4 tolérance : '
         self.I_vs  = '\nréglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) : ' 
-        self.P_vs  = 'vous devez avoir fait une erreur, veuillez réessayer'
+        self.P_vs  = 'vous devez avoir fait une erreur, veuillez réessayer\n'
 
 mess = Mess()
 
