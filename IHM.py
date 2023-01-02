@@ -135,7 +135,7 @@ class Visu :
                 image[j+h-int( h/20 )][i + int( w/10 )] = color
         location = (int(w/10) , h-int(h/20 + h/100))
         font = cv2.FONT_HERSHEY_SIMPLEX
-        size = int(w/1000)
+        size = 1
         cv2.putText(image, '1cm', location, font, size, color)
         return np.uint8(image)
     
