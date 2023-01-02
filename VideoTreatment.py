@@ -229,16 +229,16 @@ def videotreatment(video:Video) -> None:
     maxdist = settings.maxdist
     bordure_size = settings.bordure_size
     
-
+    print()
     Ti, T = t.time(), t.time()
 
     for i in range(1, len(frames)): # frame 0 traitée durant l'initialisation
         try :
-
             markers_extr = frametreatement(frames[i].array, settings, mc, i)[0]
             positions = position(markers_extr)
             
             object_tracker(video, i, positions, maxdist, bordure_size)
+   
 
         except SettingError :
             raise Break
@@ -250,13 +250,15 @@ def videotreatment(video:Video) -> None:
             print(mess.S_vt +progr+ ' % (' +tleft+ ')', end='')
             T = t.time()
         
+    d = time_formater(t.time()-Ti)
+    video.computationDuration = d
+    
     print(mess.E_vt, end='')
-
-    video.computationDuration = round(t.time()-Ti, 1)
-
+    print(mess.S_dvt + d, end='')
+    
     return None
 
-def frametreatement(frame:np.array, settings:Settings, mc:int, i:int) -> tuple:
+def frametreatement(frame, settings, mc, i) -> tuple:
     """
     frame       : image à traiter (tableau uint8).
     settings    : paramètres avec lesquels la frame est traitée.
@@ -310,7 +312,7 @@ def reducer(image:np.array, definition:int) -> np.array:
         simplified_im.append(line)
     return np.uint8(simplified_im)
 
-def objects_identification(image:np.array, settings:Settings, mc:int, i:int) -> tuple :
+def objects_identification(image:np.array, settings:Settings, mc:int, ind:int) -> tuple :
     """
     image       : frame à traiter.
     settings    : paramètres avec lesquels l'image sera traitée.
@@ -329,7 +331,7 @@ def objects_identification(image:np.array, settings:Settings, mc:int, i:int) -> 
 
 # =============================================================================
 #     if i > 0:
-#         PrevFrame = video.Frames[i-1]
+#         PrevFrame = video.Frames[ind-1]
 #         AreasToExplore = []
 #         for obj in PrevFrame.identifiedObjects :
 #             [x, y] = obj.positions[PrevFrame.id]
@@ -550,14 +552,15 @@ def in_bordure (framessize, bordure_size, pos):
 def waiting_time(i, N, Ti):
     d = t.time()-Ti
     d = round((N-i)*(d/i), 1)
-    minutes = str(int(d//60))
+    return time_formater(d)
+
+def time_formater (t):
+    minutes = str(int(t//60))
     if int(minutes) < 10 :
         minutes = '0' + minutes
-    secondes = str(int(d%60))
+    secondes = str(int(t%60))
     if int(secondes) < 10 :
         secondes = '0' + secondes
-
     return minutes + 'min ' + secondes + 'sec'
-
 
 calib = Calib()
