@@ -102,7 +102,7 @@ class Video(object):
         
         Renvoie le nombre de frames par secondes de la vidéo étudiée.
         """
-        media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
+        media_info=mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
         tracks = media_info.tracks
         for i in tracks:
             if i.track_type == 'Video':
@@ -282,11 +282,11 @@ def frametreatement(frame, settings, mc, i) -> tuple:
     if isOK:
         definition = settings.definition
         for obj in extremas:
-            xmin, ymin = extremas[obj][0]*definition, extremas[obj][1]*definition
-            xmax, ymax = extremas[obj][2]*definition, extremas[obj][3]*definition
+            xmin, ymin=extremas[obj][0]*definition, extremas[obj][1]*definition
+            xmax, ymax=extremas[obj][2]*definition, extremas[obj][3]*definition
             extremas[obj] = [xmin, ymin, xmax, ymax]
             for i in range (len(borders[obj])):
-                x, y = borders[obj][i][0]*definition, borders[obj][i][1]*definition
+                x,y=borders[obj][i][0]*definition,borders[obj][i][1]*definition
                 borders[obj][i] = [x, y]
         
         extremas = rectifyer(extremas, settings.minsize)
@@ -348,7 +348,7 @@ def objects_identification(image:np.array, settings:Settings, mc:int, ind:int) -
 
             element_in = False
             for obj in extremas :
-                HorizontalAlignement = extremas[obj][1] <= j <= extremas[obj][3]
+                HorizontalAlignement = extremas[obj][1]<= j <=extremas[obj][3]
                 VerticalAlignement = extremas[obj][0] <= i <= extremas[obj][2]
                 if VerticalAlignement and HorizontalAlignement :
                     element_in = True
@@ -372,7 +372,7 @@ def rate_rgb(pixel:list, c:int) -> float:
     composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
-    return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1) * 100
+    return int(pixel[c]) / (int(pixel[0])+int(pixel[1])+int(pixel[2])+1) * 100
 
 def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float) -> list:
     """
@@ -381,7 +381,8 @@ def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float
                 sous la forme [j,i].
     obj     : liste contenant tout les pixels appartenants au même objet.
     extr    : coordonées extremales de l'objet.
-    mc      : markerscolor, couleur des repères qui constituent les objets à detecter.
+    mc      : markerscolor, couleur des repères qui constituent les objets à 
+        detecter.
     tol     : seuil de detection des couleurs. 
     
         Regroupe tous les pixels appartenant a un même objets (forme blanche 
@@ -538,8 +539,8 @@ def in_bordure (framessize, bordure_size, pos):
     # la caméra.
 
     BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
-    BandeBas = [i for i in range(framessize[1] - bordure_size, framessize[1] + 1)]
-    BandeDroite = [i for i in range(framessize[0] - bordure_size, framessize[0] + 1)]
+    BandeBas = [i for i in range(framessize[1]-bordure_size, framessize[1]+1)]
+    BandeDroite=[i for i in range(framessize[0]-bordure_size, framessize[0]+1)]
 
     x1, y1 = pos[0], pos[1]
     if x1 in BandeGaucheHaut or x1 in BandeDroite:
