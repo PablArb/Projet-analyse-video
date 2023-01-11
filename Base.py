@@ -120,11 +120,11 @@ class Mess :
         
         self.I_dl  = "Voulez vous télécharger les résultats de l'étude ?"
         self.E_ddl = '\n\nSauvegarde de la data --------------------------------------------- OK'
-        self.B_vdl = '\nSauvegarde de la vidéo en cours ...'
+        self.B_vdl = 'Sauvegarde de la vidéo en cours ...'
         self.E_vdl = '\rSauvegarde de la vidéo -------------------------------------------- OK'
-        self.E_fdl = '\rSauvegarde des frames --------------------------------------------- OK'
+        self.E_fdl = '\nSauvegarde des frames --------------------------------------------- OK'
         
-        # dealing with to recursion limit
+        # dealing with recursion limit
         self.P_rec = '\rDéfinition trop élevée, tentative avec une défintion plus faible'
         
         # dealing with setting issue
