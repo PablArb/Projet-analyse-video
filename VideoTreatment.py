@@ -18,7 +18,7 @@ from Base import paths, mess, SettingError, Break
 class Settings:
     def __init__(self, video):
 
-        self.precision = 200       # permet de gérer la precision du système
+        self.precision = 1000      # permet de gérer la precision du système
         self.tol = 40.0            # est réglable lors de l'execution
         self.maxdef = 15           # abaissement de la definition maximal
         self.definition = 1        # est automatiquement réglé par le programme
@@ -40,24 +40,23 @@ class Video(object):
 
         self.paths = paths
         
-        self.id = None #titre de la vidéo 
+        self.id = None # titre de la vidéo 
         self.videoinput()
 
         self.Framerate = self.get_framerate() # nombre de frame par seconde
         self.Framessize = self.get_framessize() # taille des frames
-        self.Frames = self.get_frames() #liste contenant les frames de la vidéo
+        self.Frames = self.get_frames() # liste contenant les frames de la vidéo
         
-        self.markerscolor = None #couleur des repères visuels sur la video
-        self.orientation = None #orientation de la video (paysage ou portrait)
-        self.lenref = None #longueur de référence associée à la video
+        self.markerscolor = None # couleur des repères visuels sur la video
+        self.orientation = None # orientation de la video (paysage ou portrait)
+        self.lenref = None # longueur de référence associée à la video
 
-        self.scale = None #rapport distance sur nombre de pixel
-        self.markercount = 0 #nombre de repères détectés sur la vidéo
-        self.computationDuration = None #temps mis par l'algorythme pour 
-                                        #effectuer le traitement
+        self.scale = None # rapport distance sur nombre de pixel
+        self.markercount = 0 # nombre de repères détectés sur la vidéo
+        self.markers = []
+        self.computationDuration = None # temps mis par l'algorythme pour effectuer le traitement
         
-        self.settings = Settings(self) #réglages associés à la vidéo
-        
+        self.settings = Settings(self) # réglages associés à la vidéo
         
     def videoinput(self) -> None:
         '''
@@ -154,11 +153,16 @@ class Frame:
         self.identifiedObjects = []
 
 class Object:
-    def __init__(self, id):
+    def __init__(self, id, pos):
+        
         self.id = id
-        self.status = 'in'
         self.positions = {}
-        self.LastKnownPos = None
+        
+        self.status = 'in'
+        self.pos = pos
+        self.speed = None
+        self.acc = None
+        
 
 class Calib:
     
@@ -183,7 +187,7 @@ class Calib:
                 min = extr[el][2] - extr[el][0]
             if extr[el][3] - extr[el][1] < min :
                 min = extr[el][3] - extr[el][1]
-        video.settings.step = int(min/(definition * 4)) # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
+        video.settings.step = int(min/(definition * 4))+1 # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
         return None
 
 
@@ -198,11 +202,12 @@ class Calib:
         '''
         lenref = video.lenref
         if len(positions) >= 2 :
-            a = list(positions.keys())[0]
-            b = list(positions.keys())[1]
+            a = list(positions.keys())[-1]
+            b = list(positions.keys())[-2]
             apos, bpos = positions[a], positions[b]
             xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
             scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
+            
         else :
             scale = 1
         video.scale = scale
@@ -236,10 +241,7 @@ def videotreatment(video:Video) -> None:
         try :
             markers_extr = frametreatement(frames[i].array, settings, mc, i)[0]
             positions = position(markers_extr)
-            
             object_tracker(video, i, positions, maxdist, bordure_size)
-   
-
         except SettingError :
             raise Break
 
@@ -272,8 +274,10 @@ def frametreatement(frame, settings, mc, i) -> tuple:
     
     while not isOK and settings.definition <= settings.maxdef :
         try:
-            image = reducer(frame, settings.definition)
-            extremas, borders = objects_identification(image, settings, mc, i)
+            if settings.definition != 1 :
+                frame = reducer(frame, settings.definition)
+            
+            extremas, borders = objects_identification(frame, settings, mc)
             isOK = True
         except RecursionError:
             print(mess.P_rec, end='')
@@ -312,9 +316,9 @@ def reducer(image:np.array, definition:int) -> np.array:
         simplified_im.append(line)
     return np.uint8(simplified_im)
 
-def objects_identification(image:np.array, settings:Settings, mc:int, ind:int) -> tuple :
+def objects_identification(image:np.array, settings:Settings, mc:int) -> tuple :
     """
-    image       : frame à traiter.
+    image       : frame à traiter en N&B.
     settings    : paramètres avec lesquels l'image sera traitée.
     mc          : markerscolor, couleur des repères sur l'image étudiée.
     i           : indice de l'image à traiter.
@@ -329,20 +333,6 @@ def objects_identification(image:np.array, settings:Settings, mc:int, ind:int) -
     borders = {}
     n = 0
 
-# =============================================================================
-#     if i > 0:
-#         PrevFrame = video.Frames[ind-1]
-#         AreasToExplore = []
-#         for obj in PrevFrame.identifiedObjects :
-#             [x, y] = obj.positions[PrevFrame.id]
-#             if x - maxdist < 0 : xmin = 0
-#             else : xmin = x-maxdist
-#             if y - maxdist < 0 : ymin = 0
-#             else : ymin = y - maxdist
-#             NewArea = []
-# =============================================================================
-
-
     for j in range(0, h, pas):
         for i in range(0, w, pas):
 
@@ -354,6 +344,7 @@ def objects_identification(image:np.array, settings:Settings, mc:int, ind:int) -
                     element_in = True
 
             if not element_in and rate_rgb(image[j][i], mc) > tol :
+            #if not element_in and image[i][j] :
                 depart = [i, j]
                 object = [depart]
                 init_extr = [depart[0], depart[1], depart[0], depart[1]]
@@ -492,13 +483,15 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
     maxdist         : distance à partir de laquelle un objet ayant parcouru 
         cette distance d'une frame à la suivante n'est pas considérer comme un 
         même objet.
-    bordure_size    :  largeure des bordure autor de la frame permettant de 
+    bordure_size    :  largeure des bordure autour de la frame permettant de 
         detecter les repères entrant dans le champ de la caméra.
         
     Effectue le suivi des repère d'une frame à la suivante.
     '''
+    
     frames = video.Frames
     framessize = video.Framessize
+    
     for obj1 in positions :
 
         identified = False

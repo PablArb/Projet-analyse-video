@@ -293,11 +293,10 @@ class Interact :
                     self.ref_input(video)
                 elif which == '4':
                     print()
-                    settings.tol += float(input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : '))
-                    settings.tol = round(settings.tol, 3)
+                    self.tol_input(video)
                 elif which == 'pres':
                     print()
-                    sys.setrecursionlimit(int(input('setrecursionlimit : ')))
+                    self.reclimit_input(video)
                 return None
             elif which in self.stoplist :
                 raise Break
@@ -380,7 +379,34 @@ class Interact :
             except ValueError :
                 print(mess.P_vs, end='')
                 
-
+    def tol_input(self, video:Video):
+        settings = video.settings
+        while True :
+            tol = input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : ')
+            if tol in self.stoplist :
+                raise Break
+            else :
+                try :
+                    tol = round(float(tol), 3)
+                    settings.tol += tol
+                    return None
+                except ValueError :
+                    print(mess.P_vs, end='')
+        
+    def reclimit_input(self, video:Video):
+        while True :
+            rl = input('setrecursionlimit : ')
+            if rl in self.stoplist :
+                raise Break
+            else :
+                try :
+                    rl = int(rl)
+                    sys.setrecursionlimit(rl)
+                    return None
+                except ValueError :
+                    print(mess.P_vs, end='')
+    
+    
 visu = Visu()
 download = Download()
 interact = Interact()
