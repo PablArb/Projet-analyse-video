@@ -15,7 +15,7 @@ from Base import paths, mess, SettingError, Break
 
 
 
-class Settings:
+class Settings(object):
     def __init__(self, video):
 
         self.precision = 1000      # permet de gérer la precision du système
@@ -27,7 +27,7 @@ class Settings:
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.minsize = int(video.Framessize[1] / 170)
-        self.maxdist = int(video.Framessize[1] / video.Framerate * 10)
+        self.maxdist = int(video.Framessize[1] / video.Framerate * 2)
         self.bordure_size = 0
         # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
         self.crosswidth = int(video.Framessize[1] / 500)
@@ -145,26 +145,72 @@ class Video(object):
         print(mess.E_gf, end='')
         return frames
 
-class Frame:
+
+class Frame(object):
     def __init__(self, id, array):
         self.id = id
         self.array = array
-        self.AreasOfInterest = []
         self.identifiedObjects = []
 
-class Object:
-    def __init__(self, id, pos):
-        
-        self.id = id
-        self.positions = {}
-        
-        self.status = 'in'
-        self.pos = pos
-        self.speed = None
-        self.acc = None
-        
 
-class Calib:
+class Object(object):
+    def __init__(self, id, initpos, initframe):
+        self.id = id
+        self.lastupdate = 0
+        self.lastknownpos = initpos
+        self.kf = obj_tracker(1, initpos)
+        self.positions = {initframe : initpos}
+        self.status = 'hooked'
+
+
+
+class obj_tracker(object):
+    # filtre de kalman 
+    def __init__(self, dt, point):
+        self.dt=dt
+
+        # Vecteur d'etat initial
+        self.E=np.matrix([[point[0]], [point[1]], [0], [0]])
+
+        # Matrice de transition
+        self.A=np.matrix([[1      , 0      , self.dt, 0      ],
+                          [0      , 1      , 0      , self.dt],
+                          [0      , 0      , 1      , 0      ],
+                          [0      , 0      , 0      , 1      ]])
+
+        # Matrice d'observation, on n'observe que x et y
+        self.H=np.matrix([[1, 0, 0, 0],
+                          [0, 1, 0, 0]])
+
+        self.Q=np.matrix([[1, 0, 0, 0],
+                          [0, 1, 0, 0],
+                          [0, 0, 1, 0],
+                          [0, 0, 0, 1]])
+
+        self.R=np.matrix([[1, 0],
+                          [0, 1]])
+
+        self.P=np.eye(self.A.shape[1])
+
+    def predict(self):
+        self.E=np.dot(self.A, self.E)
+        # Calcul de la covariance de l'erreur
+        self.P=np.dot(np.dot(self.A, self.P), self.A.T)+self.Q
+        return self.E
+
+    def update(self, z):
+        # Calcul du gain de Kalman
+        S=np.dot(self.H, np.dot(self.P, self.H.T))+self.R
+        K=np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
+
+        # Correction / innovation
+        self.E=np.round(self.E+np.dot(K, (z-np.dot(self.H, self.E))))
+        I=np.eye(self.H.shape[1])
+        self.P=(I-(K*self.H))*self.P
+
+        return self.E
+
+class Calib():
     
     def detPas (self, video:Video, extr:dict) -> None:
         '''
@@ -489,59 +535,63 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
     Effectue le suivi des repère d'une frame à la suivante.
     '''
     
+    markers =  video.markers
     frames = video.Frames
-    framessize = video.Framessize
     
-    for obj1 in positions :
+    for obj in markers :
+        if obj.status == 'hooked':
+            obj.lastupdate += 1
+            
+            pred = obj.kf.predict()
+            xp, yp = int(pred[0]), int(pred[1])
+            
+            potential_matchs = []
+            for m in positions:
+                mes = positions[m]
+                xm, ym = mes[0], mes[1]
+                d = ( (xp-xm)**2 + (yp-ym)**2 )**.5
+                if d < maxdist*obj.lastupdate :
+                    potential_matchs.append(mes)
+            
+            if len(potential_matchs) == 0 :
+                print(f'{obj.id} not found on {frames[i].id}')
+                obj.positions[frames[i].id] = [xp, yp]
+            
+            if len(potential_matchs) == 1 :
+                pos = potential_matchs[0]
+            
+                obj.positions[frames[i].id] = pos
+                obj.lastknownpos = pos
+                obj.kf.update(np.expand_dims(pos, axis=-1))
+                obj.lastupdate = 0
+            
+                frames[i].identifiedObjects.append(obj)
+            
+            if obj.lastupdate >= 5 :
+                obj.status = 'lost'
+                print(f'{obj.id} lost on {frames[i].id}')
+    
+        elif obj.status == 'lost':
+            obj.positions[frames[i].id] = obj.lastknownpos
 
-        identified = False
-        distances_list = {}
-        x1, y1 = positions[obj1][0], positions[obj1][1]
-
-        for obj2 in frames[i-1].identifiedObjects:
-
-            x2 = obj2.positions[frames[i-1].id][0]
-            y2 = obj2.positions[frames[i-1].id][1]
-
-            d = ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
-            distances_list[obj2] = d
-
-        if len(distances_list) != 0:
-            min_key = min(distances_list, key=distances_list.get)
-            distance = distances_list[min_key]
-            if distance < maxdist:
-                identified = True
-                video.Frames[i].identifiedObjects.append(min_key)
-                min_key.positions[video.Frames[i].id] = positions[obj1]
-
-        if not identified :
-            if in_bordure(framessize, bordure_size, positions[obj1]):
-                new_obj = Object('obj-'+str(video.markercount))
-                new_obj.positions[video.Frames[i].id] = [x1, y1]
-                video.Frames[i].identifiedObjects.append(new_obj)
-                video.markercount += 1
-
-        for obj in video.Frames[i-1].identifiedObjects:
-            if not obj in video.Frames[i].identifiedObjects:
-                obj.status = 'out'
-                obj.LastKnownPos = obj.positions[frames[i-1].id]
-
-def in_bordure (framessize, bordure_size, pos):
-    # Les objets apparaissant aux bordures de l'écran ne seront pas considérés
-    # comme des erreurs mais comme des nouveaux objets entrant dans le chant de
-    # la caméra.
-
-    BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
-    BandeBas = [i for i in range(framessize[1]-bordure_size, framessize[1]+1)]
-    BandeDroite=[i for i in range(framessize[0]-bordure_size, framessize[0]+1)]
-
-    x1, y1 = pos[0], pos[1]
-    if x1 in BandeGaucheHaut or x1 in BandeDroite:
-        return True
-    if y1 in BandeGaucheHaut or y1 in BandeBas:
-        return True
-    else :
-        return False
+# =============================================================================
+# def in_bordure (framessize, bordure_size, pos):
+#     # Les objets apparaissant aux bordures de l'écran ne seront pas considérés
+#     # comme des erreurs mais comme des nouveaux objets entrant dans le chant de
+#     # la caméra.
+# 
+#     BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
+#     BandeBas = [i for i in range(framessize[1]-bordure_size, framessize[1]+1)]
+#     BandeDroite=[i for i in range(framessize[0]-bordure_size, framessize[0]+1)]
+# 
+#     x1, y1 = pos[0], pos[1]
+#     if x1 in BandeGaucheHaut or x1 in BandeDroite:
+#         return True
+#     if y1 in BandeGaucheHaut or y1 in BandeBas:
+#         return True
+#     else :
+#         return False
+# =============================================================================
 
 def waiting_time(i, N, Ti):
     d = t.time()-Ti
