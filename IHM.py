@@ -97,9 +97,9 @@ class Visu :
         h = len(image)
         w = len(image[0])
         marge = 4
-        for key in extremas:
-            xmin, ymin = int(extremas[key][0])-marge, int(extremas[key][1])-marge
-            xmax, ymax = int(extremas[key][2])+marge, int(extremas[key][3])+marge
+        for obj in extremas:
+            xmin, ymin = int(obj[0])-marge, int(obj[1])-marge
+            xmax, ymax = int(obj[2])+marge, int(obj[3])+marge
             for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
                 for n in range(rectanglewidth + 1):
                     if 0 <= i < w and 0 <= ymin-n < h and 0 <= ymin+n < h :
@@ -150,14 +150,13 @@ class Visu :
         '''
         if copy :
             image = self.copy_im(image)
-        h = len(image)
-        w = len(image[0])
+        h , w = image.shape[:2]
         for j in range(h) :
             for i in range(w):
                 if image[j][i] == 255:
                     image[j][i] = 100
         for obj in borders:
-            for pixel in borders[obj] :
+            for pixel in obj :
                 for i in range (-1, 2):
                     for j in range (-1, 2):
                         if 0 <= pixel[1] < h-j and 0 <= pixel[0] < w-i :
@@ -210,25 +209,24 @@ class Download :
         nom_colonnes = ['frame', 'time']
         objects = []
         frames = video.Frames
-        for frame in frames:
-            for obj in frame.identifiedObjects:
-                if obj not in objects:
-                    objects.append(obj)
-                    nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
+        for obj in video.markers :
+            objects.append(obj)
+            nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
         dos = open(video.paths.csv + '/positions objets.csv', 'w')
         array = csv.DictWriter(dos, fieldnames=nom_colonnes)
         array.writeheader()
         for frame in frames:
             time = round(int(frame.id.split('.')[1]) / video.Framerate, 3)
             dico = {'frame': ' ' + frame.id, 'time': ' ' + str(time)}
-            for obj in frame.identifiedObjects:
+            for obj in video.markers :
                 dico['X' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][0])
                 dico['Y' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][1])
             array.writerow(dico)
         dos.close()
     
         self.settings(video)
-    
+        self.events(video)
+        
         print(mess.E_ddl)
         return None
     
@@ -244,11 +242,21 @@ class Download :
                 doc.write(line)
     
         doc.write('\n-------VIDEO--------\n')
+        toAvoid = ['markers', 'paths', 'treatementEvents', 'Frames', 'settings']
         for attr in inspect.getmembers(video):
             if attr[0][0] != '_' and not inspect.ismethod(attr[1]):
-                if not attr[0] == 'Frames':
-                    line = attr[0] + ' '*(19-len(attr[0])) + ' : ' + str(attr[1]) + '\n'
+                if not attr[0] in toAvoid :
+                    if attr[0] != 'markerscolor':
+                        line = attr[0] + ' '*(19-len(attr[0])) + ' : ' + str(attr[1]) + '\n'
+                    else :
+                        line = attr[0] + ' '*(19-len(attr[0])) + ' : ' + ['blue', 'green', 'red'][attr[1]] + '\n'
                     doc.write(line)
+        doc.close()
+        return None
+    
+    def events(self, video:Video):
+        doc = open(video.paths.csv + '/events.csv', 'w')
+        doc.write(video.treatementEvents)
         doc.close()
         return None
     
@@ -277,7 +285,7 @@ class Interact :
             print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
             print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation-1], end='')
             print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
-            print(mess.S_vs4 + str(settings.tol), end='')
+            print(mess.S_vs4 + str(100-settings.tol), end='')
             which = input(mess.I_vs)
             if which in ['0', '1', '2', '3', '4', 'pres']:
                 if which == '0':
@@ -382,13 +390,13 @@ class Interact :
     def tol_input(self, video:Video):
         settings = video.settings
         while True :
-            tol = input('Tolérance actuelle : ' + str(settings.tol) + ', implémenter de : ')
+            tol = input('Tolérance actuelle : ' + str(100-settings.tol) + ', implémenter de : ')
             if tol in self.stoplist :
                 raise Break
             else :
                 try :
                     tol = round(float(tol), 3)
-                    settings.tol += tol
+                    settings.tol -= tol
                     return None
                 except ValueError :
                     print(mess.P_vs, end='')

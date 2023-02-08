@@ -34,6 +34,29 @@ class Settings(object):
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
 
+
+class Frame(object):
+    def __init__(self, id, array):
+        self.id = id
+        self.array = array
+        self.mesures = []
+        self.identifiedObjects = []
+        
+class Object(object):
+    def __init__(self, id, initpos, initframe):
+        self.id = id
+        self.lastupdate = 0
+        self.lastknownpos = initpos
+        self.kf = obj_tracker(1, initpos)
+        self.positions = {initframe : initpos}
+        self.status = 'hooked'
+
+class Mesure(object):
+    def __init__(self, pos):
+        self.pos = pos
+
+
+
 class Video(object):
 
     def __init__(self):
@@ -57,6 +80,7 @@ class Video(object):
         self.computationDuration = None # temps mis par l'algorythme pour effectuer le traitement
         
         self.settings = Settings(self) # réglages associés à la vidéo
+        self.treatementEvents = ''
         
     def videoinput(self) -> None:
         '''
@@ -145,25 +169,6 @@ class Video(object):
         print(mess.E_gf, end='')
         return frames
 
-
-class Frame(object):
-    def __init__(self, id, array):
-        self.id = id
-        self.array = array
-        self.identifiedObjects = []
-
-
-class Object(object):
-    def __init__(self, id, initpos, initframe):
-        self.id = id
-        self.lastupdate = 0
-        self.lastknownpos = initpos
-        self.kf = obj_tracker(1, initpos)
-        self.positions = {initframe : initpos}
-        self.status = 'hooked'
-
-
-
 class obj_tracker(object):
     # filtre de kalman 
     def __init__(self, dt, point):
@@ -224,16 +229,15 @@ class Calib():
         plus large tel que l'étude reste faisable.
         '''
         definition = video.settings.definition
-        L = list(extr.keys())
-        if len(L) == 0:
+        if len(extr) == 0:
             return 1
-        min = extr[L[0]][2] - extr[L[0]][0]
+        mini = min(extr[0][2]-extr[0][0], extr[0][3]-extr[0][1])
         for el in extr :
-            if extr[el][2] - extr[el][0] < min :
-                min = extr[el][2] - extr[el][0]
-            if extr[el][3] - extr[el][1] < min :
-                min = extr[el][3] - extr[el][1]
-        video.settings.step = int(min/(definition * 4))+1 # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
+            if el[2] - el[0] < mini :
+                mini = el[2] - el[0]
+            if el[3] - el[1] < mini :
+                mini = el[3] - el[1]
+        video.settings.step = int(mini/(definition * 4))+1 # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
         return None
 
 
@@ -248,10 +252,9 @@ class Calib():
         '''
         lenref = video.lenref
         if len(positions) >= 2 :
-            a = list(positions.keys())[-1]
-            b = list(positions.keys())[-2]
-            apos, bpos = positions[a], positions[b]
-            xa , ya , xb, yb = apos[0], apos[1], bpos[0], bpos[1]
+            a = positions[-1]
+            b = positions[-2]
+            xa , ya , xb, yb = a[0], a[1], b[0], b[1]
             scale = lenref / ( ( (xa-xb)**2 + (ya-yb)**2 )**(1/2) )
             
         else :
@@ -285,8 +288,7 @@ def videotreatment(video:Video) -> None:
 
     for i in range(1, len(frames)): # frame 0 traitée durant l'initialisation
         try :
-            markers_extr = frametreatement(frames[i].array, settings, mc, i)[0]
-            positions = position(markers_extr)
+            positions = frametreatement(frames[i], settings, mc, i)[0]
             object_tracker(video, i, positions, maxdist, bordure_size)
         except SettingError :
             raise Break
@@ -317,13 +319,12 @@ def frametreatement(frame, settings, mc, i) -> tuple:
     qui y sont detectés)
     """
     isOK = False
-    
+    im = frame.array
     while not isOK and settings.definition <= settings.maxdef :
         try:
             if settings.definition != 1 :
-                frame = reducer(frame, settings.definition)
-            
-            extremas, borders = objects_identification(frame, settings, mc)
+                im = reducer(im, settings.definition)
+            extremas, borders = objects_identification(im, settings, mc)
             isOK = True
         except RecursionError:
             print(mess.P_rec, end='')
@@ -331,16 +332,22 @@ def frametreatement(frame, settings, mc, i) -> tuple:
 
     if isOK:
         definition = settings.definition
-        for obj in extremas:
-            xmin, ymin=extremas[obj][0]*definition, extremas[obj][1]*definition
-            xmax, ymax=extremas[obj][2]*definition, extremas[obj][3]*definition
-            extremas[obj] = [xmin, ymin, xmax, ymax]
-            for i in range (len(borders[obj])):
-                x,y=borders[obj][i][0]*definition,borders[obj][i][1]*definition
-                borders[obj][i] = [x, y]
+        for i in range(len(extremas)):
+            obj = extremas[i]
+            xmin, ymin = obj[0]*definition, obj[1]*definition
+            xmax, ymax = obj[2]*definition, obj[3]*definition
+            extremas[i] = [xmin, ymin, xmax, ymax]
+            for j in range (len(borders[i])):
+                pixel = borders[i][j]
+                x, y = pixel[0]*definition, pixel[1]*definition
+                borders[i][j] = [x, y]
         
         extremas = rectifyer(extremas, settings.minsize)
-        return extremas, borders
+        positions = position(extremas)
+        
+        frame.mesures = positions
+        
+        return positions, borders, extremas
     else:
         raise SettingError
 
@@ -373,19 +380,16 @@ def objects_identification(image:np.array, settings:Settings, mc:int) -> tuple :
     """
     global at_border
     pas, tol = settings.step, settings.tol
-    h = len(image)
-    w = len(image[0])
-    extremas = {}
-    borders = {}
-    n = 0
+    h, w = image.shape[:2]
+    extremas, borders = [], []
 
     for j in range(0, h, pas):
         for i in range(0, w, pas):
 
             element_in = False
             for obj in extremas :
-                HorizontalAlignement = extremas[obj][1]<= j <=extremas[obj][3]
-                VerticalAlignement = extremas[obj][0] <= i <= extremas[obj][2]
+                HorizontalAlignement = obj[1] <= j <= obj[3]
+                VerticalAlignement = obj[0] <= i <= obj[2]
                 if VerticalAlignement and HorizontalAlignement :
                     element_in = True
 
@@ -395,8 +399,9 @@ def objects_identification(image:np.array, settings:Settings, mc:int) -> tuple :
                 object = [depart]
                 init_extr = [depart[0], depart[1], depart[0], depart[1]]
                 at_border = False
-                extremas[n], borders[n] = detection(image, depart, object, init_extr, mc, tol)
-                n += 1
+                res = detection(image, depart, object, init_extr, mc, tol)
+                extremas.append(res[0])
+                borders.append(res[1])
 
     return extremas, borders
 
@@ -492,17 +497,14 @@ def rectifyer(extremas:dict, minsize:int) -> dict:
     Rectifie quelques erreurs, élimine le bruit.
     """
     # On supprime les objets trop petits, probablement issus d'erreurs.
-    tosmall_objects = []
+    new_extremas = []
 
-    for obj in extremas:
-        if extremas[obj][2] - extremas[obj][0] < minsize :
-            tosmall_objects.append(obj)
-        elif extremas[obj][3] - extremas[obj][1] < minsize :
-            tosmall_objects.append(obj)
+    for i in range(len(extremas)):
+        obj = extremas[i]
+        if not (obj[2] - obj[0] < minsize or obj[3] - obj[1] < minsize ):
+           new_extremas.append(obj)     
 
-    for obj in tosmall_objects:
-        del extremas[obj]
-    return extremas
+    return new_extremas
 
 def position(extremas:dict) -> list:
     """
@@ -514,11 +516,11 @@ def position(extremas:dict) -> list:
     détectés sur la frame étudiée et les valeurs sont les coordonées du
     'centre' de l'objet.
     """
-    position = {}
+    position = []
     for obj in extremas:
-        x = (extremas[obj][0] + extremas[obj][2]) / 2
-        y = (extremas[obj][1] + extremas[obj][3]) / 2
-        position[obj] = [x, y]
+        x = (obj[0] + obj[2]) / 2
+        y = (obj[1] + obj[3]) / 2
+        position.append([x, y])
     return position
 
 def object_tracker(video, i, positions, maxdist, bordure_size):
@@ -546,15 +548,14 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
             xp, yp = int(pred[0]), int(pred[1])
             
             potential_matchs = []
-            for m in positions:
-                mes = positions[m]
+            for mes in positions:
                 xm, ym = mes[0], mes[1]
                 d = ( (xp-xm)**2 + (yp-ym)**2 )**.5
                 if d < maxdist*obj.lastupdate :
                     potential_matchs.append(mes)
             
             if len(potential_matchs) == 0 :
-                print(f'{obj.id} not found on {frames[i].id}')
+                video.treatementEvents += f'{obj.id} not found on {frames[i].id}\n'
                 obj.positions[frames[i].id] = [xp, yp]
             
             if len(potential_matchs) == 1 :
@@ -569,29 +570,11 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
             
             if obj.lastupdate >= 5 :
                 obj.status = 'lost'
-                print(f'{obj.id} lost on {frames[i].id}')
+                video.treatementEvents += f'{obj.id} lost on {frames[i].id}\n'
     
         elif obj.status == 'lost':
             obj.positions[frames[i].id] = obj.lastknownpos
 
-# =============================================================================
-# def in_bordure (framessize, bordure_size, pos):
-#     # Les objets apparaissant aux bordures de l'écran ne seront pas considérés
-#     # comme des erreurs mais comme des nouveaux objets entrant dans le chant de
-#     # la caméra.
-# 
-#     BandeGaucheHaut = [i for i in range(0, bordure_size + 1)]
-#     BandeBas = [i for i in range(framessize[1]-bordure_size, framessize[1]+1)]
-#     BandeDroite=[i for i in range(framessize[0]-bordure_size, framessize[0]+1)]
-# 
-#     x1, y1 = pos[0], pos[1]
-#     if x1 in BandeGaucheHaut or x1 in BandeDroite:
-#         return True
-#     if y1 in BandeGaucheHaut or y1 in BandeBas:
-#         return True
-#     else :
-#         return False
-# =============================================================================
 
 def waiting_time(i, N, Ti):
     d = t.time()-Ti
