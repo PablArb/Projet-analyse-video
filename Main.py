@@ -33,8 +33,7 @@ def calibration(video:Video, i=0) -> None:
     
     try :
         T = t.time()
-        detection = frametreatement(first, settings, mc, 0)
-        positions, extremums = detection[0], detection[2] 
+        positions,borders,extremums= frametreatement(first, settings, mc, True)
         duration = (t.time()-T)*len(video.Frames)
         
         calib.detPas(video, extremums)
@@ -77,7 +76,7 @@ def calibration(video:Video, i=0) -> None:
     NB_im = cv2.resize(NB_im, video.Framessize)
     visualisations.append(NB_im)
 
-    treated_NB = visu.detection(NB_im, detection[1], copy=True)
+    treated_NB = visu.detection(NB_im, borders, copy=True)
     treated_NB = visu.rectangle_NB(treated_NB, extremums, rw)
     visualisations.append(treated_NB)
 

@@ -54,6 +54,7 @@ class Object(object):
 class Mesure(object):
     def __init__(self, pos):
         self.pos = pos
+        self.status = 'unmatched'
 
 
 
@@ -160,7 +161,7 @@ class Video(object):
         while True:
             ret, frame = cam.read()
             if ret:
-                frames.append(Frame('frame.' + str(frame_number), frame))
+                frames.append(Frame(frame_number, frame))
                 frame_number += 1
             else:
                 break
@@ -268,6 +269,9 @@ class Calib():
         video.Frames[i].identifiedObjects = []
         return None
     
+    
+    
+    
 # Traitement tools
 
 def videotreatment(video:Video) -> None:
@@ -286,17 +290,17 @@ def videotreatment(video:Video) -> None:
     print()
     Ti, T = t.time(), t.time()
 
-    for i in range(1, len(frames)): # frame 0 traitée durant l'initialisation
+    for frame in frames[1:]: # frame 0 traitée durant l'initialisation
         try :
-            positions = frametreatement(frames[i], settings, mc, i)[0]
-            object_tracker(video, i, positions, maxdist, bordure_size)
+            frametreatement(frame, settings, mc)
+            object_tracker(video, frame, maxdist, bordure_size)
         except SettingError :
             raise Break
 
         if t.time() - T >= 1 :
-            progr = (int(frames[i].id.split('.')[1]) / (len(frames) - 1)) * 100
+            progr = ( frame.id / (len(frames) - 1)) * 100
             progr = str(round(progr))
-            tleft = waiting_time(i, len(frames), Ti)
+            tleft = waiting_time(frame.id, len(frames), Ti)
             print(mess.S_vt +progr+ ' % (' +tleft+ ')', end='')
             T = t.time()
         
@@ -308,7 +312,7 @@ def videotreatment(video:Video) -> None:
     
     return None
 
-def frametreatement(frame, settings, mc, i) -> tuple:
+def frametreatement(frame, settings, mc, calib=False) -> tuple:
     """
     frame       : image à traiter (tableau uint8).
     settings    : paramètres avec lesquels la frame est traitée.
@@ -332,22 +336,25 @@ def frametreatement(frame, settings, mc, i) -> tuple:
 
     if isOK:
         definition = settings.definition
-        for i in range(len(extremas)):
-            obj = extremas[i]
-            xmin, ymin = obj[0]*definition, obj[1]*definition
-            xmax, ymax = obj[2]*definition, obj[3]*definition
-            extremas[i] = [xmin, ymin, xmax, ymax]
-            for j in range (len(borders[i])):
-                pixel = borders[i][j]
-                x, y = pixel[0]*definition, pixel[1]*definition
-                borders[i][j] = [x, y]
+        if definition != 1 :
+            for i in range(len(extremas)):
+                obj = np.array(extremas[i])
+                xmin, ymin = obj[0]*definition, obj[1]*definition
+                xmax, ymax = obj[2]*definition, obj[3]*definition
+                extremas[i] = [xmin, ymin, xmax, ymax]
+                for j in range (len(borders[i])):
+                    pixel = borders[i][j]
+                    x, y = pixel[0]*definition, pixel[1]*definition
+                    borders[i][j] = [x, y]
         
         extremas = rectifyer(extremas, settings.minsize)
         positions = position(extremas)
         
-        frame.mesures = positions
+        frame.mesures = [Mesure(pos) for pos in positions]
         
-        return positions, borders, extremas
+        if calib : return positions, borders, extremas
+        else : return None
+        
     else:
         raise SettingError
 
@@ -523,7 +530,7 @@ def position(extremas:dict) -> list:
         position.append([x, y])
     return position
 
-def object_tracker(video, i, positions, maxdist, bordure_size):
+def object_tracker(video, frame, maxdist, bordure_size):
     '''
     video           : vidéo étudiée.
     i               : indice de la frame étudiée dans la liste contenant
@@ -537,8 +544,8 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
     Effectue le suivi des repère d'une frame à la suivante.
     '''
     
-    markers =  video.markers
-    frames = video.Frames
+    markers = video.markers
+    mesures = frame.mesures
     
     for obj in markers :
         if obj.status == 'hooked':
@@ -548,32 +555,33 @@ def object_tracker(video, i, positions, maxdist, bordure_size):
             xp, yp = int(pred[0]), int(pred[1])
             
             potential_matchs = []
-            for mes in positions:
-                xm, ym = mes[0], mes[1]
+            for mes in mesures:
+                xm, ym = mes.pos[0], mes.pos[1]
                 d = ( (xp-xm)**2 + (yp-ym)**2 )**.5
                 if d < maxdist*obj.lastupdate :
                     potential_matchs.append(mes)
             
             if len(potential_matchs) == 0 :
-                video.treatementEvents += f'{obj.id} not found on {frames[i].id}\n'
-                obj.positions[frames[i].id] = [xp, yp]
+                video.treatementEvents += f'{obj.id} not found on frame {frame.id}\n'
+                obj.positions[frame.id] = [xp, yp]
             
             if len(potential_matchs) == 1 :
-                pos = potential_matchs[0]
+                mes = potential_matchs[0]
             
-                obj.positions[frames[i].id] = pos
-                obj.lastknownpos = pos
-                obj.kf.update(np.expand_dims(pos, axis=-1))
+                obj.positions[frame.id] = mes.pos
+                obj.lastknownpos = mes.pos
+                obj.kf.update(np.expand_dims(mes.pos, axis=-1))
                 obj.lastupdate = 0
+                mes.status = 'matched'
             
-                frames[i].identifiedObjects.append(obj)
+                frame.identifiedObjects.append(obj)
             
             if obj.lastupdate >= 5 :
                 obj.status = 'lost'
-                video.treatementEvents += f'{obj.id} lost on {frames[i].id}\n'
+                video.treatementEvents += f'{obj.id} lost on  frame {frame.id}\n'
     
         elif obj.status == 'lost':
-            obj.positions[frames[i].id] = obj.lastknownpos
+            obj.positions[frame.id] = obj.lastknownpos
 
 
 def waiting_time(i, N, Ti):

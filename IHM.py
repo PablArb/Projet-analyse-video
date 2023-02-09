@@ -216,8 +216,8 @@ class Download :
         array = csv.DictWriter(dos, fieldnames=nom_colonnes)
         array.writeheader()
         for frame in frames:
-            time = round(int(frame.id.split('.')[1]) / video.Framerate, 3)
-            dico = {'frame': ' ' + frame.id, 'time': ' ' + str(time)}
+            time = round(frame.id / video.Framerate, 3)
+            dico = {'frame': ' ' + str(frame.id), 'time': ' ' + str(time)}
             for obj in video.markers :
                 dico['X' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][0])
                 dico['Y' + obj.id] = ' ' + str(video.scale * obj.positions[frame.id][1])
