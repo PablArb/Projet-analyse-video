@@ -39,7 +39,7 @@ def calibration(video:Video, i=0) -> None:
         calib.detPas(video, extremums)
         calib.detScale(video, positions)
         
-        adaptedDur = duration/settings.step
+        adaptedDur = duration/(settings.step*2)
         formatedDur = time_formater(adaptedDur)
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec
     # les paramètres entrés par l'utilisateur, on gère ici ce problème.
@@ -52,7 +52,7 @@ def calibration(video:Video, i=0) -> None:
     # Une fois le traitement réalisé in stocke les résultats.
     video.markercount = 0
     for obj in positions :
-        new_obj = Object('obj-'+str(video.markercount), obj, first.id)
+        new_obj = Object('obj-'+str(video.markercount), obj, first.id, video.Framerate)
         first.identifiedObjects.append(new_obj)
         video.markers.append(new_obj)
         video.markercount += 1

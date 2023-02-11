@@ -207,10 +207,8 @@ class Download :
     def data(self, video:Video) -> None:
         video.paths.create_dir('csv')
         nom_colonnes = ['frame', 'time']
-        objects = []
         frames = video.Frames
         for obj in video.markers :
-            objects.append(obj)
             nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
         dos = open(video.paths.csv + '/positions objets.csv', 'w')
         array = csv.DictWriter(dos, fieldnames=nom_colonnes)

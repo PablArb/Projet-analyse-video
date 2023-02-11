@@ -28,7 +28,6 @@ class Settings(object):
         # On définit la taille des indicateurs visuels / taille de l'image
         self.minsize = int(video.Framessize[1] / 170)
         self.maxdist = int(video.Framessize[1] / video.Framerate * 2)
-        self.bordure_size = 0
         # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
         self.crosswidth = int(video.Framessize[1] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
@@ -43,12 +42,13 @@ class Frame(object):
         self.identifiedObjects = []
         
 class Object(object):
-    def __init__(self, id, initpos, initframe):
+    def __init__(self, id, initpos, initframe, fr):
         self.id = id
         self.lastupdate = 0
         self.lastknownpos = initpos
-        self.kf = obj_tracker(1, initpos)
+        self.prediction = initpos
         self.positions = {initframe : initpos}
+        self.kf = obj_tracker(1/fr, initpos)
         self.status = 'hooked'
 
 class Mesure(object):
@@ -188,10 +188,10 @@ class obj_tracker(object):
         self.H=np.matrix([[1, 0, 0, 0],
                           [0, 1, 0, 0]])
 
-        self.Q=np.matrix([[1, 0, 0, 0],
-                          [0, 1, 0, 0],
-                          [0, 0, 1, 0],
-                          [0, 0, 0, 1]])
+        self.Q=np.matrix([[20, 0, 0, 0],
+                          [0, 20, 0, 0],
+                          [0, 0, 20, 0],
+                          [0, 0, 0, 20]])
 
         self.R=np.matrix([[1, 0],
                           [0, 1]])
@@ -285,7 +285,6 @@ def videotreatment(video:Video) -> None:
     settings = video.settings
     mc = video.markerscolor
     maxdist = settings.maxdist
-    bordure_size = settings.bordure_size
     
     print()
     Ti, T = t.time(), t.time()
@@ -293,7 +292,7 @@ def videotreatment(video:Video) -> None:
     for frame in frames[1:]: # frame 0 traitée durant l'initialisation
         try :
             frametreatement(frame, settings, mc)
-            object_tracker(video, frame, maxdist, bordure_size)
+            object_tracker(video, frame, maxdist)
         except SettingError :
             raise Break
 
@@ -530,58 +529,74 @@ def position(extremas:dict) -> list:
         position.append([x, y])
     return position
 
-def object_tracker(video, frame, maxdist, bordure_size):
+def object_tracker(video, frame, maxdist):
     '''
-    video           : vidéo étudiée.
-    i               : indice de la frame étudiée dans la liste contenant
-        l'ensemble des frames de la vidéo.
+    video           : vidéo étudiée
+    frame           : frame étudiée
     maxdist         : distance à partir de laquelle un objet ayant parcouru 
         cette distance d'une frame à la suivante n'est pas considérer comme un 
         même objet.
-    bordure_size    :  largeure des bordure autour de la frame permettant de 
-        detecter les repères entrant dans le champ de la caméra.
         
     Effectue le suivi des repère d'une frame à la suivante.
     '''
     
     markers = video.markers
     mesures = frame.mesures
+    M = np.zeros((len(markers), len(frame.mesures))) 
     
-    for obj in markers :
+    for i in range(len(markers)) :
+        obj = markers[i]
         if obj.status == 'hooked':
             obj.lastupdate += 1
             
             pred = obj.kf.predict()
-            xp, yp = int(pred[0]), int(pred[1])
+            obj.prediction = (int(pred[0]), int(pred[1]))
+            xp, yp = obj.prediction
             
-            potential_matchs = []
+            distances = []
             for mes in mesures:
                 xm, ym = mes.pos[0], mes.pos[1]
                 d = ( (xp-xm)**2 + (yp-ym)**2 )**.5
-                if d < maxdist*obj.lastupdate :
-                    potential_matchs.append(mes)
+                distances.append(d)
+                
+            if len(distances) != 0 : 
+                M[i][np.argmin(distances)] = 1
             
-            if len(potential_matchs) == 0 :
+    res = np.sum(M, axis=0)
+    
+    for i in range(len(mesures)):
+        if res[i] == 1 :
+            
+            mes = mesures[i]
+            marker = markers[np.argmax(M[:, i])]
+            
+            mes.status = 'matched'
+            marker.positions[frame.id] = mes.pos
+            marker.lastknownpos = mes.pos
+            marker.kf.update(np.expand_dims(mes.pos, axis=-1))
+            marker.lastupdate = 0
+           
+            frame.identifiedObjects.append(marker)
+        else:
+            pass
+            
+    for obj in markers :
+        if obj.status == 'hooked': 
+            if obj.lastupdate != 0 :
                 video.treatementEvents += f'{obj.id} not found on frame {frame.id}\n'
-                obj.positions[frame.id] = [xp, yp]
-            
-            if len(potential_matchs) == 1 :
-                mes = potential_matchs[0]
-            
-                obj.positions[frame.id] = mes.pos
-                obj.lastknownpos = mes.pos
-                obj.kf.update(np.expand_dims(mes.pos, axis=-1))
-                obj.lastupdate = 0
-                mes.status = 'matched'
-            
-                frame.identifiedObjects.append(obj)
-            
+                obj.positions[frame.id] = obj.prediction
+                print('!!!!!!!!!!', end='')
             if obj.lastupdate >= 5 :
                 obj.status = 'lost'
                 video.treatementEvents += f'{obj.id} lost on  frame {frame.id}\n'
-    
+            
         elif obj.status == 'lost':
             obj.positions[frame.id] = obj.lastknownpos
+            
+            
+            
+
+
 
 
 def waiting_time(i, N, Ti):
