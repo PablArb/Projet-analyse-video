@@ -9,7 +9,7 @@ Il peut être utiliser pour suivre des trajectoires ou la déformation d'un obje
 
 ## Comment l'utiliser
 L'ensemble de ce projet est basé sur le language de programmation Python, il faut donc un IDE adapté.
-Il faut de plus avoir intégrer le module Opencv à l'environnement 
+Il faut de plus avoir intégrer à l'environnement les modules numpy, Opencv, pymediainfo et csv.
 
 
 ## Principe de fonctionnement 
