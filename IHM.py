@@ -5,12 +5,14 @@ Created on Thu Dec  1 21:06:13 2022
 
 @author: pabloarb
 """
-
-import csv, cv2, inspect, sys
 import numpy as np
+import csv
+import cv2
+import inspect
 import shutil as sht
+import sys
 from Base import Break, mess
-from VideoTreatment import Video 
+from VideoTreatment import Video
 
 
 class Visu :
