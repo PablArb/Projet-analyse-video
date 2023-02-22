@@ -14,12 +14,14 @@ from VideoTreatment import Video
 
 
 class Visu :
+    # La classe visu regroupe les méthodes qui permttent de visualiser les résultats produits par l'algorythme.
+    # Elle est notamment utile lors de la phase de calibration ou de la création de la vidé de rendu
     
     def copy_im(self, image:np.array) -> np.array:
         '''
         image : tableau numpy.
         
-            Copie l'image passée en argument de manière a casser le lien entre
+        Copie l'image passée en argument de manière a casser le lien entre
         les objets.
         '''
         h = len(image)
@@ -35,12 +37,12 @@ class Visu :
     def cross_color(self, image:np.array, pos:list, crosswidth:int, copy=False) -> np.array:
         '''
         image       : np.array, imaghe sur laquelle on veut ajouter les croix.
-        pos         : positions ou l'on veut tracer ces croix sous forme [[x, y]]
-        crosswidth  : largeur des traits e la croix (qq pixels)
+        pos         : positions où l'on veut tracer les croix sous forme [[x, y]]
+        crosswidth  : largeur des traits de la croix (qq pixels)
         copy        : optional, indique s'il est necéssaire de défaire le lien
             entre l'image d'origine et l'image traitée par la suite.
         
-        Trace les croix aux positions des repères detectés.
+        Trace les croix aux positions passées en argument.
         '''
         if copy:
             image = self.copy_im(image)
@@ -166,14 +168,22 @@ class Visu :
 
 
 class Download :
+    # La classe download gère les méthodes permettant de télécharger les différents résultats produits par l'algorythm
+    # Elle permet égaleent detélécharger les réglages avec lesquels la vidéo à été traitée.
     
     def results(self, video:Video) -> None :
+        '''
+        Gère l'appel aux différentes fonctions de téléchargement
+        '''
         self.video(video)
         self.treatedVideo(video)
-        # framesdownload(video)
+        # self.framesdownload(video)
         return None
     
-    def reboot(self, video:Video) -> None:
+    def reboot(self, video:Video) -> None :  
+        '''
+        Efface les résultats obtens précédements dans le cas ou la video a déjà été étudiée.
+        '''
         video.paths.add_subdata_dirs(video.id)
         video.paths.delete_dir('csv')
         video.paths.delete_dir('frames')
@@ -181,7 +191,10 @@ class Download :
         video.paths.add_subdata_dirs(video.id)
         return None
     
-    def video(self, video:Video) -> None:
+    def video(self, video:Video) -> None :
+        '''
+        Télécharge la vidéo
+        '''
         video.paths.create_dir('videodl')
         source = video.paths.videoStorage  + '/' + video.id
         destination = video.paths.videodl + '/vidéo' + '.mp4'
@@ -189,7 +202,10 @@ class Download :
         sht.rmtree(video.paths.videoStorage)
         return None
     
-    def treatedVideo(self, video:Video) -> None:
+    def treatedVideo(self, video:Video) -> None :
+        '''
+        Télécharge la vidéo avec les croix tracées dessus
+        '''
         crosswidth = video.settings.crosswidth
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
@@ -204,7 +220,10 @@ class Download :
         print(mess.E_vdl, end='\n')
         return None
     
-    def data(self, video:Video) -> None:
+    def data(self, video:Video) -> None :
+        '''
+        Télécharge les positions occupées par les différents repères au cours du temps sous forme de tableau csv
+        '''
         video.paths.create_dir('csv')
         nom_colonnes = ['frame', 'time']
         frames = video.Frames
@@ -228,8 +247,10 @@ class Download :
         print(mess.E_ddl)
         return None
     
-    def settings(self, video:Video) -> None:
-        
+    def settings(self, video:Video) -> None :
+        '''
+        Télécharge les réglages avec lesquels a été fait le traitement 
+        '''
         settings = video.settings
         doc = open(video.paths.csv + '/settings.csv', 'w')
     
@@ -244,21 +265,29 @@ class Download :
         for attr in inspect.getmembers(video):
             if attr[0][0] != '_' and not inspect.ismethod(attr[1]):
                 if not attr[0] in toAvoid :
-                    if attr[0] != 'markerscolor':
+                    if attr[0] != 'markerscolor' and attr[0] != 'orientation':
                         line = attr[0] + ' '*(19-len(attr[0])) + ' : ' + str(attr[1]) + '\n'
-                    else :
+                    elif attr[0] == 'markerscolor' :
                         line = attr[0] + ' '*(19-len(attr[0])) + ' : ' + ['blue', 'green', 'red'][attr[1]] + '\n'
+                    elif attr[0] == 'orientation' :
+                        line = attr[0] + ' '*(19-len(attr[0])) + ' : ' + ['landscape', 'portrait'][attr[1]-1] + '\n'
                     doc.write(line)
         doc.close()
         return None
     
     def events(self, video:Video):
+        '''
+        Télécharge un compte des potentielles difficultés qu'a pu rencontrer l'algorythme lors du traitement
+        '''
         doc = open(video.paths.csv + '/events.csv', 'w')
         doc.write(video.treatementEvents)
         doc.close()
         return None
     
-    def frames(self, video:Video) -> None:
+    def frames(self, video:Video) -> None :
+        '''
+        Télecharge l'ensemble des frames de l'image séparement 
+        '''
         video.paths.create_dir('non treated frames')
         video.paths.create_dir('treated frames')
         print('\nSauvegarde des frames en cours ...', end='')
@@ -273,11 +302,14 @@ class Download :
         return None
 
 class Interact :
-    
+    # La classe intercat regroupe les méthodes qui vont permettre à l'algorythme d'intéragir avec l'utilisateur
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
     
     def verif_settings(self, video:Video):
+        '''
+        Éffectue les changement de réglges demandés par l'utilisateur'
+        '''
         settings = video.settings
         while True :
             print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
@@ -313,7 +345,7 @@ class Interact :
         '''
         question : question posée à l'utilisateur
         
-            Pose une question fermée à l'utilisateur et renvoie un booléen en 
+        Pose une question fermée à l'utilisateur et renvoie un booléen en 
         fonction de sa réponse.
         '''
         assert type(question) == str
@@ -331,7 +363,7 @@ class Interact :
     
     def markerscolor_input(self, video:Video) -> None:
         """
-        Récupère au près de l'utilisateur la couleur des repères placés sur
+        Récupère auprès de l'utilisateur la couleur des repères placés sur
         l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
         markerscolor de la vidéo.
         """
@@ -347,25 +379,28 @@ class Interact :
                 print(mess.P_vs, end='')
 
     def orientation_input(self, video:Video) -> None:
-            Framessize = video.Framessize
-            while True:
-                mode = input(mess.I_or)
-                if mode in ['1', '2']:
-                    if mode == '1':
-                        height = min(Framessize)
-                        width = max(Framessize)
-                    elif mode == '2':
-                        height = max(Framessize)
-                        width = min(Framessize)
-                    Framessize = (width, height)
-                    video.Framessize = Framessize
-                    video.orientation = int(mode)
-                    return None
-                    break
-                elif mode in self.stoplist :
-                    raise Break
-                else:
-                    print(mess.P_vs, end='')
+        """
+        Récupère l'orientation de la vidéo auprès de l'utilisateur
+        """
+        Framessize = video.Framessize
+        while True:
+            mode = input(mess.I_or)
+            if mode in ['1', '2']:
+                if mode == '1':
+                    height = min(Framessize)
+                    width = max(Framessize)
+                elif mode == '2':
+                    height = max(Framessize)
+                    width = min(Framessize)
+                Framessize = (width, height)
+                video.Framessize = Framessize
+                video.orientation = int(mode)
+                return None
+                break
+            elif mode in self.stoplist :
+                raise Break
+            else:
+                print(mess.P_vs, end='')
 
     def ref_input(self, video:Video) -> None:
         """
@@ -386,6 +421,9 @@ class Interact :
                 print(mess.P_vs, end='')
                 
     def tol_input(self, video:Video):
+        '''
+        Permet à l'utilisateur de régler la tolérence (poids seuil de la couleur des repères dans chque pixel)
+        '''
         settings = video.settings
         while True :
             tol = input('Tolérance actuelle : ' + str(100-settings.tol) + ', implémenter de : ')
@@ -400,6 +438,9 @@ class Interact :
                     print(mess.P_vs, end='')
         
     def reclimit_input(self, video:Video):
+        '''
+        Permet de gérer la précision de l'algorithme 
+        '''
         while True :
             rl = input('setrecursionlimit : ')
             if rl in self.stoplist :

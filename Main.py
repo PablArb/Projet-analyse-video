@@ -49,7 +49,7 @@ def calibration(video:Video, i=0) -> None:
         calibration(video)
         return None
     
-    # Une fois le traitement réalisé in stocke les résultats.
+    # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0
     for obj in positions :
         new_obj = Object('obj-'+str(video.markercount), obj, first.id, video.Framerate)
@@ -132,16 +132,15 @@ try :
     interact.orientation_input(video)
     interact.ref_input(video)
 
-    # On traite la première frame  pour vérifier que les reglages sont bons
+    # On traite la première frame  pour vérifier que les réglages sont bons
     isOK = False
     while not isOK:
-        # Tant que ce n'est pas satisfaisant on recommence cette étape
+        # Tant que le traitement n'est pas satisfaisant on recommence cette étape
         calibration(video, 0)
         if interact.yn(mess.I_val): 
             isOK = True
         else:
-            # lorsque le traitement n'est pas satisfaisant, 
-            # il est proposé de modifier les paramètres.
+            # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les paramètres.
             interact.verif_settings(video)
             calib.reboot(video, 0)
 
