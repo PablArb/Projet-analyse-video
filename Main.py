@@ -5,8 +5,7 @@ Created on Thu Dec  1 21:04:06 2022
 
 @author: pabloarb
 """
-import cv2
-import sys
+import sys, cv2
 import time as t
 import shutil as sht
 from IHM import visu, download, interact
@@ -121,9 +120,7 @@ def cleaner(video:Video, isOK=True) -> None:
 
 
 print(mess.B_proc, end='')
-
 video = None
-
 try :
 
     # On récupère la vidéo et ses caractéristiques
@@ -137,13 +134,12 @@ try :
     while not isOK:
         # Tant que le traitement n'est pas satisfaisant on recommence cette étape
         calibration(video, 0)
-        if interact.yn(mess.I_val): 
+        if interact.yn(mess.I_val):
             isOK = True
         else:
             # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les paramètres.
             interact.verif_settings(video)
             calib.reboot(video, 0)
-
     # Une fois que tout est bon on traite la vidéo.
     videotreatment(video)
     # On télécharge les résultats.
@@ -152,7 +148,6 @@ try :
 
     if interact.yn("Voulez vous télécharger les résultats de l'étude ?"):
         download.results(video)
-    
     cleaner(video)
     print(mess.E_proc)
 

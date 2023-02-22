@@ -6,13 +6,16 @@ Created on Sun Dec  4 16:32:07 2022
 @author: pabloarb
 """
 
-import sys, os, cv2
-import numpy as np
-import time as t
+import cv2
+import os
 import shutil as sht
-import pymediainfo as mi
-from Base import paths, mess, SettingError, Break
+import sys
+import time as t
 
+import numpy as np
+import pymediainfo as mi
+
+from Base import paths, mess, SettingError, Break
 
 
 class Settings(object):
