@@ -114,7 +114,7 @@ class Mess :
         # potential setting issue
         self.P_set = '\rproblèmes dans les réglages'
         
-        self.S_vt  = '\rGTraitement en cours : '
+        self.S_vt  = '\rTraitement en cours : '
         self.E_vt  = '\rTraitement de la vidéo -------------------------------------------- OK\n'
         self.S_dvt = 'Durée du traitement : '
         
