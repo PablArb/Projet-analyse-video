@@ -32,7 +32,7 @@ class Settings(object):
         self.minsize = int(video.Framessize[1] / 170)
         self.maxdist = int(video.Framessize[1] / video.Framerate * 2)
         # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
-        self.crosswidth = int(video.Framessize[1] / 500)
+        self.crosswidth = int(video.Framessize[0] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
 
@@ -191,10 +191,10 @@ class obj_tracker(object):
         self.H=np.matrix([[1, 0, 0, 0],
                           [0, 1, 0, 0]])
 
-        self.Q=np.matrix([[20, 0, 0, 0],
-                          [0, 20, 0, 0],
-                          [0, 0, 20, 0],
-                          [0, 0, 0, 20]])
+        self.Q=np.matrix([[10, 0, 0, 0],
+                          [0, 10, 0, 0],
+                          [0, 0, 10, 0],
+                          [0, 0, 0, 10]])
 
         self.R=np.matrix([[1, 0],
                           [0, 1]])

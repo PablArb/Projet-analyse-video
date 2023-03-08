@@ -64,7 +64,7 @@ class MacosPaths (Paths):
         self.desktop = '/Users/'+user+'/Desktop'
         self.bac = '/Users/'+user+'/Desktop/bac'
         self.videoStorage = '/Users/'+user+'/.##temporary storage##'
-        self.data = '/Users/'+user+'/Desktop/mes exp TIPE/data video'
+        self.data = '/Users/'+user+'/Desktop/mes exp TIPE/A - data video'
    
 class WIndowsPaths (Paths):
     def __init__(self):
@@ -87,13 +87,13 @@ class Mess :
         
         # B:begining, E:End, P:problem, I:input, S:info
     
-        self.B_proc = '\033[2K\033[1G\nInitialisation de la procédure\n\n'
+        self.B_proc = '\rInitialisation de la procédure\n\n'
         self.E_proc = '\n\nProcédure terminée'
         
         self.B_vi  = '\rPlacez la vidéo à étudier dans le bac sur votre bureau.'
         self.P_vi1 = '\rVeuillez fournir une vidéo au format mp4 ou mov'
         self.P_vi2 = "\rVeuillez ne placer qu'un document dans le bac"
-        self.B_gf  = '\033[2K\033[1GRécupération de la vidéo en cours ...'
+        self.B_gf  = '\rRécupération de la vidéo en cours ...'
         self.E_gf  = '\rRécupération de la vidéo ------------------------------------------ OK\n\n'
         
         self.I_mc  = 'Couleur des repères à étudier (1=bleu, 2=vert, 3=rouge) : '
