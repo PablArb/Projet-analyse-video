@@ -586,12 +586,12 @@ def object_tracker(video, frame, maxdist):
     for obj in markers :
         if obj.status == 'hooked': 
             if obj.lastupdate != 0 :
-                video.treatementEvents += f'{obj.id} not found on frame {frame.id}\n'
+                video.treatementEvents += f'frame {frame.id}\tobject not found\t{obj.id}\n'
                 obj.positions[frame.id] = obj.prediction
                 print('!!!!!!!!!!', end='')
             if obj.lastupdate >= 5 :
                 obj.status = 'lost'
-                video.treatementEvents += f'{obj.id} lost on  frame {frame.id}\n'
+                video.treatementEvents += f'frame {frame.id}\tobject lost\t{obj.id}\n'
             
         elif obj.status == 'lost':
             obj.positions[frame.id] = obj.lastknownpos
