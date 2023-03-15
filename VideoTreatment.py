@@ -18,6 +18,7 @@ import pymediainfo as mi
 from Base import paths, mess, SettingError, Break
 
 
+
 class Settings(object):
     def __init__(self, video):
 
@@ -270,12 +271,14 @@ class Calib():
         video.settings.definition = 1
         video.settings.step = 1
         video.Frames[i].identifiedObjects = []
-        return None 
+        return None
     
     
     
     
 # Traitement tools
+
+
 
 def videotreatment(video:Video) -> None:
     """
@@ -455,7 +458,6 @@ def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float
             detection(image, pixel, obj, extr, mc, tol)
     return extr, obj
 
-
 def get_neighbours(image:np.array, pixel:list, mc:int, tol:float) -> list:
     """
     image   : image étudiée.
@@ -597,10 +599,6 @@ def object_tracker(video, frame, maxdist):
             obj.positions[frame.id] = obj.lastknownpos
             
             
-            
-
-
-
 
 def waiting_time(i, N, Ti):
     d = t.time()-Ti
@@ -615,5 +613,6 @@ def time_formater (t):
     if int(secondes) < 10 :
         secondes = '0' + secondes
     return minutes + 'min ' + secondes + 'sec'
+
 
 calib = Calib()
