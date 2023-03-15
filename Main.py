@@ -133,7 +133,7 @@ try :
     isOK = False
     while not isOK:
         # Tant que le traitement n'est pas satisfaisant on recommence cette étape
-        calibration(video, 0)
+        calibration(video)
         if interact.yn(mess.I_val):
             isOK = True
         else:

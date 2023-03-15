@@ -266,11 +266,11 @@ class Calib():
         video.scale = scale
         return None
     
-    def reboot(self, video:Video, i:int)-> None :
+    def reboot(self, video:Video, i=0)-> None :
         video.settings.definition = 1
         video.settings.step = 1
         video.Frames[i].identifiedObjects = []
-        return None
+        return None 
     
     
     
