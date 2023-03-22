@@ -139,7 +139,7 @@ try :
         else:
             # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les paramètres.
             interact.verif_settings(video)
-            calib.reboot(video, 0)
+            calib.reboot(video)
     # Une fois que tout est bon on traite la vidéo.
     videotreatment(video)
     # On télécharge les résultats.

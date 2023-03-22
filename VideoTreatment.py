@@ -30,7 +30,7 @@ class Settings(object):
         sys.setrecursionlimit(self.precision)
 
         # On définit la taille des indicateurs visuels / taille de l'image
-        self.minsize = int(video.Framessize[1] / 150)
+        self.minsize = int(video.Framessize[1] / 50)
         self.maxdist = int(video.Framessize[1] / video.Framerate * 2)
         # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
         self.crosswidth = int(video.Framessize[0] / 500)
@@ -192,9 +192,9 @@ class obj_tracker(object):
         self.H=np.matrix([[1, 0, 0, 0],
                           [0, 1, 0, 0]])
 
-        self.Q=np.matrix([[20, 0, 0, 0],
-                          [0, 20, 0, 0],
-                          [0, 0, 20, 0],
+        self.Q=np.matrix([[200, 0, 0, 0],
+                          [0, 50, 0, 0],
+                          [0, 0, 50, 0],
                           [0, 0, 0, 20]])
 
         self.R=np.matrix([[1, 0],
@@ -295,7 +295,7 @@ def videotreatment(video:Video) -> None:
     print()
     Ti, T = t.time(), t.time()
 
-    for frame in frames[1:]: # frame 0 traitée durant l'initialisation
+    for frame in (frames[1:256]+frames[257:470]+frames[471:]): # frame 0 traitée durant l'initialisation
         try :
             frametreatement(frame, settings, mc)
             object_tracker(video, frame, maxdist)
@@ -426,7 +426,9 @@ def rate_rgb(pixel:list, c:int) -> float:
     composantes rgb qui le définissent.
     """
     assert c in [0, 1, 2]
-    return int(pixel[c]) / (int(pixel[0])+int(pixel[1])+int(pixel[2])+1) * 100
+    s = int(pixel[0])+int(pixel[1])+int(pixel[2])
+    if s > 100 : return int(pixel[c]+1) / (s+3) * 100
+    else : return 0
 
 def detection(image:np.array, start:list, obj:list, extr:list, mc:int, tol:float) -> list:
     """

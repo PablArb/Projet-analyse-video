@@ -125,7 +125,7 @@ class Mess :
         self.E_fdl = '\nSauvegarde des frames --------------------------------------------- OK'
         
         # dealing with recursion limit
-        self.P_rec = '\rDéfinition trop élevée, tentative avec une défintion plus faible'
+        self.P_rec = '\rDéfinition trop élevée, tentative avec une définition plus faible'
         
         # dealing with setting issue
         self.P_set = '\rIl y a un problème, veuillez vérifiez les réglages'
