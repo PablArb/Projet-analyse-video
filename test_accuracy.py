@@ -21,12 +21,12 @@ v0 = 0                      # vitesse initiale du pendule (en m/s)
 
 # paramètres vidéo
 name = 'accuracy test vidéo'
-dur = 10                    # durée de la video en secondes
-framerate = 120             # nombre d'images par seconde
+dur = 5                    # durée de la video en secondes
+framerate = 60             # nombre d'images par seconde
 size = (720, 1280)          # dimensions des frames de la vidéo créée
 shutterSpeed = 1/300        # simule le temps d'ouverture de l'objectif
-degrade = 10                # discretise les positions du pendule pour le flou
-blanc = 2
+degrade = 5                # discretise les positions du pendule pour le flou
+blanc = 0
 
 # configs :
 # normal : (1080, 1920) ; 30 fps
@@ -98,10 +98,10 @@ print('\nTemps mis pour calculer Theta(t) : ' + str(dur) + 's')
 Ti = time.time()
 path = '/Users/pabloarb/Desktop/'+ name +'.mp4'
 format = cv2.VideoWriter_fourcc(*'mp4v')
-# out = cv2.VideoWriter(path, format, framerate, size)
+out = cv2.VideoWriter(path, format, framerate, size)
 for t in T:
 
-    # image = np.uint8(np.full( (size[1], size[0], 3), 255 ))
+    image = np.uint8(np.full( (size[1], size[0], 3), 255 ))
 
     if not t in T[N//2:N//2+blanc]:
         dT = np.linspace(t-shutterSpeed/2, t+shutterSpeed/2, degrade)
@@ -109,8 +109,8 @@ for t in T:
         for i in range(len(dTheta)):
             x, y = pos_xy(dTheta[i])
             xe, ye = mise_a_echelle(x, y)
-            # image = point(image, xe, ye)
-            # image = point(image, size[0]//2, marge//2)
+            image = point(image, xe, ye)
+            image = point(image, size[0]//2, marge//2)
             if i == len(dT)//2 :
                 X.append(x)
                 Y.append(y)
@@ -119,12 +119,12 @@ for t in T:
     else :
         X.append(x)
         Y.append(y)
-    # out.write(image)
+    out.write(image)
 
     progr = round(t/T[-1] * 100, 1)
     print('\rcréation de la vidéo : ' + str(progr) + '%', end='')
 
-# out.release()
+out.release()
 print('\nTemps mis pour créer la vidéo : ' + str( round(time.time()-Ti, 2) ) + 's')
 
 

@@ -56,6 +56,7 @@ def calibration(video:Video, i=0) -> None:
         video.markers.append(new_obj)
         video.markercount += 1
 
+
     print(mess.E_cal, end='')
     
     # On créer maintenant les visuels à partir des résultats.

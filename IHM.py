@@ -234,7 +234,7 @@ class Download :
         dos = open(video.paths.csv + '/positions objets.csv', 'w')
         array = csv.DictWriter(dos, fieldnames=nom_colonnes)
         array.writeheader()
-        for frame in (frames[1:256]+frames[257:470]+frames[471:]):
+        for frame in frames:
             time = round(frame.id / video.Framerate, 3)
             dico = {'frame': ' ' + str(frame.id), 'time': ' ' + str(time)}
             for obj in video.markers :
