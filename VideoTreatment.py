@@ -269,6 +269,7 @@ class Calib:
         video.settings.definition = 1
         video.settings.step = 1
         video.Frames[i].identifiedObjects = []
+        video.markers = []
         return None
 
 
