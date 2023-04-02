@@ -5,11 +5,12 @@ Created on Thu Dec  1 21:04:06 2022
 
 @author: pabloarb
 """
-import sys, cv2
-import time as t
+import cv2
 import shutil as sht
-from IHM import visu, download, interact
+import sys
+
 from Base import Break, SettingError, mess
+from IHM import visu, download, interact
 from VideoTreatment import Video, Object
 from VideoTreatment import calib, time_formater
 from VideoTreatment import videotreatment, frametreatement
@@ -17,24 +18,24 @@ from VideoTreatment import videotreatment, frametreatement
 
 # Calibration fcts
 
-def calibration(video:Video, i=0) -> None:
+def calibration(video: Video, i=0) -> None:
     """
     video : vidéo à traiter.
     
     Permet de vérifier le bon réglage de l'ensemble des paramètres.
     """
-    # On va dans un premier temps traiter le première frame de la video.
+    # On va dans un premier temps traiter la première frame de la video.
     print(mess.B_cal, end='')
 
     settings = video.settings
     first = video.Frames[i]
     mc = video.markerscolor
-    
-    try :
+
+    try:
         positions, borders, extremums, Bdur, Tdur = frametreatement(first, settings, mc, True)
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec
     # les paramètres entrés par l'utilisateur, on gère ici ce problème.
-    except SettingError :
+    except SettingError:
         interact.verif_settings(video)
         calibration(video)
         return None
@@ -45,19 +46,18 @@ def calibration(video:Video, i=0) -> None:
     swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
     videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames)
     formatedDur = time_formater(videoDur)
-    
+
     # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0
-    for obj in positions :
-        new_obj = Object('obj-'+str(video.markercount), obj, first.id, video.Framerate)
+    for obj in positions:
+        new_obj = Object('obj-' + str(video.markercount), obj, first.id, video.Framerate)
         first.identifiedObjects.append(new_obj)
         video.markers.append(new_obj)
         video.markercount += 1
 
     print(mess.E_cal, end='')
 
-
-    # On créer maintenant les visuels à partir des résultats.
+    # On cré maintenant les visuels à partir des résultats.
     rw = video.settings.rectanglewidth
     cw = video.settings.crosswidth
     scale = video.scale
@@ -83,9 +83,9 @@ def calibration(video:Video, i=0) -> None:
     visualisations.append(treated_color)
 
     print(mess.S_vis, end='')
-    
+
     # On présente les résultats à l'utilisateur.
-    for im in visualisations :
+    for im in visualisations:
         cv2.imshow('calibration window', im)
         cv2.waitKey(0)
         cv2.destroyWindow('calibration window')
@@ -96,19 +96,16 @@ def calibration(video:Video, i=0) -> None:
     return None
 
 
-def cleaner(video:Video, isOK=True) -> None:
-    '''
+def cleaner(video: Video, isOK=True) -> None:
+    """
     video : Video, video que l'on souhaite traiter
-    isOK : booléen, optionel, si le traitement n'est pas on mais que
-        l'utilisateur veut interompre l'algorithme, sa video sera copiée sur 
-        son bureau
-        
+    isOK : booléen, optionel, si le traitement n'est pas terminé, mais que l'utilisateur veut interompre l'algorithme,
+        sa video sera copiée sur le bureau.
+
     Efface les traces que laisse l'algorithme sur loridnateur de l'utilisateur.
-    '''
+    """
     sys.setrecursionlimit(1000)
-    if video == None:
-        return None
-    if not isOK :
+    if not isOK:
         dst = video.paths.desktop
         src = video.paths.videoStorage + '/' + video.id
         sht.copy2(src, dst)
@@ -119,7 +116,7 @@ def cleaner(video:Video, isOK=True) -> None:
 
 print(mess.B_proc, end='')
 video = None
-try :
+try:
 
     # On récupère la vidéo et ses caractéristiques
     video = Video()
@@ -127,7 +124,7 @@ try :
     interact.orientation_input(video)
     interact.ref_input(video)
 
-    # On traite la première frame  pour vérifier que les réglages sont bons
+    # On traite la première frame pour vérifier que les réglages sont bons
     isOK = False
     while not isOK:
         # Tant que le traitement n'est pas satisfaisant on recommence cette étape

@@ -5,14 +5,13 @@ Created on Sun Dec  4 16:32:07 2022
 
 @author: pabloarb
 """
-from typing import Tuple, Any
 
-import cv2
 import os
 import shutil as sht
 import sys
 import time as t
 
+import cv2
 import numpy as np
 import pymediainfo as mi
 
@@ -29,7 +28,7 @@ class Settings(object):
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.minsize = int(video.Framessize[1] / 200)
-        self.maxdist = int(video.Framessize[1] / video.Framerate * 2)
+        # self.maxdist = int(video.Framessize[1] / video.Framerate * 2)
         # self.bordure_size = int(video.Framessize[0] /  video.Framerate * 2)
         self.crosswidth = int(video.Framessize[0] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
@@ -53,7 +52,7 @@ class Video(object):
         self.orientation = None  # orientation de la video (paysage ou portrait)
         self.lenref = None  # longueur de référence associée à la video
 
-        self.scale = None  # rapport distance sur nombre de pixel
+        self.scale = None  # rapport distance sur nombre de pixels
         self.markercount = 0  # nombre de repères détectés sur la vidéo
         self.markers = []
         self.computationDuration = None  # temps mis par l'algorythme pour effectuer le traitement
@@ -186,7 +185,7 @@ class obj_tracker(object):
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
 
-        # Matrice d'observation, on n'observe que x et y
+        # Matrice d'observation, on n'observe que x et y.
         self.H = np.matrix([[1, 0, 0, 0],
                             [0, 1, 0, 0]])
 
@@ -285,7 +284,6 @@ def videotreatment(video: Video) -> None:
     frames = video.Frames
     settings = video.settings
     mc = video.markerscolor
-    maxdist = settings.maxdist
 
     print()
     Ti, T = t.time(), t.time()
@@ -293,7 +291,7 @@ def videotreatment(video: Video) -> None:
     for frame in frames[1:]:  # frame 0 traitée durant l'initialisation
         try:
             frametreatement(frame, settings, mc)
-            object_tracker(video, frame, maxdist)
+            object_tracker(video, frame)
         except SettingError:
             raise Break
 
@@ -406,18 +404,18 @@ def rate_rgb(pixel: list, c: int) -> float:
         return 0
 
 
-def detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> list:
+def detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> tuple:
     """
-    image   : image étudiée.
-    start   : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
-    obj     : liste contenant tout les pixels appartenants au même objet.
-    extr    : coordonées extremales de l'objet.
-    mc      : markerscolor, couleur des repères qui constituent les objets à detecter.
-    tol     : seuil de detection des couleurs. 
+    image : image étudiée.
+    start : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
+    obj : liste contenant tous les pixels appartenants au même objet.
+    extr : coordonées extremales de l'objet.
+    mc : markerscolor, couleur des repères qui constituent les objets à detecter.
+    tol : seuil de detection des couleurs.
     
-        Regroupe tous les pixels appartenant a un même objets (forme blanche ici) dans une liste.
+    Regroupe tous les pixels appartenant à un même objet (forme blanche ici) dans une liste.
     """
-    if start not in obj:  # but: récupérer un encadrement de objet
+    if start not in obj:  # but: récupérer un encadrement de l'objet
         obj.append(start)
         if start[0] < extr[0]:
             extr[0] = start[0]
@@ -436,9 +434,9 @@ def detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol:
 
 def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     """
-    image   : image étudiée.
-    pixel   : sous la forme [j,i].
-    mc      : markerscolor, couleur des repères sur l'image étudiée.
+    image : image étudiée.
+    pixel : sous la forme [j,i].
+    mc : markerscolor, couleur des repères sur l'image étudiée.
     
         Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre 
     de la recherche d'objet.
@@ -476,11 +474,10 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     return L_neighbours
 
 
-def rectifyer(extremas: dict, minsize: int) -> dict:
+def rectifyer(extremas: dict, minsize: int) -> list:
     """
-    extremas    : dictionaire contenant les coordonnées extremales des repères 
-        détectés sur une frame.
-    minsize     : Taille minimale acceptée pour un objet.
+    extremas : dictionaire contenant les coordonnées extremales des repères détectés sur une frame.
+    minsize : Taille minimale acceptée pour un objet.
     
     Rectifie quelques erreurs, élimine le bruit.
     """
@@ -495,9 +492,9 @@ def rectifyer(extremas: dict, minsize: int) -> dict:
     return new_extremas
 
 
-def position(extremas: dict) -> list:
+def position(extremas: list) -> list:
     """
-    extremas    : dictionaire contenant les coordonnées extremales des repères 
+    extremas : dictionaire contenant les coordonnées extremales des repères
         détectés sur une frame.
     
         Détermine la position d'un objet à partir des extremas.
@@ -513,16 +510,13 @@ def position(extremas: dict) -> list:
     return position
 
 
-def object_tracker(video, frame, maxdist):
-    '''
-    video           : vidéo étudiée
-    frame           : frame étudiée
-    maxdist         : distance à partir de laquelle un objet ayant parcouru 
-        cette distance d'une frame à la suivante n'est pas considérer comme un 
-        même objet.
-        
-    Effectue le suivi des repère d'une frame à la suivante.
-    '''
+def object_tracker(video, frame):
+    """
+    video : vidéo étudiée frame : frame étudiée maxdist : distance à partir de laquelle un objet ayant parcouru cette
+    distance d'une frame à la suivante n'est pas considéré comme un même objet.
+
+    Effectue le suivi des repères d'une frame à la suivante.
+    """
 
     markers = video.markers
     mesures = frame.mesures
@@ -585,10 +579,10 @@ def waiting_time(i, N, Ti):
 
 
 def time_formater(t):
-    minutes = str(int(t // 60))
+    minutes = str(t // 60)
     if int(minutes) < 10:
         minutes = '0' + minutes
-    secondes = str(int(t % 60))
+    secondes = str(t % 60)
     if int(secondes) < 10:
         secondes = '0' + secondes
     return minutes + 'min ' + secondes + 'sec'
