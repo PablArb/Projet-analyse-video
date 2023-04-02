@@ -579,10 +579,10 @@ def waiting_time(i, N, Ti):
 
 
 def time_formater(t):
-    minutes = str(t // 60)
+    minutes = str(int(t // 60))
     if int(minutes) < 10:
         minutes = '0' + minutes
-    secondes = str(t % 60)
+    secondes = str(int(t % 60))
     if int(secondes) < 10:
         secondes = '0' + secondes
     return minutes + 'min ' + secondes + 'sec'
