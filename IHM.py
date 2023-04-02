@@ -12,7 +12,7 @@ import inspect
 import shutil as sht
 import sys
 from Base import Break, mess
-from VideoTreatment import Video
+# from VideoTreatment import Video
 
 
 class Visu:
@@ -178,7 +178,7 @@ class Download:
     # La classe download gère les méthodes permettant de télécharger les différents résultats produits par l'algorythme.
     # Elle permet également detélécharger les réglages avec lesquels la vidéo a été traitée.
 
-    def results(self, video: Video) -> None:
+    def results(self, video) -> None:
         """
         Gère l'appel aux différentes fonctions de téléchargement
         """
@@ -188,7 +188,7 @@ class Download:
         return None
 
     @staticmethod
-    def reboot(video: Video) -> None:
+    def reboot(video) -> None:
         """
         Efface les résultats obtens précédements dans le cas ou la video a déjà été étudiée.
         """
@@ -200,7 +200,7 @@ class Download:
         return None
 
     @staticmethod
-    def video(video: Video) -> None:
+    def video(video) -> None:
         """
         Télécharge la vidéo
         """
@@ -212,7 +212,7 @@ class Download:
         return None
 
     @staticmethod
-    def treatedVideo(video: Video) -> None:
+    def treatedVideo(video) -> None:
         """
         Télécharge la vidéo avec les croix tracées dessus
         """
@@ -231,7 +231,7 @@ class Download:
         print(mess.E_vdl, end='\n')
         return None
 
-    def data(self, video: Video) -> None:
+    def data(self, video) -> None:
         """
         Télécharge les positions occupées par les différents repères au cours du temps sous forme de tableau csv
         """
@@ -259,7 +259,7 @@ class Download:
         return None
 
     @staticmethod
-    def settings(video: Video) -> None:
+    def settings(video) -> None:
         """
         Télécharge les réglages avec lesquels a été fait le traitement
         """
@@ -289,7 +289,7 @@ class Download:
         return None
 
     @staticmethod
-    def events(video: Video):
+    def events(video) -> None:
         """
         Télécharge un compte des potentielles difficultés qu'a pu rencontrer l'algorythme lors du traitement
         """
@@ -299,7 +299,7 @@ class Download:
         return None
 
     @staticmethod
-    def frames(video: Video) -> None:
+    def frames(video) -> None:
         """
         Télecharge l'ensemble des frames de l'image séparement
         """
@@ -322,7 +322,7 @@ class Interact:
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
 
-    def verif_settings(self, video: Video):
+    def verif_settings(self, video) -> None:
         """
         Éffectue les changements de réglges demandés par l'utilisateur'
         """
@@ -377,7 +377,7 @@ class Interact:
             else:
                 print(mess.P_vs)
 
-    def markerscolor_input(self, video: Video) -> None:
+    def markerscolor_input(self, video) -> None:
         """
         Récupère auprès de l'utilisateur la couleur des repères placés sur
         l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
@@ -394,7 +394,7 @@ class Interact:
             else:
                 print(mess.P_vs, end='')
 
-    def orientation_input(self, video: Video) -> None:
+    def orientation_input(self, video) -> None:
         """
         Récupère l'orientation de la vidéo auprès de l'utilisateur
         """
@@ -418,7 +418,7 @@ class Interact:
                 print(mess.P_vs, end='')
 
     @staticmethod
-    def ref_input(video: Video) -> None:
+    def ref_input(video) -> None:
         """
         Récupère au près de l'utilisateur la distances séparant les deux
         premiers repères placés sur l'objet étudiée sur la vidéo et assigne
@@ -436,7 +436,7 @@ class Interact:
             except ValueError:
                 print(mess.P_vs, end='')
 
-    def tol_input(self, video: Video):
+    def tol_input(self, video):
         """
         Permet à l'utilisateur de régler la tolérence (poids seuil de la couleur des repères dans chque pixel)
         """

@@ -5,12 +5,11 @@ Created on Thu Dec  1 21:04:06 2022
 
 @author: pabloarb
 """
-import cv2
 import shutil as sht
 import sys
 
 from Base import Break, SettingError, mess
-from IHM import visu, download, interact
+from IHM import download, interact
 from VideoTreatment import Video, Object
 from VideoTreatment import calib, time_formater
 from VideoTreatment import videotreatment, frametreatement
@@ -37,6 +36,7 @@ def calibration(video: Video, i=0) -> None:
     # les paramètres entrés par l'utilisateur, on gère ici ce problème.
     except SettingError:
         interact.verif_settings(video)
+        calib.reboot(video)
         calibration(video)
         return None
 
@@ -57,39 +57,8 @@ def calibration(video: Video, i=0) -> None:
 
     print(mess.E_cal, end='')
 
-    # On cré maintenant les visuels à partir des résultats.
-    rw = video.settings.rectanglewidth
-    cw = video.settings.crosswidth
-    scale = video.scale
-    tol = settings.tol
-
-    print(mess.B_vis, end='')
-    visualisations = []
-
-    color_im = visu.copy_im(first.array)
-    visualisations.append(color_im)
-
-    NB_im = visu.reduced(mc, tol, color_im)
-    # NB_im = cv2.resize(NB_im, video.Framessize)
-    visualisations.append(NB_im)
-
-    treated_NB = visu.detection(NB_im, borders, copy=True)
-    treated_NB = visu.rectangle_NB(treated_NB, extremums, rw)
-    visualisations.append(treated_NB)
-
-    pos = [obj.positions[first.id] for obj in first.identifiedObjects]
-    treated_color = visu.cross_color(first.array, pos, cw, copy=True)
-    treated_color = visu.scale(treated_color, scale, cw, mc)
-    visualisations.append(treated_color)
-
-    print(mess.S_vis, end='')
-
-    # On présente les résultats à l'utilisateur.
-    for im in visualisations:
-        cv2.imshow('calibration window', im)
-        cv2.waitKey(0)
-        cv2.destroyWindow('calibration window')
-        cv2.waitKey(1)
+    # On crée maintenant les visuels à partir des résultats.
+    calib.visualisations(video, first, borders, extremums)
 
     print(mess.E_vis, end='')
     print(mess.S_dur + str(formatedDur), end='')
