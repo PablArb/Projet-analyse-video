@@ -16,7 +16,7 @@ settings = '/Users/pabloarb/Desktop/mes exp TIPE/data video/' + video + '/csv/se
 
 def str2float(N:str):
     '''
-    convertis la valeure passée en argument en string
+    Convertis la valeure passée en argument en string
     avec certains cas particuliers propre à la mise en forme
     effectuée lors de la mesure.
     '''
@@ -167,7 +167,7 @@ class SinModel ():
 
 def str2float(N:str):
     '''
-    convertis la valeure passée en argument en string
+    Convertis la valeure passée en argument en string
     avec certains cas particuliers propre à la mise en forme
     effectuée lors de la mesure.
     '''

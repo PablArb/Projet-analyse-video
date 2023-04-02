@@ -31,22 +31,20 @@ def calibration(video:Video, i=0) -> None:
     mc = video.markerscolor
     
     try :
-        T = t.time()
-        positions,borders,extremums= frametreatement(first, settings, mc, True)
-        duration = (t.time()-T)*len(video.Frames)
-        
-        calib.detPas(video, extremums)
-        calib.detScale(video, positions)
-        
-        adaptedDur = duration/(settings.step*2)
-        formatedDur = time_formater(adaptedDur)
+        positions, borders, extremums, Bdur, Tdur = frametreatement(first, settings, mc, True)
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec
     # les paramètres entrés par l'utilisateur, on gère ici ce problème.
     except SettingError :
         interact.verif_settings(video)
-        calib.reboot(video, i)
         calibration(video)
         return None
+
+    calib.detPas(video, extremums)
+    calib.detScale(video, positions)
+
+    swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
+    videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames)
+    formatedDur = time_formater(videoDur)
     
     # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0
@@ -56,15 +54,14 @@ def calibration(video:Video, i=0) -> None:
         video.markers.append(new_obj)
         video.markercount += 1
 
-
     print(mess.E_cal, end='')
-    
+
+
     # On créer maintenant les visuels à partir des résultats.
     rw = video.settings.rectanglewidth
     cw = video.settings.crosswidth
     scale = video.scale
     tol = settings.tol
-    definition = settings.definition
 
     print(mess.B_vis, end='')
     visualisations = []
@@ -72,8 +69,8 @@ def calibration(video:Video, i=0) -> None:
     color_im = visu.copy_im(first.array)
     visualisations.append(color_im)
 
-    NB_im = visu.reduced(mc, tol, definition, color_im)
-    NB_im = cv2.resize(NB_im, video.Framessize)
+    NB_im = visu.reduced(mc, tol, color_im)
+    # NB_im = cv2.resize(NB_im, video.Framessize)
     visualisations.append(NB_im)
 
     treated_NB = visu.detection(NB_im, borders, copy=True)

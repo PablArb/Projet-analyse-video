@@ -11,6 +11,7 @@ import getpass as gp
 
 
 # définition des paths utiles 
+# noinspection GrazieInspection
 class Paths :
     def __init__(self):
         self.pathList = ['desktop','bac', 'videoStorage', 'data']
@@ -49,7 +50,7 @@ class Paths :
         '''
         video : nom de la video passée en entrée du script.
         
-            Ajoute les dossier propre à la vidéo dans le dossier data (où les
+            Ajoute les dossiers propre à la vidéo dans le dossier data (où les
         résultats de l'étude sont stockés).
         '''
         self.csv = self.data + '/' + video + '/csv'

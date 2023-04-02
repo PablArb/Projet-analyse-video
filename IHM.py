@@ -23,7 +23,7 @@ class Visu :
         '''
         image : tableau numpy.
         
-        Copie l'image passée en argument de manière a casser le lien entre
+        Copie l'image passée en argument de manière à casser le lien entre
         les objets.
         '''
         h = len(image)
@@ -66,9 +66,13 @@ class Visu :
     
     def rate_rgb(self, pixel:list, c:int) -> float:
         assert c in [0, 1, 2]
-        return int(pixel[c]) / (int(pixel[0]) + int(pixel[1]) + int(pixel[2]) + 1) * 100
+        s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
+        if 600 > s > 150:
+            return int(pixel[c] + 1) / (s + 3) * 100
+        else:
+            return 0
     
-    def reduced(self, mc:int, tol:float, definition:int, image:np.array) -> np.array:
+    def reduced(self, mc:int, tol:float, image:np.array) -> np.array:
         '''
         mc          : markerscolor, couleur des repères de l'image étudiée.
         tol         : seuil de détection des couleurs.
@@ -80,9 +84,9 @@ class Visu :
         h = len(image)
         w = len(image[0])
         newIm = []
-        for j in range(0, h, definition):
+        for j in range(0, h):
             newLine = []
-            for i in range(0, w, definition):
+            for i in range(0, w):
                 if self.rate_rgb(image[j][i], mc) > tol:
                     newLine.append(255)
                 else :
@@ -168,7 +172,6 @@ class Visu :
         return np.uint8(image)
 
 
-
 class Download :
     # La classe download gère les méthodes permettant de télécharger les différents résultats produits par l'algorythm
     # Elle permet égaleent detélécharger les réglages avec lesquels la vidéo à été traitée.
@@ -211,7 +214,8 @@ class Download :
         crosswidth = video.settings.crosswidth
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(path, ext, video.Framerate, video.Framessize)
+        fps = video.settings.resFps
+        out = cv2.VideoWriter(path, ext, fps, video.Framessize)
         print(mess.B_vdl, end='')
         for frame in video.Frames:
             pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
@@ -302,6 +306,7 @@ class Download :
             cv2.imwrite(name, im)
         print(mess.E_fdl)
         return None
+
 
 class Interact :
     # La classe intercat regroupe les méthodes qui vont permettre à l'algorythme d'intéragir avec l'utilisateur
