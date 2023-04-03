@@ -12,12 +12,21 @@ import inspect
 import shutil as sht
 import sys
 from Base import Break, mess
-from VideoTreatment import Video
+from VideoTreatment import Video, Frame
 
 
 class Visu:
     # La classe visu regroupe les méthodes qui permttent de visualiser les résultats produits par l'algorythme.
     # Elle est notamment utile lors de la phase de calibration ou de la création de la vidéo de rendu
+
+    @staticmethod
+    def rate_rgb(pixel: list, c: int) -> float:
+        assert c in [0, 1, 2]
+        s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
+        if 600 > s > 150:
+            return int(pixel[c] + 1) / (s + 3) * 100
+        else:
+            return 0
 
     @staticmethod
     def copy_im(image: np.array) -> np.array:
@@ -36,6 +45,76 @@ class Visu:
                 newLine.append(image[y][x])
             newIm.append(newLine)
         return np.uint8(newIm)
+
+    def reduced(self, mc: int, tol: float, image: np.array) -> np.array:
+        """
+        mc : markerscolor, couleur des repères de l'image étudiée.
+        tol : seuil de détection des couleurs.
+        definition : taux de réduction de l'image.
+        image : image étudiée.
+
+        Crée un apercu de ce que percoit l'algorythme.
+        """
+        h = len(image)
+        w = len(image[0])
+        newIm = []
+        for j in range(0, h):
+            newLine = []
+            for i in range(0, w):
+                if self.rate_rgb(image[j][i], mc) > tol:
+                    newLine.append(255)
+                else:
+                    newLine.append(0)
+            newIm.append(newLine)
+        return np.uint8(newIm)
+
+    def detection(self, image: np.array, borders: list, copy=False) -> np.array:
+        """
+        image : image étudiée.
+        borders : contours des repères detectés.
+        copy : optionel, permet de defaire le lien entre l'image créée et l'image original.
+
+        Crée un apercu de ce que l'algorythme détecte.
+        """
+        if copy:
+            image = self.copy_im(image)
+        h, w = image.shape[:2]
+        for j in range(h):
+            for i in range(w):
+                if image[j][i] == 255:
+                    image[j][i] = 100
+        for obj in borders:
+            for pixel in obj:
+                for i in range(-1, 2):
+                    for j in range(-1, 2):
+                        if 0 <= pixel[1] < h - j and 0 <= pixel[0] < w - i:
+                            image[pixel[1] + j][pixel[0] + i] = 255
+        return np.uint8(image)
+
+    @staticmethod
+    def rectangle_NB(image: np.array, extremas: list, rectanglewidth: int) -> np.array:
+        """
+        image : image étudiée.
+        extremas : coordonées extremales des repères.
+        rectanglewidth : largeur du contour tracé autour des repères detectés.
+
+        Crée un apercu de ce que detecte l'algorythme.
+        """
+        h = len(image)
+        w = len(image[0])
+        marge = 4
+        for obj in extremas:
+            xmin, ymin = int(obj[0]) - marge, int(obj[1]) - marge
+            xmax, ymax = int(obj[2]) + marge, int(obj[3]) + marge
+            for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
+                for n in range(rectanglewidth + 1):
+                    if 0 <= i < w and 0 <= ymin - n < h and 0 <= ymin + n < h:
+                        image[(ymin - n) % h][i % w], image[(ymax + n) % h][i % w] = 255, 255
+            for j in range(ymin - rectanglewidth, ymax + rectanglewidth + 1):
+                for n in range(rectanglewidth + 1):
+                    if 0 <= xmin - n < w and 0 <= xmin + n < w and 0 <= j < h:
+                        image[j % h][(xmin - n) % w], image[j % h][(xmax + n) % w] = 255, 255
+        return np.uint8(image)
 
     def cross_color(self, image: np.array, pos: list, crosswidth: int, copy=False) -> np.array:
         """
@@ -64,70 +143,6 @@ class Visu:
         return np.uint8(image)
 
     @staticmethod
-    def rate_rgb(pixel: list, c: int) -> float:
-        assert c in [0, 1, 2]
-        s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
-        if 600 > s > 150:
-            return int(pixel[c] + 1) / (s + 3) * 100
-        else:
-            return 0
-
-    def reduced(self, mc: int, tol: float, image: np.array) -> np.array:
-        """
-        mc : markerscolor, couleur des repères de l'image étudiée.
-        tol : seuil de détection des couleurs.
-        definition : taux de réduction de l'image.
-        image : image étudiée.
-
-        Crée un apercu de ce que percoit l'algorythme.
-        """
-        h = len(image)
-        w = len(image[0])
-        newIm = []
-        for j in range(0, h):
-            newLine = []
-            for i in range(0, w):
-                if self.rate_rgb(image[j][i], mc) > tol:
-                    newLine.append(255)
-                else:
-                    newLine.append(0)
-            newIm.append(newLine)
-        return np.uint8(newIm)
-
-    @staticmethod
-    def rectangle_NB(image: np.array, extremas: dict, rectanglewidth: int) -> np.array:
-        """
-        image : image étudiée.
-        extremas : coordonées extremales des repères.
-        rectanglewidth : largeur du contour tracé autour des repères detectés.
-
-        Crée un apercu de ce que detecte l'algorythme.
-        """
-        h = len(image)
-        w = len(image[0])
-        marge = 4
-        for obj in extremas:
-            xmin, ymin = int(obj[0]) - marge, int(obj[1]) - marge
-            xmax, ymax = int(obj[2]) + marge, int(obj[3]) + marge
-            for i in range(xmin - rectanglewidth, xmax + rectanglewidth + 1):
-                for n in range(rectanglewidth + 1):
-                    if 0 <= i < w and 0 <= ymin - n < h and 0 <= ymin + n < h:
-                        image[(ymin - n) % h][i % w], image[(ymax + n) % h][i % w] = 255, 255
-            for j in range(ymin - rectanglewidth, ymax + rectanglewidth + 1):
-                for n in range(rectanglewidth + 1):
-                    if 0 <= xmin - n < w and 0 <= xmin + n < w and 0 <= j < h:
-                        image[j % h][(xmin - n) % w], image[j % h][(xmax + n) % w] = 255, 255
-        return np.uint8(image)
-
-    @staticmethod
-    def pas(image: np.array, pas: int) -> np.array:
-        if pas >= 2:
-            for j in range(int(len(image) / pas)):
-                for i in range(int(len(image[j]) / pas)):
-                    image[j * pas][i * pas] = [0, 0, 0]
-        return np.uint8(image)
-
-    @staticmethod
     def scale(image: np.array, scale: float, crosswidth: int, mc: int) -> np.array:
         """
         image : image étudiée.
@@ -150,30 +165,15 @@ class Visu:
         cv2.putText(image, '1cm', location, font, size, color)
         return np.uint8(image)
 
-    def detection(self, image: np.array, borders: list, copy=False) -> np.array:
-        """
-        image : image étudiée.
-        borders : contours des repères detectés.
-        copy : optionel, permet de defaire le lien entre l'image créée et l'image original.
-
-        Crée un apercu de ce que l'algorythme détecte.
-        """
-        if copy:
-            image = self.copy_im(image)
-        h, w = image.shape[:2]
-        for j in range(h):
-            for i in range(w):
-                if image[j][i] == 255:
-                    image[j][i] = 100
-        for obj in borders:
-            for pixel in obj:
-                for i in range(-1, 2):
-                    for j in range(-1, 2):
-                        if 0 <= pixel[1] < h - j and 0 <= pixel[0] < w - i:
-                            image[pixel[1] + j][pixel[0] + i] = 255
+    @staticmethod
+    def pas(image: np.array, pas: int) -> np.array:
+        if pas >= 2:
+            for j in range(int(len(image) / pas)):
+                for i in range(int(len(image[j]) / pas)):
+                    image[j * pas][i * pas] = [0, 0, 0]
         return np.uint8(image)
 
-    def visus(self, video: Video, frame, borders, extremums):
+    def visus(self, video: Video, frame: Frame, borders: list, extremas: list) -> None:
         rw = video.settings.rectanglewidth
         cw = video.settings.crosswidth
         mc = video.markerscolor
@@ -190,7 +190,7 @@ class Visu:
         visualisations.append(NB_im)
 
         treated_NB = self.detection(NB_im, borders, copy=True)
-        treated_NB = self.rectangle_NB(treated_NB, extremums, rw)
+        treated_NB = self.rectangle_NB(treated_NB, extremas, rw)
         visualisations.append(treated_NB)
 
         pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
@@ -207,6 +207,7 @@ class Visu:
             cv2.destroyWindow('calibration window')
             cv2.waitKey(1)
 
+        print(mess.E_vis, end='')
         return None
 
 
@@ -384,9 +385,6 @@ class Interact:
                 elif which == '4':
                     print()
                     self.tol_input(video)
-                elif which == 'pres':
-                    print()
-                    self.reclimit_input()
                 return None
             elif which in self.stoplist:
                 raise Break
@@ -453,8 +451,7 @@ class Interact:
             else:
                 print(mess.P_vs, end='')
 
-    @staticmethod
-    def ref_input(video: Video) -> None:
+    def ref_input(self, video: Video) -> None:
         """
         Récupère au près de l'utilisateur la distances séparant les deux
         premiers repères placés sur l'objet étudiée sur la vidéo et assigne
@@ -463,7 +460,7 @@ class Interact:
         while True:
             l = input(mess.I_ref)
             try:
-                if l in interact.stoplist:
+                if l in self.stoplist:
                     raise Break
                 else:
                     lenref = float(l)
@@ -485,22 +482,6 @@ class Interact:
                 try:
                     tol = round(float(tol), 3)
                     settings.tol -= tol
-                    return None
-                except ValueError:
-                    print(mess.P_vs, end='')
-
-    def reclimit_input(self):
-        """
-        Permet de gérer la précision de l'algorithme
-        """
-        while True:
-            rl = input('setrecursionlimit : ')
-            if rl in self.stoplist:
-                raise Break
-            else:
-                try:
-                    rl = int(rl)
-                    sys.setrecursionlimit(rl)
                     return None
                 except ValueError:
                     print(mess.P_vs, end='')

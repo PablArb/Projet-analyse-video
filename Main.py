@@ -31,16 +31,16 @@ def calibration(video: Video, i=0) -> None:
     mc = video.markerscolor
 
     try:
-        positions, borders, extremums, Bdur, Tdur = frametreatement(first, settings, mc, True)
-    # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec
-    # les paramètres entrés par l'utilisateur, on gère ici ce problème.
+        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, mc, True)
+    # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
+    # l'utilisateur, on gère ici ce problème.
     except SettingError:
         interact.verif_settings(video)
         calib.reboot(video)
         calibration(video)
         return None
 
-    calib.detPas(video, extremums)
+    calib.detPas(video, extremas)
     calib.detScale(video, positions)
 
     swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
@@ -58,9 +58,8 @@ def calibration(video: Video, i=0) -> None:
     print(mess.E_cal, end='')
 
     # On crée maintenant les visuels à partir des résultats.
-    visu.visus(video, first, borders, extremums)
+    visu.visus(video, first, borders, extremas)
 
-    print(mess.E_vis, end='')
     print(mess.S_dur + str(formatedDur), end='')
     return None
 

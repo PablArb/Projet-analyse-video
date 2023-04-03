@@ -10,8 +10,7 @@ import shutil as sht
 import getpass as gp
 
 
-# définition des paths utiles 
-# noinspection GrazieInspection
+# définition des paths utiles
 class Paths:
     def __init__(self):
         self.TreatedFrames = None
@@ -154,6 +153,3 @@ elif os.name == 'posix':
     paths = MacosPaths()
 else:
     pass
-
-
-

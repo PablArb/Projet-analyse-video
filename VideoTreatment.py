@@ -5,7 +5,6 @@ Created on Sun Dec  4 16:32:07 2022
 
 @author: pabloarb
 """
-
 import os
 import shutil as sht
 import sys
@@ -264,7 +263,8 @@ class Calib:
 
     @staticmethod
     def reboot(video: Video, i=0) -> None:
-        video.settings.definition = 1
+        video.settings.precision = 1000
+        sys.setrecursionlimit(1000)
         video.settings.step = 1
         video.Frames[i].identifiedObjects = []
         video.markers = []
@@ -272,7 +272,6 @@ class Calib:
 
 
 # Traitement tools
-
 
 def videotreatment(video: Video) -> None:
     """
@@ -310,7 +309,7 @@ def videotreatment(video: Video) -> None:
     return None
 
 
-def frametreatement(frame, settings, mc, calib=False):
+def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     """
     frame : image à traiter (tableau uint8).
     settings : paramètres avec lesquels la frame est traitée.
