@@ -16,7 +16,6 @@ import numpy as np
 import pymediainfo as mi
 
 from Base import paths, mess, SettingError, Break
-from IHM import visu
 
 
 class Settings(object):
@@ -261,43 +260,6 @@ class Calib:
         else:
             scale = 1
         video.scale = scale
-        return None
-
-    @staticmethod
-    def visualisations(video, frame, borders, extremums):
-        rw = video.settings.rectanglewidth
-        cw = video.settings.crosswidth
-        mc = video.markerscolor
-        scale = video.scale
-        tol = video.settings.tol
-
-        print(mess.B_vis, end='')
-        visualisations = []
-
-        color_im = visu.copy_im(frame.array)
-        visualisations.append(color_im)
-
-        NB_im = visu.reduced(mc, tol, color_im)
-        visualisations.append(NB_im)
-
-        treated_NB = visu.detection(NB_im, borders, copy=True)
-        treated_NB = visu.rectangle_NB(treated_NB, extremums, rw)
-        visualisations.append(treated_NB)
-
-        pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
-        treated_color = visu.cross_color(frame.array, pos, cw, copy=True)
-        treated_color = visu.scale(treated_color, scale, cw, mc)
-        visualisations.append(treated_color)
-
-        print(mess.S_vis, end='')
-
-        # On présente les résultats à l'utilisateur.
-        for im in visualisations:
-            cv2.imshow('calibration window', im)
-            cv2.waitKey(0)
-            cv2.destroyWindow('calibration window')
-            cv2.waitKey(1)
-
         return None
 
     @staticmethod

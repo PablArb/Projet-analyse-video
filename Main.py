@@ -9,7 +9,7 @@ import shutil as sht
 import sys
 
 from Base import Break, SettingError, mess
-from IHM import download, interact
+from IHM import visu, download, interact
 from VideoTreatment import Video, Object
 from VideoTreatment import calib, time_formater
 from VideoTreatment import videotreatment, frametreatement
@@ -58,7 +58,7 @@ def calibration(video: Video, i=0) -> None:
     print(mess.E_cal, end='')
 
     # On crée maintenant les visuels à partir des résultats.
-    calib.visualisations(video, first, borders, extremums)
+    visu.visus(video, first, borders, extremums)
 
     print(mess.E_vis, end='')
     print(mess.S_dur + str(formatedDur), end='')

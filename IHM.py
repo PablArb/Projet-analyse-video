@@ -12,7 +12,7 @@ import inspect
 import shutil as sht
 import sys
 from Base import Break, mess
-# from VideoTreatment import Video
+from VideoTreatment import Video
 
 
 class Visu:
@@ -173,12 +173,48 @@ class Visu:
                             image[pixel[1] + j][pixel[0] + i] = 255
         return np.uint8(image)
 
+    def visus(self, video: Video, frame, borders, extremums):
+        rw = video.settings.rectanglewidth
+        cw = video.settings.crosswidth
+        mc = video.markerscolor
+        scale = video.scale
+        tol = video.settings.tol
+
+        print(mess.B_vis, end='')
+        visualisations = []
+
+        color_im = self.copy_im(frame.array)
+        visualisations.append(color_im)
+
+        NB_im = self.reduced(mc, tol, color_im)
+        visualisations.append(NB_im)
+
+        treated_NB = self.detection(NB_im, borders, copy=True)
+        treated_NB = self.rectangle_NB(treated_NB, extremums, rw)
+        visualisations.append(treated_NB)
+
+        pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
+        treated_color = self.cross_color(frame.array, pos, cw, copy=True)
+        treated_color = self.scale(treated_color, scale, cw, mc)
+        visualisations.append(treated_color)
+
+        print(mess.S_vis, end='')
+
+        # On présente les résultats à l'utilisateur.
+        for im in visualisations:
+            cv2.imshow('calibration window', im)
+            cv2.waitKey(0)
+            cv2.destroyWindow('calibration window')
+            cv2.waitKey(1)
+
+        return None
+
 
 class Download:
     # La classe download gère les méthodes permettant de télécharger les différents résultats produits par l'algorythme.
     # Elle permet également detélécharger les réglages avec lesquels la vidéo a été traitée.
 
-    def results(self, video) -> None:
+    def results(self, video: Video) -> None:
         """
         Gère l'appel aux différentes fonctions de téléchargement
         """
@@ -188,7 +224,7 @@ class Download:
         return None
 
     @staticmethod
-    def reboot(video) -> None:
+    def reboot(video: Video) -> None:
         """
         Efface les résultats obtens précédements dans le cas ou la video a déjà été étudiée.
         """
@@ -200,7 +236,7 @@ class Download:
         return None
 
     @staticmethod
-    def video(video) -> None:
+    def video(video: Video) -> None:
         """
         Télécharge la vidéo
         """
@@ -212,7 +248,7 @@ class Download:
         return None
 
     @staticmethod
-    def treatedVideo(video) -> None:
+    def treatedVideo(video: Video) -> None:
         """
         Télécharge la vidéo avec les croix tracées dessus
         """
@@ -231,7 +267,7 @@ class Download:
         print(mess.E_vdl, end='\n')
         return None
 
-    def data(self, video) -> None:
+    def data(self, video: Video) -> None:
         """
         Télécharge les positions occupées par les différents repères au cours du temps sous forme de tableau csv
         """
@@ -259,7 +295,7 @@ class Download:
         return None
 
     @staticmethod
-    def settings(video) -> None:
+    def settings(video: Video) -> None:
         """
         Télécharge les réglages avec lesquels a été fait le traitement
         """
@@ -289,7 +325,7 @@ class Download:
         return None
 
     @staticmethod
-    def events(video) -> None:
+    def events(video: Video) -> None:
         """
         Télécharge un compte des potentielles difficultés qu'a pu rencontrer l'algorythme lors du traitement
         """
@@ -299,7 +335,7 @@ class Download:
         return None
 
     @staticmethod
-    def frames(video) -> None:
+    def frames(video: Video) -> None:
         """
         Télecharge l'ensemble des frames de l'image séparement
         """
@@ -322,7 +358,7 @@ class Interact:
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
 
-    def verif_settings(self, video) -> None:
+    def verif_settings(self, video: Video) -> None:
         """
         Éffectue les changements de réglges demandés par l'utilisateur'
         """
@@ -377,7 +413,7 @@ class Interact:
             else:
                 print(mess.P_vs)
 
-    def markerscolor_input(self, video) -> None:
+    def markerscolor_input(self, video: Video) -> None:
         """
         Récupère auprès de l'utilisateur la couleur des repères placés sur
         l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
@@ -394,7 +430,7 @@ class Interact:
             else:
                 print(mess.P_vs, end='')
 
-    def orientation_input(self, video) -> None:
+    def orientation_input(self, video: Video) -> None:
         """
         Récupère l'orientation de la vidéo auprès de l'utilisateur
         """
@@ -418,7 +454,7 @@ class Interact:
                 print(mess.P_vs, end='')
 
     @staticmethod
-    def ref_input(video) -> None:
+    def ref_input(video: Video) -> None:
         """
         Récupère au près de l'utilisateur la distances séparant les deux
         premiers repères placés sur l'objet étudiée sur la vidéo et assigne
@@ -436,7 +472,7 @@ class Interact:
             except ValueError:
                 print(mess.P_vs, end='')
 
-    def tol_input(self, video):
+    def tol_input(self, video: Video):
         """
         Permet à l'utilisateur de régler la tolérence (poids seuil de la couleur des repères dans chque pixel)
         """
