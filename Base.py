@@ -73,7 +73,8 @@ class MacosPaths(Paths):
         self.bac = '/Users/'+user+'/Desktop/bac'
         self.videoStorage = '/Users/'+user+'/.##temporary storage##'
         self.data = '/Users/'+user+'/Desktop/mes exp TIPE/A - data video'
-   
+
+
 class WIndowsPaths (Paths):
     def __init__(self):
         super().__init__()
@@ -81,15 +82,6 @@ class WIndowsPaths (Paths):
         self.bac = 'C:/Users/' + user + '/Desktop/bac'
         self.videoStorage = 'C:/Users/' + user + '/Desktop/.##temporary storage##'
         self.data = '/C:Users/' + user + '/Desktop/TIPE/data video'
-
-
-user = gp.getuser()
-if os.name == 'nt':
-    paths = WIndowsPaths()
-elif os.name == 'posix':
-    paths = MacosPaths()
-else:
-    pass
 
 
 class Mess:
@@ -144,10 +136,7 @@ class Mess:
         self.S_vs4 = '\n4 tolérance : '
         self.I_vs = '\nréglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) : '
         self.P_vs = 'vous devez avoir fait une erreur, veuillez réessayer\n'
-
-
 mess = Mess()
-
 
 class Break(Exception):
     pass
@@ -156,3 +145,15 @@ class Break(Exception):
 class SettingError(Exception):
     print(mess.P_set, end='')
     pass
+
+
+user = gp.getuser()
+if os.name == 'nt':
+    paths = WIndowsPaths()
+elif os.name == 'posix':
+    paths = MacosPaths()
+else:
+    pass
+
+
+
