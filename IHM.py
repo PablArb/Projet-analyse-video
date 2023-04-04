@@ -10,7 +10,6 @@ import csv
 import cv2
 import inspect
 import shutil as sht
-import sys
 from Base import Break, mess
 from VideoTreatment import Video, Frame
 
@@ -116,7 +115,7 @@ class Visu:
                         image[j % h][(xmin - n) % w], image[j % h][(xmax + n) % w] = 255, 255
         return np.uint8(image)
 
-    def cross_color(self, image: np.array, pos: list, crosswidth: int, copy=False) -> np.array:
+    def cross_color(self, image: np.array, pos: list, crosswidth: int, mc, copy=False) -> np.array:
         """
         image : np.array, imaghe sur laquelle on veut ajouter les croix. pos : positions où l'on souhaite tracer les
         croix sous forme [[x, y]] crosswidth : largeur des traits de la croix (quelques pixels) copy : optional,
@@ -135,11 +134,13 @@ class Visu:
             for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
                 for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
                     if 0 <= i < w and 0 <= n < h:
-                        image[n][i] = [0, 255, 0]
+                        image[n][i] = [0, 0, 0]
+                        image[n][i][mc] = 255
             for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
                 for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
                     if 0 <= n < w and 0 <= j < h:
-                        image[j][n] = [0, 255, 0]
+                        image[j][n] = [0, 0, 0]
+                        image[j][n][mc] = 255
         return np.uint8(image)
 
     @staticmethod
@@ -158,7 +159,7 @@ class Visu:
         color[mc] = 255
         for i in range(int(1 / scale)):
             for j in range(crosswidth):
-                image[j + h - int(h / 20)][i + int(w / 10)] = color
+                image[(j + h - int(h / 20)) % h][(i + int(w / 10)) % w] = color
         location = (int(w / 10), h - int(h / 20 + h / 100))
         font = cv2.FONT_HERSHEY_SIMPLEX
         size = 1
@@ -194,7 +195,7 @@ class Visu:
         visualisations.append(treated_NB)
 
         pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
-        treated_color = self.cross_color(frame.array, pos, cw, copy=True)
+        treated_color = self.cross_color(frame.array, pos, cw, (mc+1) % 3, copy=True)
         treated_color = self.scale(treated_color, scale, cw, mc)
         visualisations.append(treated_color)
 
@@ -253,17 +254,25 @@ class Download:
         """
         Télécharge la vidéo avec les croix tracées dessus
         """
+
         crosswidth = video.settings.crosswidth
+        mc = video.markerscolor
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
         fps = video.settings.resFps
+
         out = cv2.VideoWriter(path, ext, fps, video.Framessize)
         print(mess.B_vdl, end='')
         for frame in video.Frames:
-            pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
-            img = visu.cross_color(frame.array, pos, crosswidth)
+
+            pos = [obj.positions[frame.id] for obj in video.markers]
+            pred = [obj.predictions[frame.id] for obj in video.markers if frame.id in obj.predictions]
+
+            img = visu.cross_color(frame.array, pos, crosswidth, (mc+1) % 3)
+            img = visu.cross_color(img, pred, crosswidth, (mc+2) % 3)
             # img = Add_pas(img, pas)
             out.write(img)
+
         out.release()
         print(mess.E_vdl, end='\n')
         return None
@@ -340,6 +349,7 @@ class Download:
         """
         Télecharge l'ensemble des frames de l'image séparement
         """
+        mc = video.markerscolor
         video.paths.create_dir('non treated frames')
         video.paths.create_dir('treated frames')
         print('\nSauvegarde des frames en cours ...', end='')
@@ -348,7 +358,7 @@ class Download:
             cv2.imwrite(name, frame.array)
             name = video.paths.TreatedFrames + str(frame.id) + '.jpg'
             crosswidth = video.settings.crosswidth
-            im = visu.cross_color(frame.array, frame.identified_objects, crosswidth)
+            im = visu.cross_color(frame.array, frame.identified_objects, crosswidth, mc)
             cv2.imwrite(name, im)
         print(mess.E_fdl)
         return None

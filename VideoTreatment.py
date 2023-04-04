@@ -156,9 +156,9 @@ class Object(object):
         self.id = id
         self.lastupdate = 0
         self.lastknownpos = initpos
-        self.prediction = initpos
+        self.predictions = {initframe: initpos}
         self.positions = {initframe: initpos}
-        self.kf = obj_tracker(1 / fr, initpos)
+        self.kf = Obj_tracker(1 / fr, initpos)
         self.status = 'hooked'
 
 
@@ -168,7 +168,7 @@ class Mesure(object):
         self.status = 'unmatched'
 
 
-class obj_tracker(object):
+class Obj_tracker(object):
     # filtre de kalman 
     def __init__(self, dt, point):
         self.dt = dt
@@ -378,7 +378,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     init_extr = [depart[0], depart[1], depart[0], depart[1]]
                     at_border = False
                     Ti = t.time()
-                    res = detection(image, depart, object, init_extr, mc, tol)
+                    res = border_detection(image, depart, object, init_extr, mc, tol)
                     s += t.time() - Ti
                     extremas.append(res[0])
                     borders.append(res[1])
@@ -402,7 +402,7 @@ def rate_rgb(pixel: list, c: int) -> float:
         return 0
 
 
-def detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> tuple:
+def border_detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> tuple:
     """
     image : image étudiée.
     start : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
@@ -426,7 +426,7 @@ def detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol:
 
     for pixel in get_neighbours(image, start, mc, tol):
         if pixel not in obj:
-            detection(image, pixel, obj, extr, mc, tol)
+            border_detection(image, pixel, obj, extr, mc, tol)
     return np.array(extr), np.array(obj)
 
 
@@ -508,10 +508,10 @@ def position(extremas: list) -> list:
     return position
 
 
-def object_tracker(video, frame):
+def object_tracker(video: Video, frame: Frame) -> None:
     """
-    video : vidéo étudiée frame : frame étudiée maxdist : distance à partir de laquelle un objet ayant parcouru cette
-    distance d'une frame à la suivante n'est pas considéré comme un même objet.
+    video : vidéo étudiée
+    frame : frame étudiée
 
     Effectue le suivi des repères d'une frame à la suivante.
     """
@@ -526,8 +526,11 @@ def object_tracker(video, frame):
             obj.lastupdate += 1
 
             pred = obj.kf.predict()
-            obj.prediction = (int(pred[0]), int(pred[1]))
-            xp, yp = obj.prediction
+            xp, yp = int(pred[0]), int(pred[1])
+            obj.predictions[frame.id] = (xp, yp)
+
+            # obj.prediction = (int(pred[0]), int(pred[1]))
+            # xp, yp = obj.prediction
 
             distances = []
             for mes in mesures:
@@ -560,7 +563,7 @@ def object_tracker(video, frame):
         if obj.status == 'hooked':
             if obj.lastupdate != 0:
                 video.treatementEvents += f'frame {frame.id}\t\tobject not found\t{obj.id}\n'
-                obj.positions[frame.id] = obj.prediction
+                obj.positions[frame.id] = obj.predictions[frame.id]
                 print('!!!!!!!!!!', end='')
             if obj.lastupdate >= 5:
                 obj.status = 'lost'
@@ -568,15 +571,19 @@ def object_tracker(video, frame):
 
         elif obj.status == 'lost':
             obj.positions[frame.id] = obj.lastknownpos
+    return None
 
 
-def waiting_time(i, N, Ti):
+def waiting_time(i: int, N: int, Ti: float) -> str:
     d = t.time() - Ti
     d = round((N - i) * (d / i), 1)
     return time_formater(d)
 
 
-def time_formater(t):
+def time_formater(t: float) -> str:
+    """
+    Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
+    """
     minutes = str(int(t // 60))
     if int(minutes) < 10:
         minutes = '0' + minutes
