@@ -65,7 +65,7 @@ class Video(object):
         """
         self.paths.create_dir('bac')
         isempty = True
-        print(mess.B_vi, end='')
+        print(mess.B_vi0, end='')
         while isempty:
             if len(os.listdir(self.paths.bac)) != 0:
                 isempty = False
@@ -86,10 +86,12 @@ class Video(object):
             destination = self.paths.desktop + '/' + _bac[0]
             sht.copy2(source, destination)
             self.paths.delete_dir('bac')
+            t.sleep(2)
             self.videoinput()
         elif len(_bac) > 1:
             print(mess.P_vi2, end='')
             self.paths.delete_dir('bac')
+            t.sleep(2)
             self.videoinput()
 
     def get_framerate(self) -> float:
@@ -129,7 +131,7 @@ class Video(object):
         frames = []
         cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)
         frame_number = 0
-        print(mess.B_gf, end='')
+        print(mess.B_gfs, end='')
         while True:
             ret, frame = cam.read()
             if ret:
@@ -139,7 +141,7 @@ class Video(object):
                 break
         cam.release()
         cv2.destroyAllWindows()
-        print(mess.E_gf, end='')
+        print(mess.E_gfs, end='')
         return frames
 
 
@@ -296,13 +298,13 @@ def videotreatment(video: Video) -> None:
             progr = (frame.id / (len(frames) - 1)) * 100
             progr = str(round(progr))
             tleft = waiting_time(frame.id, len(frames), Ti)
-            print(mess.S_vt + progr + ' % (' + tleft + ')', end='')
+            print(mess.S_vtm + progr + ' % (' + tleft + ')', end='')
             T = t.time()
 
     d = time_formater(t.time() - Ti)
     video.computationDuration = d
 
-    print(mess.E_vt, end='')
+    print(mess.E_vtm, end='')
     print(mess.S_dvt + d, end='')
 
     return None
@@ -535,7 +537,7 @@ def object_tracker(video: Video, frame: Frame) -> None:
         if obj.status == 'hooked':
             if obj.lastupdate != 0:
                 video.treatementEvents += f'frame {frame.id}\t\tobject not found\t{obj.id}\n'
-                obj.positions[frame.id] = obj.predictions[frame.id]
+                obj.positions[frame.id] = [int(pred[0]), int(pred[1])]
                 print('!!!!!!!!!!', end='')
             if obj.lastupdate >= 5:
                 obj.status = 'lost'

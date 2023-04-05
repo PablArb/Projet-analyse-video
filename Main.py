@@ -110,7 +110,7 @@ try:
     download.reboot(video)
     download.data(video)
 
-    if interact.yn("Voulez vous télécharger les résultats de l'étude ?"):
+    if interact.yn(mess.I_dlr):
         download.results(video)
     cleaner(video)
     print(mess.E_proc)
@@ -118,4 +118,3 @@ try:
 except (Break, KeyboardInterrupt):
     cleaner(video, isOK=False)
     print(mess.E_proc)
-    
