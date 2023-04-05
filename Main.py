@@ -20,7 +20,7 @@ from VideoTreatment import videotreatment, frametreatement
 def calibration(video: Video, i=0) -> None:
     """
     video : vidéo à traiter.
-    
+
     Permet de vérifier le bon réglage de l'ensemble des paramètres.
     """
     # On va dans un premier temps traiter la première frame de la video.
@@ -118,3 +118,4 @@ try:
 except (Break, KeyboardInterrupt):
     cleaner(video, isOK=False)
     print(mess.E_proc)
+    

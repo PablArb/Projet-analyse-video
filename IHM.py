@@ -380,27 +380,30 @@ class Interact:
             print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation - 1], end='')
             print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
             print(mess.S_vs4 + str(100 - settings.tol), end='')
-            which = input(mess.I_vs)
-            if which in ['0', '1', '2', '3', '4', 'pres']:
-                if which == '0':
-                    pass
-                elif which == '1':
-                    print()
-                    self.markerscolor_input(video)
-                elif which == '2':
-                    print()
-                    self.orientation_input(video)
-                elif which == '3':
-                    print()
-                    self.ref_input(video)
-                elif which == '4':
-                    print()
-                    self.tol_input(video)
-                return None
-            elif which in self.stoplist:
-                raise Break
-            else:
-                print(mess.P_vs)
+            which_L = input(mess.I_vs).split(',')
+            for which in which_L:
+                if which in self.stoplist:
+                    raise Break
+                which = int(which)
+                # print(which)
+                if which in [0, 1, 2, 3, 4]:
+                    if which == '0':
+                        pass
+                    elif which == '1':
+                        print()
+                        self.markerscolor_input(video)
+                    elif which == '2':
+                        print()
+                        self.orientation_input(video)
+                    elif which == '3':
+                        print()
+                        self.ref_input(video)
+                    elif which == '4':
+                        print()
+                        self.tol_input(video)
+                else:
+                    print(mess.P_vs)
+            return None
 
     def yn(self, question: str) -> bool:
         """
