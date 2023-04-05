@@ -268,9 +268,10 @@ class Download:
             pos = [obj.positions[frame.id] for obj in video.markers]
             pred = [obj.predictions[frame.id] for obj in video.markers if frame.id in obj.predictions]
 
-            img = visu.cross_color(frame.array, pos, crosswidth, (mc+1) % 3)
-            img = visu.cross_color(img, pred, crosswidth, (mc+2) % 3)
-            # img = Add_pas(img, pas)
+            # img = visu.pas(img, pas)
+            img = visu.cross_color(frame.array, pred, crosswidth, (mc + 2) % 3)
+            img = visu.cross_color(img, pos, crosswidth, (mc+1) % 3)
+            
             out.write(img)
 
         out.release()
