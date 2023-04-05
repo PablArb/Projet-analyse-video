@@ -152,13 +152,13 @@ class Frame(object):
 
 
 class Object(object):
-    def __init__(self, id, initpos, initframe, fr):
+    def __init__(self, id, initpos, initframe):
         self.id = id
         self.lastupdate = 0
         self.lastknownpos = initpos
         self.predictions = {initframe: initpos}
         self.positions = {initframe: initpos}
-        self.kf = Obj_tracker(1 / fr, initpos)
+        self.kf = KallmanFilter(initpos)
         self.status = 'hooked'
 
 
@@ -168,17 +168,16 @@ class Mesure(object):
         self.status = 'unmatched'
 
 
-class Obj_tracker(object):
+class KallmanFilter(object):
     # filtre de kalman 
-    def __init__(self, dt, point):
-        self.dt = dt
+    def __init__(self, point):
 
         # Vecteur d'etat initial
         self.E = np.matrix([[point[0]], [point[1]], [0], [0]])
 
         # Matrice de transition
-        self.A = np.matrix([[1, 0, self.dt, 0],
-                            [0, 1, 0, self.dt],
+        self.A = np.matrix([[1, 0, 1, 0],
+                            [0, 1, 0, 1],
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
 
@@ -186,10 +185,10 @@ class Obj_tracker(object):
         self.H = np.matrix([[1, 0, 0, 0],
                             [0, 1, 0, 0]])
 
-        self.Q = np.matrix([[100, 0, 0, 0],
-                            [0, 100, 0, 0],
-                            [0, 0, 100, 0],
-                            [0, 0, 0, 100]])
+        self.Q = np.matrix([[200, 0, 0, 0],
+                            [0, 10, 0, 0],
+                            [0, 0, 200, 0],
+                            [0, 0, 0, 10]])
 
         self.R = np.matrix([[1, 0],
                             [0, 1]])
@@ -308,7 +307,6 @@ def videotreatment(video: Video) -> None:
 
     return None
 
-
 def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     """
     frame : image à traiter (tableau uint8).
@@ -385,7 +383,6 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
 
     return extremas, borders, s
 
-
 def rate_rgb(pixel: list, c: int) -> float:
     """
     pixel : élement de l'image d'origine sous la forme [r, g, b].
@@ -399,8 +396,7 @@ def rate_rgb(pixel: list, c: int) -> float:
     if 600 > s > 150:
         return int(pixel[c] + 1) / (s + 3) * 100
     else:
-        return 0
-
+        return 0.
 
 def border_detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> tuple:
     """
@@ -428,7 +424,6 @@ def border_detection(image: np.array, start: list, obj: list, extr: list, mc: in
         if pixel not in obj:
             border_detection(image, pixel, obj, extr, mc, tol)
     return np.array(extr), np.array(obj)
-
 
 def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     """
@@ -471,7 +466,6 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
 
     return L_neighbours
 
-
 def rectifyer(extremas: dict, minsize: int) -> list:
     """
     extremas : dictionaire contenant les coordonnées extremales des repères détectés sur une frame.
@@ -488,7 +482,6 @@ def rectifyer(extremas: dict, minsize: int) -> list:
             new_extremas.append(obj)
 
     return new_extremas
-
 
 def position(extremas: list) -> list:
     """
@@ -515,7 +508,6 @@ def object_tracker(video: Video, frame: Frame) -> None:
 
     Effectue le suivi des repères d'une frame à la suivante.
     """
-
     markers = video.markers
     mesures = frame.mesures
     M = np.zeros((len(markers), len(frame.mesures)))
@@ -523,41 +515,21 @@ def object_tracker(video: Video, frame: Frame) -> None:
     for i in range(len(markers)):
         obj = markers[i]
         if obj.status == 'hooked':
+
             obj.lastupdate += 1
-
             pred = obj.kf.predict()
-            xp, yp = int(pred[0]), int(pred[1])
-            obj.predictions[frame.id] = (xp, yp)
+            obj.predictions[frame.id] = pred
 
-            # obj.prediction = (int(pred[0]), int(pred[1]))
-            # xp, yp = obj.prediction
+            dist = distances(pred, mesures)
+            if len(dist) != 0:
+                M[i][np.argmin(dist)] = 1
 
-            distances = []
-            for mes in mesures:
-                xm, ym = mes.pos[0], mes.pos[1]
-                d = ((xp - xm) ** 2 + (yp - ym) ** 2) ** .5
-                distances.append(d)
-
-            if len(distances) != 0:
-                M[i][np.argmin(distances)] = 1
-
+    # M : colonnes = mesures, lignes = markers
+    # Ainsi si la somme sur la colonne n'est pas égale à 1 cela signifie que différents markers pourrait se trouver
+    # à cette position. Si elle est bien égale à 1 il n'y a pas de conflit.
     res = np.sum(M, axis=0)
 
-    for i in range(len(mesures)):
-        if res[i] == 1:
-
-            mes = mesures[i]
-            marker = markers[np.argmax(M[:, i])]
-
-            mes.status = 'matched'
-            marker.positions[frame.id] = mes.pos
-            marker.lastknownpos = mes.pos
-            marker.kf.update(np.expand_dims(mes.pos, axis=-1))
-            marker.lastupdate = 0
-
-            frame.identifiedObjects.append(marker)
-        else:
-            pass
+    matching(frame, M, res, mesures, markers)
 
     for obj in markers:
         if obj.status == 'hooked':
@@ -573,12 +545,48 @@ def object_tracker(video: Video, frame: Frame) -> None:
             obj.positions[frame.id] = obj.lastknownpos
     return None
 
+def distances(pred: list, mesures: list[Mesure]) -> list:
+    """
+    pred : position prédite [x, y]
+    mesures : liste de positions des objets détéctés
+
+    Calcule les distances entre la position prédite et les positions de chacuns des objets détéctés.
+    """
+    LDistances = []
+    xp, yp = int(pred[0]), int(pred[1])
+    for mes in mesures:
+        xm, ym = mes.pos[0], mes.pos[1]
+        d = ((xp - xm) ** 2 + (yp - ym) ** 2) ** .5
+        LDistances.append(d)
+    return LDistances
+
+def matching(frame: Frame, M: np.array, res: np.array, mesures: list, markers: list) -> None:
+    # On interprète les résultats
+    imatchMesures = [i for i in range(len(res)) if res[i] == 1]
+    imatchMarkers = [np.argmax(M[:, i]) for i in imatchMesures]
+    matchedMesures = [mesures[i] for i in imatchMesures]
+    matchedMarkers = [markers[i] for i in imatchMarkers]
+
+    assert len(matchedMesures) == len(matchedMarkers)
+    for i in range(len(matchedMarkers)):
+        update(frame, matchedMarkers[i], matchedMesures[i])
+
+    return None
+
+def update(frame: Frame, marker: Object, mesure: Mesure) -> None:
+    mesure.status = 'matched'
+    marker.positions[frame.id] = mesure.pos
+    marker.lastknownpos = mesure.pos
+    marker.kf.update(np.expand_dims(mesure.pos, axis=-1))
+    marker.lastupdate = 0
+    frame.identifiedObjects.append(marker)
+    return None
+
 
 def waiting_time(i: int, N: int, Ti: float) -> str:
     d = t.time() - Ti
     d = round((N - i) * (d / i), 1)
     return time_formater(d)
-
 
 def time_formater(t: float) -> str:
     """

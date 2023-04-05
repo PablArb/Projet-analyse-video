@@ -50,7 +50,7 @@ def calibration(video: Video, i=0) -> None:
     # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0
     for obj in positions:
-        new_obj = Object('obj-' + str(video.markercount), obj, first.id, video.Framerate)
+        new_obj = Object('obj-' + str(video.markercount), obj, first.id)
         first.identifiedObjects.append(new_obj)
         video.markers.append(new_obj)
         video.markercount += 1
@@ -84,6 +84,7 @@ def cleaner(video: Video, isOK=True) -> None:
 
 print(mess.B_proc, end='')
 video = None
+
 try:
 
     # On récupère la vidéo et ses caractéristiques

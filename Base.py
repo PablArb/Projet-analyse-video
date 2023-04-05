@@ -103,11 +103,11 @@ class Mess:
         self.B_cal = '\nTraitement en cours ...'
         # potential recursion limit issue
         # potential setting issue
-        self.E_cal = '\rTraitement -------------------------------------------------------- OK\n'
+        self.E_cal = '\rTraitement - calibration ------------------------------------------ OK\n'
 
         self.B_vis = 'Création des visuels en cours ...'
         self.S_vis = "\rAffichage du résultat (une fenêtre a dû s'ouvrir)"
-        self.E_vis = '\rValidation du résultat -------------------------------------------- OK\n'
+        self.E_vis = '\rVisualisation du résultat ----------------------------------------- OK\n'
         self.S_dur = 'Estimation de la durée du traitement : '
 
         self.I_val = '\n\nLe traitement est-il bon ?'
@@ -124,7 +124,7 @@ class Mess:
         self.E_vdl = '\rSauvegarde de la vidéo -------------------------------------------- OK'
         self.E_fdl = '\nSauvegarde des frames --------------------------------------------- OK'
 
-        # dealing with recursion limit
+        # dealing with recursion limit issue
         self.P_rec = '\rDéfinition trop élevée, tentative avec une définition plus faible'
 
         # dealing with setting issue
