@@ -271,7 +271,7 @@ class Download:
             # img = visu.pas(img, pas)
             img = visu.cross_color(frame.array, pred, crosswidth, (mc + 2) % 3)
             img = visu.cross_color(img, pos, crosswidth, (mc+1) % 3)
-            
+
             out.write(img)
 
         out.release()
