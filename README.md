@@ -11,7 +11,8 @@ Il peut être utiliser pour suivre des trajectoires ou la déformation d'un obje
 Le programme de traitement vidéo est composé des fichiers Main.py, VideoTreatment.py, IHM.py et Base.py.
 L'ensemble de ce projet est basé sur le language de programmation Python, il faut donc un IDE adapté.
 Il faut de plus avoir intégrer à l'environnement les modules numpy, Opencv, pymediainfo et csv.
-Lorsque on execute le programme dans la console de l'IDE un dosssier est créé sur le bureau de l'ordinateur dans lequel il faut glisser la vidéo à étudier (le programme accepte les vidéos au format mp4 ou mov les fichiers qui ne sont pas sous ses formats seront déplacés vers le bureau).\n
+Lorsque on execute le programme dans la console de l'IDE un dosssier est créé sur le bureau de l'ordinateur dans lequel il faut glisser la vidéo à étudier (le programme accepte les vidéos au format mp4 ou mov les fichiers qui ne sont pas sous ses formats seront déplacés vers le bureau).
+Pendant le traitement des informations sont transmises à l'utilisateur par le biais de la console.
 À l'issue du traitement de la vidéo les résultats sont stockés dans un dossier sur le bureau. Il est possible de changer l'emplecment des dossiers utilisés dans le dossier Base.py.
 
 
