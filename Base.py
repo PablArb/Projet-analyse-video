@@ -64,7 +64,6 @@ class Paths:
         self.NonTreatedFrames = self.frames + '/non treated'
         return None
 
-
 class MacosPaths(Paths):
     def __init__(self):
         super().__init__()
@@ -72,7 +71,6 @@ class MacosPaths(Paths):
         self.bac = '/Users/'+user+'/Desktop/bac'
         self.videoStorage = '/Users/'+user+'/.##temporary storage##'
         self.data = '/Users/'+user+'/Desktop/mes exp TIPE/A - data video'
-
 
 class WIndowsPaths (Paths):
     def __init__(self):
@@ -135,9 +133,9 @@ class Mess:
         self.P_vs = '\nvous devez avoir fait une erreur, veuillez réessayer'
 mess = Mess()
 
+
 class Break(Exception):
     pass
-
 
 class SettingError(Exception):
     print(mess.P_set, end='')
