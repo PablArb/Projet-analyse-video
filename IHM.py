@@ -375,13 +375,14 @@ class Interact:
         Éffectue les changements de réglges demandés par l'utilisateur'
         """
         settings = video.settings
-        while True:
-            print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
-            print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation - 1], end='')
-            print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
-            print(mess.S_vs4 + str(100 - settings.tol), end='')
-
+        print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
+        print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation - 1], end='')
+        print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
+        print(mess.S_vs4 + str(100 - settings.tol), end='')
+        isOk = False
+        while not isOk:
             which_L = input(mess.I_vs).split(',')
+            isOk = True
             for which in which_L:
                 if which in self.stoplist:
                     raise Break
@@ -404,11 +405,13 @@ class Interact:
                             print()
                             self.tol_input(video)
                     else:
+                        isOk = False
                         print(mess.P_vs)
                 except ValueError:
+                    isOk = False
                     print(mess.P_vs)
 
-            return None
+        return None
 
     def yn(self, question: str) -> bool:
         """

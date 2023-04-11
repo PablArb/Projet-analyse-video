@@ -40,8 +40,8 @@ class Video(object):
         self.id = None  # titre de la vidéo
         self.videoinput()
 
-        # self.Framerate = self.get_framerate() # nombre de frame par seconde
-        self.Framerate = 240
+        self.Framerate = self.get_framerate()  # nombre de frame par seconde
+        # self.Framerate = 240
         self.Framessize = self.get_framessize()  # taille des frames
         self.Frames = self.get_frames()  # liste contenant les frames de la vidéo
 
