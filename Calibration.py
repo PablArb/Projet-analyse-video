@@ -4,7 +4,7 @@ from Base import SettingError
 from Base import mess
 from Base import time_formater
 from IHM import visu, interact
-from Constructor import Video, Object
+from MainConstructor import Video, Object
 from VideoTreatment import frametreatement
 
 

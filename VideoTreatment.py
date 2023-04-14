@@ -16,8 +16,8 @@ import numpy as np
 from Base import SettingError, Break
 from Base import mess
 from Base import waiting_time, time_formater
-from Constructor import Video, Frame, Object, Mesure
-from Settings import settings
+from MainConstructor import Video, Frame, Object, Mesure
+from SettingsConstructor import Settings
 
 
 # Main functions
@@ -56,7 +56,7 @@ def videotreatment(video: Video) -> None:
 
     return None
 
-def frametreatement(frame: Frame, settings: settings, mc: int, calib=False):
+def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     """
     frame : image à traiter (tableau uint8).
     settings : paramètres avec lesquels la frame est traitée.
@@ -93,7 +93,7 @@ def frametreatement(frame: Frame, settings: settings, mc: int, calib=False):
 
 
 # sub functions
-def objects_detection(image: np.array, settings: settings, mc: int) -> tuple:
+def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     """
     image : frame à traiter en N&B.
     settings : paramètres avec lesquels l'image sera traitée.
