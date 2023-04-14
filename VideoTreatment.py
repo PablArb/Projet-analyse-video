@@ -7,9 +7,8 @@ import numpy as np
 # fichiers propres au projet
 from Base import SettingError, Break
 from Base import mess
-from Base import rate_rgb
 from IHM import interact
-from MainConstructor import Video, Frame, Object, Mesure
+from MainConstructor import Video, Frame, Object, Mesure, rate_rgb
 from SettingsConstructor import Settings
 
 # Main functions
@@ -158,8 +157,7 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     pixel : sous la forme [j,i].
     mc : markerscolor, couleur des repères sur l'image étudiée.
     
-        Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre 
-    de la recherche d'objet.
+    Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la recherche d'objet.
     """
     global at_border
     x, y = pixel[0], pixel[1]
@@ -212,13 +210,11 @@ def rectifyer(extremas: dict, minsize: int) -> list:
 
 def position(extremas: list) -> list:
     """
-    extremas : dictionaire contenant les coordonnées extremales des repères
-        détectés sur une frame.
+    extremas : dictionaire contenant les coordonnées extremales des repères détectés sur une frame.
     
-        Détermine la position d'un objet à partir des extremas.
-    Renvoie un dictionnaire où les clefs sont les noms des différents objets
-    détectés sur la frame étudiée et les valeurs sont les coordonées du
-    'centre' de l'objet.
+    Détermine la position d'un objet à partir des extremas.
+    Renvoie un dictionnaire où les clefs sont les noms des différents objets détectés sur la frame étudiée et les
+    valeurs sont les coordonées du 'centre' de l'objet.
     """
     position = []
     for obj in extremas:

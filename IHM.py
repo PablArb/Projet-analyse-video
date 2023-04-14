@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from Base import Break, mess
-from Base import rate_rgb
+from MainConstructor import rate_rgb
 from MainConstructor import Video, Frame
 
 
@@ -19,8 +19,7 @@ class Visu:
         """
         image : tableau numpy.
 
-        Copie l'image passée en argument de manière à casser le lien entre
-        les objets.
+        Copie l'image passée en argument de manière à casser le lien entre les objets.
         """
         h = len(image)
         w = len(image[0])
@@ -407,8 +406,7 @@ class Interact:
         """
         question : question posée à l'utilisateur
 
-        Pose une question fermée à l'utilisateur et renvoie un booléen en
-        fonction de sa réponse.
+        Pose une question fermée à l'utilisateur et renvoie un booléen en fonction de sa réponse.
         """
         assert type(question) == str
         while True:
@@ -425,9 +423,8 @@ class Interact:
 
     def markerscolor_input(self, video: Video) -> None:
         """
-        Récupère auprès de l'utilisateur la couleur des repères placés sur
-        l'objet étudiée sur la vidéo et assigne cette valeur à l'attribut
-        markerscolor de la vidéo.
+        Récupère auprès de l'utilisateur la couleur des repères placés sur l'objet étudiée sur la vidéo et assigne cette
+        valeur à l'attribut markerscolor de la vidéo.
         """
         while True:
             c = input(mess.I_mco)
@@ -465,9 +462,8 @@ class Interact:
 
     def ref_input(self, video: Video) -> None:
         """
-        Récupère au près de l'utilisateur la distances séparant les deux
-        premiers repères placés sur l'objet étudiée sur la vidéo et assigne
-        cette valeur à l'attribut lenref de la vidéo.
+        Récupère au près de l'utilisateur la distances séparant les deux premiers repères placés sur l'objet étudiée
+        sur la vidéo et assigne cette valeur à l'attribut lenref de la vidéo.
         """
         while True:
             l = input(mess.I_ref)
@@ -503,6 +499,7 @@ class Interact:
         i : indice de la frame actuellement traitée
         N : nombre de frames qui constituent la vidéo
         Ti : instant
+
         Détermine le temps restant pour compléter la tâche
         """
         d = t.time() - Ti
@@ -513,6 +510,7 @@ class Interact:
     def time_formater(t: float) -> str:
         """
         t : durée en secondes à mettre au format ..min ..sec
+
         Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
         """
         minutes = str(int(t // 60))

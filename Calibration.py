@@ -60,13 +60,10 @@ def calibration(video: Video, i=0) -> None:
 def detPas(video: Video, extr: dict) -> None:
     """
     video : vidéo étudiée.
-    extr : {0: [xmin, ymin, xmax, ymax], 1: ... },
-        dictionaire où chaque clef correspond à un objet,
-        la valeure qui lui est associée est la liste des 4 coordonées
-        extremales entourant l'objet.
+    extr : {0: [xmin, ymin, xmax, ymax], 1: ... }, dictionaire où chaque clef correspond à un objet, la valeure qui lui
+        est associée est la liste des 4 coordonées extremales entourant l'objet.
 
-        Associe à l'attribut step des reglages de la vidéo l'intervalle le
-    plus large tel que l'étude reste faisable.
+    Associe à l'attribut step des reglages de la vidéo l'intervalle le plus large tel que l'étude reste faisable.
     """
     if len(extr) == 0:
         return None

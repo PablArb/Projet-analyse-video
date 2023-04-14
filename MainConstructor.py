@@ -11,6 +11,22 @@ from SettingsConstructor import Settings
 from KallmanFilterConstructor import KallmanFilter
 
 
+# Élement central de la detection
+def rate_rgb(pixel: list, c: int) -> float:
+    """
+    pixel : élement de l'image d'origine sous la forme [r, g, b].
+    c : 0(rouge), 1(vert) ou 2(bleu).
+
+    Calcul le poids relatif de la composante c du pixel parmis les composantes rgb qui le définissent.
+    """
+    assert c in [0, 1, 2]
+    s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
+    if 600 > s > 150:
+        return int(pixel[c] + 1) / (s + 3) * 100
+    else:
+        return 0.
+
+
 class Video(object):
 
     def __init__(self):
@@ -38,8 +54,6 @@ class Video(object):
 
     def videoinput(self) -> None:
         """
-        Pas d'argument.
-
         Récupère la vidéo auprès de l'utilisateur.
         """
         self.paths.create_dir('bac')
@@ -75,8 +89,6 @@ class Video(object):
 
     def get_framerate(self) -> float:
         """
-        Pas d'argument.
-
         Renvoie le nombre de frames par secondes de la vidéo étudiée.
         """
         media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
@@ -88,10 +100,7 @@ class Video(object):
 
     def get_framessize(self) -> tuple:
         """
-        Pas d'argument.
-
-            Renvoie un tuple de deux valeurs : la hauteur et largeur des frames
-        de la vidéo.
+        Renvoie un tuple de deux valeurs : la hauteur et largeur des frames de la vidéo.
         """
         media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
         video_tracks = media_info.video_tracks[0]
@@ -102,10 +111,8 @@ class Video(object):
 
     def get_frames(self) -> list:
         """
-        Pas d'argument.
-
-            Renvoie une liste contenant l'ensemble des frames (tableaux de type
-        uint8) dans le même ordre que dans la vidéo étudiée.
+        Renvoie une liste contenant l'ensemble des frames (tableaux de type uint8) dans le même ordre que dans la vidéo
+        étudiée.
         """
         frames = []
         cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)

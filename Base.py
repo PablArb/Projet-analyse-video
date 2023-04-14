@@ -3,23 +3,6 @@ import shutil as sht
 import getpass as gp
 
 
-#
-def rate_rgb(pixel: list, c: int) -> float:
-    """
-    pixel : élement de l'image d'origine sous la forme [r, g, b].
-        c = 0(rouge), 1(vert) ou 2(bleu).
-
-        Calcul le poids relatif de la composante c du pixel parmis les
-    composantes rgb qui le définissent.
-    """
-    assert c in [0, 1, 2]
-    s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
-    if 600 > s > 150:
-        return int(pixel[c] + 1) / (s + 3) * 100
-    else:
-        return 0.
-
-
 # définition des exceptions utiles
 class Break(Exception):
     pass
