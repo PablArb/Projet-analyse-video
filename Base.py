@@ -2,8 +2,16 @@ import os
 import shutil as sht
 import getpass as gp
 
+
+# définition des exceptions utiles
+class Break(Exception):
+    pass
+class SettingError(Exception):
+    pass
+
+
 # définition des paths utiles
-class Paths:
+class Paths(object):
     def __init__(self):
         self.TreatedFrames = None
         self.frames = None
@@ -72,6 +80,14 @@ class WIndowsPaths (Paths):
         self.videoStorage = 'C:/Users/' + user + '/Desktop/.##temporary storage##'
         self.data = '/C:Users/' + user + '/Desktop/TIPE/data video'
 
+user = gp.getuser()
+if os.name == 'nt':
+    paths = WIndowsPaths()
+elif os.name == 'posix':
+    paths = MacosPaths()
+else:
+    raise Break
+
 
 # définition des messages transmis à l'utilisateur
 class Mess:
@@ -125,18 +141,3 @@ class Mess:
         self.I_vs = '\nréglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) : '
         self.P_vs = '\nvous devez avoir fait une erreur, veuillez réessayer'
 mess = Mess()
-
-# définition des exceptions utiles
-class Break(Exception):
-    pass
-class SettingError(Exception):
-    print(mess.P_set, end='')
-    pass
-
-user = gp.getuser()
-if os.name == 'nt':
-    paths = WIndowsPaths()
-elif os.name == 'posix':
-    paths = MacosPaths()
-else:
-    raise Break

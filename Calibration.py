@@ -27,6 +27,7 @@ def calibration(video: Video, i=0) -> None:
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
     # l'utilisateur, on gère ici ce problème.
     except SettingError:
+        print(mess.P_set, end='')
         interact.verif_settings(video)
         reboot(video)
         calibration(video)
