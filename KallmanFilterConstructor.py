@@ -1,6 +1,6 @@
 import numpy as np
 
-class kallman_filter(object):
+class KallmanFilter(object):
     # filtre de kalman
     def __init__(self, point):
 

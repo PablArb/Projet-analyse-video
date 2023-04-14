@@ -10,7 +10,7 @@ import sys
 
 from Base import Break, mess
 from IHM import download, interact
-from Constructor import Video
+from MainConstructor import Video
 from Calibration import calibration, reboot
 from VideoTreatment import videotreatment
 

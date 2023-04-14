@@ -7,8 +7,8 @@ import numpy as np
 import cv2
 
 from Base import paths, mess
-from Settings import settings
-from KallmanFilter import kallman_filter
+from SettingsConstructor import Settings
+from KallmanFilterConstructor import KallmanFilter
 
 class Video(object):
 
@@ -32,7 +32,7 @@ class Video(object):
         self.markers = []
         self.computationDuration = None  # temps mis par l'algorythme pour effectuer le traitement
 
-        self.settings = settings(self)  # réglages associés à la vidéo
+        self.settings = Settings(self)  # réglages associés à la vidéo
         self.treatementEvents = ''
 
     def videoinput(self) -> None:
@@ -138,7 +138,7 @@ class Object(object):
         self.lastknownpos = initpos
         self.predictions = {initframe: initpos}
         self.positions = {initframe: initpos}
-        self.kf = kallman_filter(initpos)
+        self.kf = KallmanFilter(initpos)
         self.status = 'hooked'
 
 
