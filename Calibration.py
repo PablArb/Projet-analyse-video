@@ -2,7 +2,6 @@ import sys
 
 from Base import SettingError
 from Base import mess
-from Base import time_formater
 from IHM import visu, interact
 from MainConstructor import Video, Object
 from VideoTreatment import frametreatement
@@ -20,6 +19,8 @@ def calibration(video: Video, i=0) -> None:
     settings = video.settings
     first = video.Frames[i]
     mc = video.markerscolor
+    f = video.Framerate
+    dt = 1/f
 
     try:
         positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, mc, True)
@@ -36,12 +37,12 @@ def calibration(video: Video, i=0) -> None:
 
     swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
     videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames)
-    formatedDur = time_formater(videoDur)
+    formatedDur = interact.time_formater(videoDur)
 
     # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0
     for obj in positions:
-        new_obj = Object('obj-' + str(video.markercount), obj, first.id)
+        new_obj = Object('obj-' + str(video.markercount), obj, first.id, dt)
         first.identifiedObjects.append(new_obj)
         video.markers.append(new_obj)
         video.markercount += 1

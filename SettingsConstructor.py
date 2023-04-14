@@ -1,5 +1,6 @@
 import sys
 
+
 class Settings(object):
     def __init__(self, video):
         self.precision = 1000  # permet de gérer la precision du système

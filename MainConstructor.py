@@ -10,6 +10,7 @@ from Base import paths, mess
 from SettingsConstructor import Settings
 from KallmanFilterConstructor import KallmanFilter
 
+
 class Video(object):
 
     def __init__(self):
@@ -132,13 +133,13 @@ class Frame(object):
 
 
 class Object(object):
-    def __init__(self, id, initpos, initframe):
+    def __init__(self, id, initpos, initframe, dt):
         self.id = id
         self.lastupdate = 0
         self.lastknownpos = initpos
         self.predictions = {initframe: initpos}
         self.positions = {initframe: initpos}
-        self.kf = KallmanFilter(initpos)
+        self.kf = KallmanFilter(dt, initpos)
         self.status = 'hooked'
 
 

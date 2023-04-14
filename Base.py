@@ -1,8 +1,6 @@
 import os
 import shutil as sht
 import getpass as gp
-import time as t
-
 
 # définition des paths utiles
 class Paths:
@@ -126,8 +124,6 @@ class Mess:
         self.S_vs4 = '\n4 tolérance : '
         self.I_vs = '\nréglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) : '
         self.P_vs = '\nvous devez avoir fait une erreur, veuillez réessayer'
-
-
 mess = Mess()
 
 # définition des exceptions utiles
@@ -144,27 +140,3 @@ elif os.name == 'posix':
     paths = MacosPaths()
 else:
     raise Break
-
-def waiting_time(i: int, N: int, Ti: float) -> str:
-    """
-    i : indice de la frame actuellement traitée
-    N : nombre de frames qui constituent la vidéo
-    Ti : instant
-    Détermine le temps restant pour compléter la tâche
-    """
-    d = t.time() - Ti
-    d = round((N - i) * (d / i), 1)
-    return time_formater(d)
-
-def time_formater(t: float) -> str:
-    """
-    t : durée en secondes à mettre au format ..min ..sec
-    Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
-    """
-    minutes = str(int(t // 60))
-    if int(minutes) < 10:
-        minutes = '0' + minutes
-    secondes = str(int(t % 60))
-    if int(secondes) < 10:
-        secondes = '0' + secondes
-    return minutes + 'min ' + secondes + 'sec'

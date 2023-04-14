@@ -7,10 +7,9 @@ import numpy as np
 # fichiers propres au projet
 from Base import SettingError, Break
 from Base import mess
-from Base import waiting_time, time_formater
+from IHM import interact
 from MainConstructor import Video, Frame, Object, Mesure
 from SettingsConstructor import Settings
-
 
 # Main functions
 def videotreatment(video: Video) -> None:
@@ -36,11 +35,11 @@ def videotreatment(video: Video) -> None:
         if t.time() - T >= 1:
             progr = (frame.id / (len(frames) - 1)) * 100
             progr = str(round(progr))
-            tleft = waiting_time(frame.id, len(frames), Ti)
+            tleft = interact.waiting_time(frame.id, len(frames), Ti)
             print(mess.S_vtm + progr + ' % (' + tleft + ')', end='')
             T = t.time()
 
-    d = time_formater(t.time() - Ti)
+    d = interact.time_formater(t.time() - Ti)
     video.computationDuration = d
 
     print(mess.E_vtm, end='')

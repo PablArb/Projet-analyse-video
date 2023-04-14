@@ -1,15 +1,16 @@
 import numpy as np
 
+
 class KallmanFilter(object):
     # filtre de kalman
-    def __init__(self, point):
+    def __init__(self, dt, point):
 
         # Vecteur d'etat initial
         self.E = np.matrix([[point[0]], [point[1]], [0], [0]])
 
         # Matrice de transition
-        self.A = np.matrix([[1, 0, 1, 0],
-                            [0, 1, 0, 1],
+        self.A = np.matrix([[1, 0, dt, 0],
+                            [0, 1, 0, dt],
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
 

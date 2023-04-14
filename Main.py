@@ -1,14 +1,7 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Dec  1 21:04:06 2022
-
-@author: pabloarb
-"""
 import shutil as sht
 import sys
 
-from Base import Break, mess
+from Base import mess
 from IHM import download, interact
 from MainConstructor import Video
 from Calibration import calibration, reboot
@@ -33,10 +26,9 @@ def cleaner(video: Video, isOK=True) -> None:
     return None
 
 
-print(mess.B_proc, end='')
-video = None
-
 try:
+    print(mess.B_proc, end='')
+    video = None
 
     # On récupère la vidéo et ses caractéristiques
     video = Video()
@@ -66,6 +58,6 @@ try:
     cleaner(video)
     print(mess.E_proc)
 
-except (Break, KeyboardInterrupt):
+except Exception:
     cleaner(video, isOK=False)
     print(mess.E_proc)

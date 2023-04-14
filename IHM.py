@@ -1,8 +1,11 @@
-import numpy as np
 import csv
-import cv2
 import inspect
 import shutil as sht
+import time as t
+
+import numpy as np
+import cv2
+
 from Base import Break, mess
 from VideoTreatment import Video, Frame
 
@@ -252,7 +255,7 @@ class Download:
         mc = video.markerscolor
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
-        fps = video.settings.resFps
+        fps = video.settings.framerate
 
         out = cv2.VideoWriter(path, ext, fps, video.Framessize)
         print(mess.B_vdl, end='')
@@ -500,6 +503,31 @@ class Interact:
                     return None
                 except ValueError:
                     print(mess.P_vs, end='')
+
+    def waiting_time(self, i: int, N: int, Ti: float) -> str:
+        """
+        i : indice de la frame actuellement traitée
+        N : nombre de frames qui constituent la vidéo
+        Ti : instant
+        Détermine le temps restant pour compléter la tâche
+        """
+        d = t.time() - Ti
+        d = round((N - i) * (d / i), 1)
+        return self.time_formater(d)
+
+    @staticmethod
+    def time_formater(t: float) -> str:
+        """
+        t : durée en secondes à mettre au format ..min ..sec
+        Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
+        """
+        minutes = str(int(t // 60))
+        if int(minutes) < 10:
+            minutes = '0' + minutes
+        secondes = str(int(t % 60))
+        if int(secondes) < 10:
+            secondes = '0' + secondes
+        return minutes + 'min ' + secondes + 'sec'
 
 
 visu = Visu()
