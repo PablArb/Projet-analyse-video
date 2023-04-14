@@ -51,7 +51,7 @@ def calibration(video: Video, i=0) -> None:
     print(mess.E_cal, end='')
 
     # On crée maintenant les visuels à partir des résultats.
-    visu.visus(video, first, borders, extremas)
+    visu.visusCalib(video, first, borders, extremas)
 
     print(mess.S_dur + str(formatedDur), end='')
     return None

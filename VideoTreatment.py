@@ -7,6 +7,7 @@ import numpy as np
 # fichiers propres au projet
 from Base import SettingError, Break
 from Base import mess
+from Base import rate_rgb
 from IHM import interact
 from MainConstructor import Video, Frame, Object, Mesure
 from SettingsConstructor import Settings
@@ -123,21 +124,6 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     borders.append(res[1])
 
     return extremas, borders, s
-
-def rate_rgb(pixel: list, c: int) -> float:
-    """
-    pixel : élement de l'image d'origine sous la forme [r, g, b].
-        c = 0(rouge), 1(vert) ou 2(bleu).
-
-        Calcul le poids relatif de la composante c du pixel parmis les
-    composantes rgb qui le définissent.
-    """
-    assert c in [0, 1, 2]
-    s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
-    if 600 > s > 150:
-        return int(pixel[c] + 1) / (s + 3) * 100
-    else:
-        return 0.
 
 def border_detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> tuple:
     """

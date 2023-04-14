@@ -1,28 +1,19 @@
 import csv
 import inspect
-import shutil as sht
 import time as t
+import shutil as sht
 
-import numpy as np
 import cv2
+import numpy as np
 
 from Base import Break, mess
-from VideoTreatment import Video, Frame
+from Base import rate_rgb
+from MainConstructor import Video, Frame
 
 
 class Visu:
     # La classe visu regroupe les méthodes qui permttent de visualiser les résultats produits par l'algorythme.
     # Elle est notamment utile lors de la phase de calibration ou de la création de la vidéo de rendu
-
-    @staticmethod
-    def rate_rgb(pixel: list, c: int) -> float:
-        assert c in [0, 1, 2]
-        s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
-        if 600 > s > 150:
-            return int(pixel[c] + 1) / (s + 3) * 100
-        else:
-            return 0
-
     @staticmethod
     def copy_im(image: np.array) -> np.array:
         """
@@ -41,7 +32,8 @@ class Visu:
             newIm.append(newLine)
         return np.uint8(newIm)
 
-    def reduced(self, mc: int, tol: float, image: np.array) -> np.array:
+    @staticmethod
+    def reduced(mc: int, tol: float, image: np.array) -> np.array:
         """
         mc : markerscolor, couleur des repères de l'image étudiée.
         tol : seuil de détection des couleurs.
@@ -56,14 +48,15 @@ class Visu:
         for j in range(0, h):
             newLine = []
             for i in range(0, w):
-                if self.rate_rgb(image[j][i], mc) > tol:
+                if rate_rgb(image[j][i], mc) > tol:
                     newLine.append(255)
                 else:
                     newLine.append(0)
             newIm.append(newLine)
         return np.uint8(newIm)
 
-    def detection(self, image: np.array, borders: list, copy=False) -> np.array:
+    @staticmethod
+    def detection(image: np.array, borders: list, copy=False) -> np.array:
         """
         image : image étudiée.
         borders : contours des repères detectés.
@@ -72,7 +65,7 @@ class Visu:
         Crée un apercu de ce que l'algorythme détecte.
         """
         if copy:
-            image = self.copy_im(image)
+            image = np.copy(image)
         h, w = image.shape[:2]
         for j in range(h):
             for i in range(w):
@@ -111,7 +104,8 @@ class Visu:
                         image[j % h][(xmin - n) % w], image[j % h][(xmax + n) % w] = 255, 255
         return np.uint8(image)
 
-    def cross_color(self, image: np.array, pos: list, crosswidth: int, mc, copy=False) -> np.array:
+    @staticmethod
+    def cross_color(image: np.array, pos: list, crosswidth: int, mc, copy=False) -> np.array:
         """
         image : np.array, imaghe sur laquelle on veut ajouter les croix. pos : positions où l'on souhaite tracer les
         croix sous forme [[x, y]] crosswidth : largeur des traits de la croix (quelques pixels) copy : optional,
@@ -120,7 +114,7 @@ class Visu:
         Trace les croix aux positions passées en argument.
         """
         if copy:
-            image = self.copy_im(image)
+            image = np.copy(image)
 
         h = len(image)
         w = len(image[0])
@@ -170,7 +164,7 @@ class Visu:
                     image[j * pas][i * pas] = [0, 0, 0]
         return np.uint8(image)
 
-    def visus(self, video: Video, frame: Frame, borders: list, extremas: list) -> None:
+    def visusCalib(self, video: Video, frame: Frame, borders: list, extremas: list) -> None:
         rw = video.settings.rectanglewidth
         cw = video.settings.crosswidth
         mc = video.markerscolor
@@ -180,7 +174,7 @@ class Visu:
         print(mess.B_vis, end='')
         visualisations = []
 
-        color_im = self.copy_im(frame.array)
+        color_im = np.copy(frame.array)
         visualisations.append(color_im)
 
         NB_im = self.reduced(mc, tol, color_im)
