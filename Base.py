@@ -8,6 +8,7 @@ Created on Sun Dec  4 12:53:12 2022
 import os
 import shutil as sht
 import getpass as gp
+import time as t
 
 
 # définition des paths utiles
@@ -81,6 +82,7 @@ class WIndowsPaths (Paths):
         self.data = '/C:Users/' + user + '/Desktop/TIPE/data video'
 
 
+# définition des messages transmis à l'utilisateur
 class Mess:
     def __init__(self):
         # B:begining, E:End, P:problem, I:input, S:info
@@ -131,16 +133,16 @@ class Mess:
         self.S_vs4 = '\n4 tolérance : '
         self.I_vs = '\nréglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) : '
         self.P_vs = '\nvous devez avoir fait une erreur, veuillez réessayer'
+
+
 mess = Mess()
 
-
+# définition des exceptions utiles
 class Break(Exception):
     pass
-
 class SettingError(Exception):
     print(mess.P_set, end='')
     pass
-
 
 user = gp.getuser()
 if os.name == 'nt':
@@ -148,4 +150,21 @@ if os.name == 'nt':
 elif os.name == 'posix':
     paths = MacosPaths()
 else:
-    pass
+    raise Break
+
+def waiting_time(i: int, N: int, Ti: float) -> str:
+    d = t.time() - Ti
+    d = round((N - i) * (d / i), 1)
+    return time_formater(d)
+
+def time_formater(t: float) -> str:
+    """
+    Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
+    """
+    minutes = str(int(t // 60))
+    if int(minutes) < 10:
+        minutes = '0' + minutes
+    secondes = str(int(t % 60))
+    if int(secondes) < 10:
+        secondes = '0' + secondes
+    return minutes + 'min ' + secondes + 'sec'

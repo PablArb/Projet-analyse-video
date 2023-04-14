@@ -5,16 +5,13 @@ Created on Sun Dec  4 16:32:07 2022
 
 @author: pabloarb
 """
-import os
-import shutil as sht
 import sys
-import time as t
 
 import cv2
 import numpy as np
 import pymediainfo as mi
 
-from Base import paths, mess, SettingError, Break
+from Base import *
 
 
 class Settings(object):
@@ -583,24 +580,6 @@ def update(frame: Frame, marker: Object, mesure: Mesure) -> None:
     marker.lastupdate = 0
     frame.identifiedObjects.append(marker)
     return None
-
-
-def waiting_time(i: int, N: int, Ti: float) -> str:
-    d = t.time() - Ti
-    d = round((N - i) * (d / i), 1)
-    return time_formater(d)
-
-def time_formater(t: float) -> str:
-    """
-    Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
-    """
-    minutes = str(int(t // 60))
-    if int(minutes) < 10:
-        minutes = '0' + minutes
-    secondes = str(int(t % 60))
-    if int(secondes) < 10:
-        secondes = '0' + secondes
-    return minutes + 'min ' + secondes + 'sec'
 
 
 calib = Calib()
