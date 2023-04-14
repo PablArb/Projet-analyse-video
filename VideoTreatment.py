@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Dec  4 16:32:07 2022
-
-@author: pabloarb
-"""
-# modules intégrés à python
 import sys
 import time as t
 

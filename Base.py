@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Dec  4 12:53:12 2022
-
-@author: pabloarb
-"""
 import os
 import shutil as sht
 import getpass as gp
@@ -156,7 +149,7 @@ def waiting_time(i: int, N: int, Ti: float) -> str:
     """
     i : indice de la frame actuellement traitée
     N : nombre de frames qui constituent la vidéo
-    Ti : instant 
+    Ti : instant
     Détermine le temps restant pour compléter la tâche
     """
     d = t.time() - Ti
