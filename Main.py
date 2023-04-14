@@ -8,60 +8,11 @@ Created on Thu Dec  1 21:04:06 2022
 import shutil as sht
 import sys
 
-from Base import Break, SettingError, mess
-from IHM import visu, download, interact
-from VideoTreatment import Video, Object
-from VideoTreatment import calib, time_formater
-from VideoTreatment import videotreatment, frametreatement
-
-
-# Calibration fcts
-
-def calibration(video: Video, i=0) -> None:
-    """
-    video : vidéo à traiter.
-
-    Permet de vérifier le bon réglage de l'ensemble des paramètres.
-    """
-    # On va dans un premier temps traiter la première frame de la video.
-    print(mess.B_cal, end='')
-
-    settings = video.settings
-    first = video.Frames[i]
-    mc = video.markerscolor
-
-    try:
-        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, mc, True)
-    # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
-    # l'utilisateur, on gère ici ce problème.
-    except SettingError:
-        interact.verif_settings(video)
-        calib.reboot(video)
-        calibration(video)
-        return None
-
-    calib.detPas(video, extremas)
-    calib.detScale(video, positions)
-
-    swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
-    videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames)
-    formatedDur = time_formater(videoDur)
-
-    # Une fois le traitement réalisé on stocke les résultats.
-    video.markercount = 0
-    for obj in positions:
-        new_obj = Object('obj-' + str(video.markercount), obj, first.id)
-        first.identifiedObjects.append(new_obj)
-        video.markers.append(new_obj)
-        video.markercount += 1
-
-    print(mess.E_cal, end='')
-
-    # On crée maintenant les visuels à partir des résultats.
-    visu.visus(video, first, borders, extremas)
-
-    print(mess.S_dur + str(formatedDur), end='')
-    return None
+from Base import Break, mess
+from IHM import download, interact
+from Constructor import Video
+from Calibration import calibration, reboot
+from VideoTreatment import videotreatment
 
 
 def cleaner(video: Video, isOK=True) -> None:
@@ -103,7 +54,7 @@ try:
         else:
             # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les paramètres.
             interact.verif_settings(video)
-            calib.reboot(video)
+            reboot(video)
     # Une fois que tout est bon on traite la vidéo.
     videotreatment(video)
     # On télécharge les résultats.

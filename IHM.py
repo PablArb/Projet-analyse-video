@@ -354,7 +354,7 @@ class Download:
         video.paths.create_dir('non treated frames')
         video.paths.create_dir('treated frames')
         print('\nSauvegarde des frames en cours ...', end='')
-        for frame in video.frames:
+        for frame in video.Frames:
             name = video.paths.NonTreatedFrames + str(frame.id) + '.jpg'
             cv2.imwrite(name, frame.array)
             name = video.paths.TreatedFrames + str(frame.id) + '.jpg'

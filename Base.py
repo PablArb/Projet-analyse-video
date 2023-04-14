@@ -153,12 +153,19 @@ else:
     raise Break
 
 def waiting_time(i: int, N: int, Ti: float) -> str:
+    """
+    i : indice de la frame actuellement traitée
+    N : nombre de frames qui constituent la vidéo
+    Ti : instant 
+    Détermine le temps restant pour compléter la tâche
+    """
     d = t.time() - Ti
     d = round((N - i) * (d / i), 1)
     return time_formater(d)
 
 def time_formater(t: float) -> str:
     """
+    t : durée en secondes à mettre au format ..min ..sec
     Met en forme la durée entrée en argument pour la rendre lisible par l'utilisateur
     """
     minutes = str(int(t // 60))

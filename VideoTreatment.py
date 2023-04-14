@@ -5,272 +5,22 @@ Created on Sun Dec  4 16:32:07 2022
 
 @author: pabloarb
 """
+# modules intégrés à python
 import sys
+import time as t
 
-import cv2
+# modules supplémentaires
 import numpy as np
-import pymediainfo as mi
 
-from Base import *
-
-
-class Settings(object):
-    def __init__(self, video):
-        self.precision = 1000  # permet de gérer la precision du système
-        self.maxPrec = 1e6
-        self.tol = 40.0  # est réglable lors de l'execution
-        self.step = 1  # est automatiquement réglé par le programme
-        sys.setrecursionlimit(self.precision)
-
-        # On définit la taille des indicateurs visuels / taille de l'image
-        self.minsize = int(video.Framessize[1] / 200)
-        self.crosswidth = int(video.Framessize[0] / 500)
-        self.rectanglewidth = int(video.Framessize[1] / 1250)
-        self.resFps = 60
-
-class Video(object):
-
-    def __init__(self):
-
-        self.paths = paths
-
-        self.id = None  # titre de la vidéo
-        self.videoinput()
-
-        self.Framerate = self.get_framerate()  # nombre de frame par seconde
-        # self.Framerate = 240
-        self.Framessize = self.get_framessize()  # taille des frames
-        self.Frames = self.get_frames()  # liste contenant les frames de la vidéo
-
-        self.markerscolor = None  # couleur des repères visuels sur la video
-        self.orientation = None  # orientation de la video (paysage ou portrait)
-        self.lenref = None  # longueur de référence associée à la video
-
-        self.scale = None  # rapport distance sur nombre de pixels
-        self.markercount = 0  # nombre de repères détectés sur la vidéo
-        self.markers = []
-        self.computationDuration = None  # temps mis par l'algorythme pour effectuer le traitement
-
-        self.settings = Settings(self)  # réglages associés à la vidéo
-        self.treatementEvents = ''
-
-    def videoinput(self) -> None:
-        """
-        Pas d'argument.
-
-        Récupère la vidéo auprès de l'utilisateur.
-        """
-        self.paths.create_dir('bac')
-        isempty = True
-        print(mess.B_vi0, end='')
-        while isempty:
-            if len(os.listdir(self.paths.bac)) != 0:
-                isempty = False
-            t.sleep(0.5)
-        _bac = os.listdir(self.paths.bac)
-        ext = _bac[0].split('.')[1]
-        if len(_bac) == 1 and (ext == 'mp4' or ext == 'mov'):
-            video = _bac[0]
-            self.paths.videoinput = self.paths.bac + '/' + video
-            self.paths.create_dir('videoStorage')
-            sht.copy2(self.paths.videoinput, self.paths.videoStorage)
-            self.id = str(video)
-            self.paths.delete_dir('bac')
-            return None
-        elif len(_bac) == 1 and ext != 'mp4' and ext != 'mov':
-            print(mess.P_vi1, end='')
-            source = self.paths.bac + '/' + _bac[0]
-            destination = self.paths.desktop + '/' + _bac[0]
-            sht.copy2(source, destination)
-            self.paths.delete_dir('bac')
-            t.sleep(2)
-            self.videoinput()
-        elif len(_bac) > 1:
-            print(mess.P_vi2, end='')
-            self.paths.delete_dir('bac')
-            t.sleep(2)
-            self.videoinput()
-
-    def get_framerate(self) -> float:
-        """
-        Pas d'argument.
-
-        Renvoie le nombre de frames par secondes de la vidéo étudiée.
-        """
-        media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
-        tracks = media_info.tracks
-        for i in tracks:
-            if i.track_type == 'Video':
-                framerate = float(i.frame_rate)
-        return framerate
-
-    def get_framessize(self) -> tuple:
-        """
-        Pas d'argument.
-
-            Renvoie un tuple de deux valeurs : la hauteur et largeur des frames
-        de la vidéo.
-        """
-        media_info = mi.MediaInfo.parse(self.paths.videoStorage + '/' + self.id)
-        video_tracks = media_info.video_tracks[0]
-        w = int(video_tracks.sampled_width)
-        h = int(video_tracks.sampled_height)
-        framessize = (w, h)
-        return framessize
-
-    def get_frames(self) -> list:
-        """
-        Pas d'argument.
-
-            Renvoie une liste contenant l'ensemble des frames (tableaux de type
-        uint8) dans le même ordre que dans la vidéo étudiée.
-        """
-        frames = []
-        cam = cv2.VideoCapture(self.paths.videoStorage + '/' + self.id)
-        frame_number = 0
-        print(mess.B_gfs, end='')
-        while True:
-            ret, frame = cam.read()
-            if ret:
-                frames.append(Frame(frame_number, np.array(frame)))
-                frame_number += 1
-            else:
-                break
-        cam.release()
-        cv2.destroyAllWindows()
-        print(mess.E_gfs, end='')
-        return frames
+# fichiers propres au projet
+from Base import SettingError, Break
+from Base import mess
+from Base import waiting_time, time_formater
+from Constructor import Video, Frame, Object, Mesure
+from Settings import settings
 
 
-class Frame(object):
-    def __init__(self, id, array):
-        self.id = id
-        self.array = array
-        self.mesures = []
-        self.identifiedObjects = []
-
-
-class Object(object):
-    def __init__(self, id, initpos, initframe):
-        self.id = id
-        self.lastupdate = 0
-        self.lastknownpos = initpos
-        self.predictions = {initframe: initpos}
-        self.positions = {initframe: initpos}
-        self.kf = KallmanFilter(initpos)
-        self.status = 'hooked'
-
-
-class Mesure(object):
-    def __init__(self, pos):
-        self.pos = pos
-        self.status = 'unmatched'
-
-
-class KallmanFilter(object):
-    # filtre de kalman 
-    def __init__(self, point):
-
-        # Vecteur d'etat initial
-        self.E = np.matrix([[point[0]], [point[1]], [0], [0]])
-
-        # Matrice de transition
-        self.A = np.matrix([[1, 0, 1, 0],
-                            [0, 1, 0, 1],
-                            [0, 0, 1, 0],
-                            [0, 0, 0, 1]])
-
-        # Matrice d'observation, on n'observe que x et y.
-        self.H = np.matrix([[1, 0, 0, 0],
-                            [0, 1, 0, 0]])
-
-        self.Q = np.matrix([[200, 0, 0, 0],
-                            [0, 10, 0, 0],
-                            [0, 0, 200, 0],
-                            [0, 0, 0, 10]])
-
-        self.R = np.matrix([[1, 0],
-                            [0, 1]])
-
-        self.P = np.eye(self.A.shape[1])
-
-    def predict(self):
-        self.E = np.dot(self.A, self.E)
-        # Calcul de la covariance de l'erreur
-        self.P = np.dot(np.dot(self.A, self.P), self.A.T) + self.Q
-        return self.E
-
-    def update(self, z):
-        # Calcul du gain de Kalman
-        S = np.dot(self.H, np.dot(self.P, self.H.T)) + self.R
-        K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
-
-        # Correction / innovation
-        self.E = np.round(self.E + np.dot(K, (z - np.dot(self.H, self.E))))
-        I = np.eye(self.H.shape[1])
-        self.P = (I - (K * self.H)) * self.P
-
-        return self.E
-
-
-class Calib:
-
-    @staticmethod
-    def detPas(video: Video, extr: dict) -> None:
-        """
-        video : vidéo étudiée.
-        extr : {0: [xmin, ymin, xmax, ymax], 1: ... },
-            dictionaire où chaque clef correspond à un objet,
-            la valeure qui lui est associée est la liste des 4 coordonées
-            extremales entourant l'objet.
-
-            Associe à l'attribut step des reglages de la vidéo l'intervalle le
-        plus large tel que l'étude reste faisable.
-        """
-        if len(extr) == 0:
-            return None
-        mini = min(extr[0][2] - extr[0][0], extr[0][3] - extr[0][1])
-        for el in extr:
-            if el[2] - el[0] < mini:
-                mini = el[2] - el[0]
-            if el[3] - el[1] < mini:
-                mini = el[3] - el[1]
-        video.settings.step = mini // 2
-        # On multiplie par 3 pour s'assurer de ne manquer aucun repère.
-        return None
-
-    @staticmethod
-    def detScale(video: Video, positions: dict) -> None:
-        """
-        positions : dictionaire contenant les positions de chaque repère sur une des frames.
-        lenref : longeur de reférance sur laquelle on s'appuie pour définir l'échelle.
-
-        Renvoie l'échelle de la vidéo en cm par nb de pixel.
-        """
-        lenref = video.lenref
-        if len(positions) >= 2:
-            a = positions[-1]
-            b = positions[-2]
-            xa, ya, xb, yb = a[0], a[1], b[0], b[1]
-            scale = lenref / (((xa - xb) ** 2 + (ya - yb) ** 2) ** (1 / 2))
-
-        else:
-            scale = 1
-        video.scale = scale
-        return None
-
-    @staticmethod
-    def reboot(video: Video, i=0) -> None:
-        video.settings.precision = 1000
-        sys.setrecursionlimit(1000)
-        video.settings.step = 1
-        video.Frames[i].identifiedObjects = []
-        video.markers = []
-        return None
-
-
-# Traitement tools
-
+# Main functions
 def videotreatment(video: Video) -> None:
     """
     video : vidéo étudiée.
@@ -306,7 +56,7 @@ def videotreatment(video: Video) -> None:
 
     return None
 
-def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
+def frametreatement(frame: Frame, settings: settings, mc: int, calib=False):
     """
     frame : image à traiter (tableau uint8).
     settings : paramètres avec lesquels la frame est traitée.
@@ -342,7 +92,8 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
         raise SettingError
 
 
-def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
+# sub functions
+def objects_detection(image: np.array, settings: settings, mc: int) -> tuple:
     """
     image : frame à traiter en N&B.
     settings : paramètres avec lesquels l'image sera traitée.
@@ -500,6 +251,7 @@ def position(extremas: list) -> list:
     return position
 
 
+# Tracking functions
 def object_tracker(video: Video, frame: Frame) -> None:
     """
     video : vidéo étudiée
@@ -580,6 +332,3 @@ def update(frame: Frame, marker: Object, mesure: Mesure) -> None:
     marker.lastupdate = 0
     frame.identifiedObjects.append(marker)
     return None
-
-
-calib = Calib()
