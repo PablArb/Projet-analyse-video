@@ -1,6 +1,7 @@
 import shutil as sht
 import sys
 
+from Base import Break
 from Base import mess
 from IHM import download, interact
 from MainConstructor import Video
@@ -58,6 +59,6 @@ try:
     cleaner(video)
     print(mess.E_proc)
 
-except Exception:
+except (KeyboardInterrupt, Break):
     cleaner(video, isOK=False)
     print(mess.E_proc)
