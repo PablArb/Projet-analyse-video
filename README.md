@@ -7,8 +7,7 @@ L'objectif est de ce projet est de pouvoir effectuer des mesures par analyse vid
 Les mesures en question consistes à suivre la position au cours du temps de repères placés sur l'objet que l'on veut étudier.  
 Il peut être utiliser pour suivre des trajectoires ou la déformation d'un objet. Par exemple, dans le cadre de mon TIPE il m'a permis de mesurer la déformation d'une tour miniature lorsque soumise à un séisme. 
 
-## Comment l'utiliser
-Le programme de traitement vidéo est composé des fichiers Main.py, VideoTreatment.py, IHM.py et Base.py.  
+## Comment l'utiliser  
 L'ensemble de ce projet est basé sur le language de programmation Python, il faut donc un IDE adapté.  
 Il faut de plus avoir intégrer à l'environnement les modules numpy, Opencv, pymediainfo et csv.  
 Lorsque on execute le programme dans la console de l'IDE un dosssier est créé sur le bureau de l'ordinateur dans lequel il faut glisser la vidéo à étudier (le programme accepte les vidéos au format mp4 ou mov les fichiers qui ne sont pas sous ses formats seront déplacés vers le bureau).
