@@ -57,6 +57,7 @@ class Video(object):
         Récupère la vidéo auprès de l'utilisateur.
         """
         self.paths.create_dir('bac')
+        acceptedFormats = ['mp4', 'mov', 'Mov']
         isempty = True
         print(mess.B_vi0, end='')
         while isempty:
@@ -65,7 +66,7 @@ class Video(object):
             t.sleep(0.5)
         _bac = os.listdir(self.paths.bac)
         ext = _bac[0].split('.')[1]
-        if len(_bac) == 1 and (ext == 'mp4' or ext == 'mov'):
+        if len(_bac) == 1 and ext in acceptedFormats:
             video = _bac[0]
             self.paths.videoinput = self.paths.bac + '/' + video
             self.paths.create_dir('videoStorage')
@@ -73,7 +74,7 @@ class Video(object):
             self.id = str(video)
             self.paths.delete_dir('bac')
             return None
-        elif len(_bac) == 1 and ext != 'mp4' and ext != 'mov':
+        elif len(_bac) == 1 and ext not in acceptedFormats:
             print(mess.P_vi1, end='')
             source = self.paths.bac + '/' + _bac[0]
             destination = self.paths.desktop + '/' + _bac[0]
