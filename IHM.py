@@ -248,7 +248,7 @@ class Download:
         mc = video.markerscolor
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
-        fps = video.settings.framerate
+        fps = video.Framerate
 
         out = cv2.VideoWriter(path, ext, fps, video.Framessize)
         print(mess.B_vdl, end='')
