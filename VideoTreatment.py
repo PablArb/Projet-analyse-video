@@ -104,6 +104,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
 
             if rate_rgb(image[j][i], mc) > tol:
 
+                # On vérifie que l'élément étudié n'appartient pas déjà à un repère détecté.
                 element_in = False
                 for obj in extremas:
                     HorizontalAlignement = obj[1] <= j <= obj[3]
@@ -112,13 +113,19 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                         element_in = True
 
                 if not element_in:
+
+                    # On initie ici la détection du contour du repère
                     depart = [i, j]
                     object = [depart]
                     init_extr = [depart[0], depart[1], depart[0], depart[1]]
+
+                    # On considère que le premier pixel que l'on trouve n'appartiens pas forcément au contour du repère
                     at_border = False
+
                     Ti = t.time()
                     res = border_detection(image, depart, object, init_extr, mc, tol)
                     s += t.time() - Ti
+
                     extremas.append(res[0])
                     borders.append(res[1])
 
@@ -135,7 +142,8 @@ def border_detection(image: np.array, start: list, obj: list, extr: list, mc: in
     
     Regroupe tous les pixels appartenant à un même objet (forme blanche ici) dans une liste.
     """
-    if start not in obj:  # but: récupérer un encadrement de l'objet
+    # On cherche ici à récupérer un encadrement de l'objet
+    if start not in obj:
         obj.append(start)
         if start[0] < extr[0]:
             extr[0] = start[0]
@@ -158,6 +166,11 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     mc : markerscolor, couleur des repères sur l'image étudiée.
     
     Renvoie la liste des voisins du pixel 'pixel' à étudier dans le cadre de la recherche d'objet.
+    L'idée est de fixer des conditions pour qu'un pixel face partis des voisins intéressants :
+        Au départ, on n'est pas sur le contour du repère, on cherche alors à le rejoindre, on prend comme seul voisin
+        le pixel à sa droite.
+        Si on se trouve bien sur le contour les voisins intéressants sont les voisins se trouvant également sur le
+        contour.
     """
     global at_border
     x, y = pixel[0], pixel[1]
@@ -165,23 +178,30 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     w = len(image[0])
     view = 2
 
+    # On crée une liste des coordonnées des voisins potentiellement intéressants
     neighbours_coordinates = []
     for i in range(-view, view + 1):
         for j in range(-view, view + 1):
             if j != i:
-                neighbours_coordinates.append([(x + i) % w, (y + j) % h])
+                neighbours_coordinates.append(((x + i) % w, (y + j) % h))
 
+    # On crée la liste des voisins n'appartenant âs au repère.
+    # On vérifie en même temps si on a atteint le contour du repère ou non.
     is_border = False
     outsiders = []
     for n in neighbours_coordinates:
-        if rate_rgb(image[n[1]][n[0]], mc) < tol:
+        if rate_rgb(image[n[1], n[0]], mc) < tol:
             is_border = True
-            at_border = True
             outsiders.append(n)
+            # Si on n'était pas sur le contour, on y est désormais.
+            if not at_border:
+                at_border = True
 
     L_neighbours = []
+    # Si on ne se trouve pas sur le contour du repère, on prend comme voisin seulement le pixel de droite.
     if not is_border and not at_border:
-        L_neighbours.append([pixel[0] + 1, pixel[1]])
+        L_neighbours.append((pixel[0] + 1, pixel[1]))
+    # Sinon on ne garde que les éléments proches d'éléments qui n'appartiennent pas au repère.
     if is_border:
         for n in neighbours_coordinates:
             if n not in outsiders:

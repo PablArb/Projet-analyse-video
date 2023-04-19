@@ -9,8 +9,8 @@ class KallmanFilter(object):
         self.E = np.matrix([[point[0]], [point[1]], [0], [0]])
 
         # Matrice de transition
-        self.A = np.matrix([[1, 0, dt, 0],
-                            [0, 1, 0, dt],
+        self.A = np.matrix([[1, 0, 1, 0],
+                            [0, 1, 0, 1],
                             [0, 0, 1, 0],
                             [0, 0, 0, 1]])
 

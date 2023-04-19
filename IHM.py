@@ -355,7 +355,7 @@ class Download:
 
 
 class Interact:
-    # La classe intercat regroupe les méthodes qui vont permettre à l'algorythme d'intéragir avec l'utilisateur
+    # La classe interact regroupe les méthodes qui vont permettre à l'algorythme d'intéragir avec l'utilisateur
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
 
