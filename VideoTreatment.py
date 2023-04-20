@@ -95,6 +95,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     """
     global at_border
     pas, tol = settings.step, settings.tol
+    maxb, minb = settings.maxBrightness, settings.minBrightness
     h, w = image.shape[:2]
     extremas, borders = [], []
     s = 0
@@ -102,7 +103,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     for j in range(0, h, pas):
         for i in range(0, w, pas):
 
-            if rate_rgb(image[j][i], mc) > tol:
+            if rate_rgb(image[j][i], mc, maxb, minb) > tol:
 
                 # On vérifie que l'élément étudié n'appartient pas déjà à un repère détecté.
                 element_in = False
@@ -123,7 +124,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     at_border = False
 
                     Ti = t.time()
-                    res = border_detection(image, depart, object, init_extr, mc, tol)
+                    res = border_detection(image, depart, object, init_extr, mc, tol, maxb, minb)
                     s += t.time() - Ti
 
                     extremas.append(res[0])
@@ -131,7 +132,8 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
 
     return extremas, borders, s
 
-def border_detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float) -> tuple:
+def border_detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float, maxb: int, minb: int) \
+        -> tuple:
     """
     image : image étudiée.
     start : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
@@ -154,12 +156,12 @@ def border_detection(image: np.array, start: list, obj: list, extr: list, mc: in
         elif start[1] > extr[3]:
             extr[3] = start[1]
 
-    for pixel in get_neighbours(image, start, mc, tol):
+    for pixel in get_neighbours(image, start, mc, tol, maxb, minb):
         if pixel not in obj:
-            border_detection(image, pixel, obj, extr, mc, tol)
+            border_detection(image, pixel, obj, extr, mc, tol, maxb, minb)
     return np.array(extr), np.array(obj)
 
-def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
+def get_neighbours(image: np.array, pixel: list, mc: int, tol: float, maxb: int, minb: int) -> list:
     """
     image : image étudiée.
     pixel : sous la forme [j,i].
@@ -174,9 +176,8 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     """
     global at_border
     x, y = pixel[0], pixel[1]
-    h = len(image)
-    w = len(image[0])
-    view = 2
+    h, w = len(image), len(image[0])
+    view = 3
 
     # On crée une liste des coordonnées des voisins potentiellement intéressants
     neighbours_coordinates = []
@@ -190,7 +191,7 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float) -> list:
     is_border = False
     outsiders = []
     for n in neighbours_coordinates:
-        if rate_rgb(image[n[1], n[0]], mc) < tol:
+        if rate_rgb(image[n[1], n[0]], mc, maxb, minb) < tol:
             is_border = True
             outsiders.append(n)
             # Si on n'était pas sur le contour, on y est désormais.
@@ -254,6 +255,7 @@ def object_tracker(video: Video, frame: Frame) -> None:
     """
     markers = video.markers
     mesures = frame.mesures
+    maxdist = video.settings.maxdist
     M = np.zeros((len(markers), len(frame.mesures)))
 
     for i in range(len(markers)):
@@ -264,9 +266,11 @@ def object_tracker(video: Video, frame: Frame) -> None:
             pred = obj.kf.predict()
             obj.predictions[frame.id] = pred
 
-            dist = distances(pred, mesures)
+            dist = distances(pred, mesures, maxdist)
             if len(dist) != 0:
-                M[i][np.argmin(dist)] = 1
+                ind = np.argmin(dist)
+                if dist[ind] < np.inf:
+                    M[i][ind] = 1
 
     # M : colonnes = mesures, lignes = markers
     # Ainsi si la somme sur la colonne n'est pas égale à 1 cela signifie que différents markers pourrait se trouver
@@ -278,18 +282,18 @@ def object_tracker(video: Video, frame: Frame) -> None:
     for obj in markers:
         if obj.status == 'hooked':
             if obj.lastupdate != 0:
-                video.treatementEvents += f'frame {frame.id}\t\tobject not found\t{obj.id}\n'
+                video.treatementEvents += f'frame {frame.id}\tobject not found\t{obj.id}\n'
                 obj.positions[frame.id] = [int(pred[0]), int(pred[1])]
                 print('!!!!!!!!!!', end='')
             if obj.lastupdate >= 5:
                 obj.status = 'lost'
-                video.treatementEvents += f'frame {frame.id}\t\tobject lost\t\t{obj.id}\n'
+                video.treatementEvents += f'frame {frame.id}\tobject lost\t{obj.id}\n'
 
         elif obj.status == 'lost':
             obj.positions[frame.id] = obj.lastknownpos
     return None
 
-def distances(pred: list, mesures: list[Mesure]) -> list:
+def distances(pred: list, mesures: list[Mesure], maxdist: int) -> list:
     """
     pred : position prédite [x, y]
     mesures : liste de positions des objets détéctés
@@ -301,6 +305,8 @@ def distances(pred: list, mesures: list[Mesure]) -> list:
     for mes in mesures:
         xm, ym = mes.pos[0], mes.pos[1]
         d = ((xp - xm) ** 2 + (yp - ym) ** 2) ** .5
+        if d > maxdist:
+            d = np.inf
         LDistances.append(d)
     return LDistances
 

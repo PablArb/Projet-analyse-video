@@ -12,7 +12,7 @@ from KallmanFilterConstructor import KallmanFilter
 
 
 # Élement central de la detection
-def rate_rgb(pixel: list, c: int) -> float:
+def rate_rgb(pixel: list, c: int, maxBrightness, minBritghtness) -> float:
     """
     pixel : élement de l'image d'origine sous la forme [r, g, b].
     c : 0(rouge), 1(vert) ou 2(bleu).
@@ -21,8 +21,8 @@ def rate_rgb(pixel: list, c: int) -> float:
     """
     assert c in [0, 1, 2]
     s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
-    if 600 > s > 150:
-        return int(pixel[c] + 1) / (s + 3) * 100
+    if maxBrightness > s > minBritghtness:
+        return int(pixel[c]) / s * 100
     else:
         return 0.
 

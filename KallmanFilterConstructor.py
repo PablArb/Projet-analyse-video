@@ -4,7 +4,7 @@ import numpy as np
 class KallmanFilter(object):
     # filtre de kalman
     def __init__(self, dt, point):
-
+        self.dt = dt
         # Vecteur d'etat initial
         self.E = np.matrix([[point[0]], [point[1]], [0], [0]])
 
@@ -18,9 +18,9 @@ class KallmanFilter(object):
         self.H = np.matrix([[1, 0, 0, 0],
                             [0, 1, 0, 0]])
 
-        self.Q = np.matrix([[200, 0, 0, 0],
+        self.Q = np.matrix([[100, 0, 0, 0],
                             [0, 10, 0, 0],
-                            [0, 0, 200, 0],
+                            [0, 0, 100, 0],
                             [0, 0, 0, 10]])
 
         self.R = np.matrix([[1, 0],

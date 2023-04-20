@@ -32,7 +32,7 @@ class Visu:
         return np.uint8(newIm)
 
     @staticmethod
-    def reduced(mc: int, tol: float, image: np.array) -> np.array:
+    def reduced(image: np.array, mc: int, tol: float, maxb: int, minb: int) -> np.array:
         """
         mc : markerscolor, couleur des repères de l'image étudiée.
         tol : seuil de détection des couleurs.
@@ -47,7 +47,7 @@ class Visu:
         for j in range(0, h):
             newLine = []
             for i in range(0, w):
-                if rate_rgb(image[j][i], mc) > tol:
+                if rate_rgb(image[j][i], mc, maxb, minb) > tol:
                     newLine.append(255)
                 else:
                     newLine.append(0)
@@ -169,6 +169,7 @@ class Visu:
         mc = video.markerscolor
         scale = video.scale
         tol = video.settings.tol
+        maxb, minb = video.settings.maxBrightness, video.settings.maxBrightness
 
         print(mess.B_vis, end='')
         visualisations = []
@@ -176,7 +177,7 @@ class Visu:
         color_im = np.copy(frame.array)
         visualisations.append(color_im)
 
-        NB_im = self.reduced(mc, tol, color_im)
+        NB_im = self.reduced(color_im, mc, tol, maxb, minb)
         visualisations.append(NB_im)
 
         treated_NB = self.detection(NB_im, borders, copy=True)
