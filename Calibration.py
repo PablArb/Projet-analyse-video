@@ -40,7 +40,7 @@ def calibration(video: Video, i=0) -> None:
     videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames) * 1.3
     formatedDur = interact.time_formater(videoDur)
     # On multiplie la durée par un léger facteur de manière à obtenir une dirée de traitement finale plus faible
-    # que celle évaluée ici (ca fait plaisir à l'utilisateur)
+    # que celle évaluée ici (ça fait plaisir à l'utilisateur).
 
     # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0

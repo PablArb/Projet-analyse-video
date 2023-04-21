@@ -71,6 +71,10 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     if isOK:
         Ti = t.time()
         cleanedMesures = rectifyer(mesures, settings.minsize)
+        while [mes.id for mes in cleanedMesures] != [mes.id for mes in mesures]:
+            mesures = cleanedMesures
+            cleanedMesures = rectifyer(mesures, settings.minsize)
+
         Tduration += t.time() - Ti
         frame.mesures = cleanedMesures
         if calib:
@@ -130,7 +134,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     extremas, border = border_detection(image, depart, object, init_extr, mc, settings)
                     s += t.time() - Ti
 
-                    mesures.append(Mesure(id, tuple(extremas), border))
+                    mesures.append(Mesure(id, extremas, border))
                     id += 1
 
     return mesures, s
@@ -225,7 +229,7 @@ def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
     d'un unique pixel) puis on supprime les mesures considérées comme du bruit.
     """
 
-    d = max([max(mes.size) for mes in mesures])
+    # d = max([max(mes.size) for mes in mesures])
 
     newMes1 = []
     dictRectified = {mes: False for mes in mesures}
@@ -233,6 +237,7 @@ def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
     while not all([dictRectified[mes] for mes in mesures]):
         notRectified = [mes for mes in mesures if not dictRectified[mes]]
         mes1 = notRectified[0]
+        d = max(mes1.size)
         dictRectified[mes1] = True
         group = [mes1]
 
