@@ -51,8 +51,7 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     """
     frame : image à traiter (tableau uint8).
     settings : paramètres avec lesquels la frame est traitée.
-    mc : markerscolor, couleur des repères sur la frame étudiée.
-    i : numméro de la frame que l'on traite.
+    mc : markerscolor, couleur des repères sur la frame étudiée
     
     Traite la frame passée en argument.(renvoie les postions des repères qui y sont detectés)
     """
@@ -70,7 +69,9 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
             sys.setrecursionlimit(settings.precision)
 
     if isOK:
+        Ti = t.time()
         cleanedMesures = rectifyer(mesures, settings.minsize)
+        Tduration += t.time() - Ti
         frame.mesures = cleanedMesures
         if calib:
             positions = [mes.pos for mes in cleanedMesures]
@@ -216,6 +217,13 @@ def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) ->
     return L_neighbours
 
 def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
+    """
+    mesures : liste contenats les objets détectés sur la frmae étudiée
+    minsize : taille minimum que doit avoir un objet pour ne pas être considéré comme du bruit.
+
+    Dans un premier temps, on regroupe les mesures liées à un même repère (elles peuvent être séparée si séparée
+    d'un unique pixel) puis on supprime les mesures considérées comme du bruit.
+    """
 
     d = max([max(mes.size) for mes in mesures])
 
@@ -292,7 +300,6 @@ def object_tracker(video: Video, frame: Frame) -> None:
             if obj.lastupdate != 0:
                 video.treatementEvents += f'frame {frame.id}\tobject not found\t{obj.id}\n'
                 obj.positions[frame.id] = [int(pred[0]), int(pred[1])]
-                print('!!!!!!!!!!', end='')
             if obj.lastupdate >= 5:
                 obj.status = 'lost'
                 video.treatementEvents += f'frame {frame.id}\tobject lost\t{obj.id}\n'
@@ -316,7 +323,7 @@ def distances(pred: list, mesures: list[Mesure], maxdist: int) -> list:
         LDistances.append(d)
     return LDistances
 
-def distance(p1, p2):
+def distance(p1: tuple, p2: tuple) -> float:
     return np.sqrt((p1[0]-p2[0]) ** 2 + (p1[1]-p2[1]) ** 2)
 
 def matching(frame: Frame, M: np.array, res: np.array, mesures: list, markers: list) -> None:
