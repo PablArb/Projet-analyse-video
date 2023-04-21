@@ -273,7 +273,7 @@ class Download:
         frames = video.Frames
         for obj in video.markers:
             nom_colonnes += ['X' + obj.id, 'Y' + obj.id]
-        dos = open(video.paths.csv + '/positions objets.csv', 'w')
+        dos = open(video.paths.csv + '/rawData.csv', 'w')
         array = csv.DictWriter(dos, fieldnames=nom_colonnes)
         array.writeheader()
         for frame in frames:

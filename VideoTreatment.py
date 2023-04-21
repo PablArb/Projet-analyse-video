@@ -127,10 +127,10 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     at_border = False
 
                     Ti = t.time()
-                    res = border_detection(image, depart, object, init_extr, mc, settings)
+                    extremas, border = border_detection(image, depart, object, init_extr, mc, settings)
                     s += t.time() - Ti
 
-                    mesures.append(Mesure(id, res[0], res[1]))
+                    mesures.append(Mesure(id, tuple(extremas), border))
                     id += 1
 
     return mesures, s
@@ -243,7 +243,7 @@ def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
                     group.append(mes2)
                     dictRectified[mes2] = True
 
-        extr = np.array([mes.extremas for mes in group])
+        extr = np.array([mes.extremas for mes in group], dtype=object)
         xmin, ymin = min(extr[:, 0]), min(extr[:, 1])
         xmax, ymax = max(extr[:, 2]), max(extr[:, 3])
 
@@ -251,7 +251,7 @@ def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
         for mes in group:
             borders += mes.borders
 
-        newMes1.append(Mesure(mes1.id, [xmin, ymin, xmax, ymax], borders))
+        newMes1.append(Mesure(mes1.id, (xmin, ymin, xmax, ymax), borders))
 
     newMes2 = []
     for mes in newMes1:

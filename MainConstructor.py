@@ -158,8 +158,6 @@ class Mesure(object):
         self.borders = borders
         self.pos = self.detPos()  # [x, y]
         self.size = self.detSize()
-        self.status = 'unmatched'
-        self.rectified = False
 
     def detPos(self) -> tuple:
         """
