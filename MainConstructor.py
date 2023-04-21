@@ -57,7 +57,7 @@ class Video(object):
         Récupère la vidéo auprès de l'utilisateur.
         """
         self.paths.create_dir('bac')
-        acceptedFormats = ['mp4', 'mov', 'Mov']
+        acceptedFormats = ['mp4', 'mov', 'MOV']
         isempty = True
         print(mess.B_vi0, end='')
         while isempty:
