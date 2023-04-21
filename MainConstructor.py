@@ -152,6 +152,29 @@ class Object(object):
 
 
 class Mesure(object):
-    def __init__(self, pos):
-        self.pos = pos
+    def __init__(self, id, extr, borders):
+        self.id = id
+        self.extremas = extr  # [xmin, ymin, xmax, ymax]
+        self.borders = borders
+        self.pos = self.detPos()  # [x, y]
+        self.size = self.detSize()
         self.status = 'unmatched'
+        self.rectified = False
+
+    def detPos(self) -> tuple:
+        """
+        extremas : dictionaire contenant les coordonnées extremales des repères détectés sur une frame.
+
+        Détermine la position d'un objet à partir des extremas.
+        Renvoie un dictionnaire où les clefs sont les noms des différents objets détectés sur la frame étudiée et les
+        valeurs sont les coordonées du 'centre' de l'objet.
+        """
+        obj = self.extremas
+        x, y = (obj[0] + obj[2]) / 2, (obj[1] + obj[3]) / 2
+        return x, y
+
+    def detSize(self) -> tuple:
+        extr = self.extremas
+        xsize = extr[2] - extr[0]
+        ysize = extr[3] - extr[1]
+        return xsize, ysize

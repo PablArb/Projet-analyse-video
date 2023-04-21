@@ -61,7 +61,7 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     while not isOK and settings.precision <= settings.maxPrec:
         try:
             Ti = t.time()
-            extremas, borders, Bduration = objects_detection(im, settings, mc)
+            mesures, Bduration = objects_detection(im, settings, mc)
             Tduration = t.time() - Ti
             isOK = True
         except RecursionError:
@@ -70,11 +70,12 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
             sys.setrecursionlimit(settings.precision)
 
     if isOK:
-        extremas = rectifyer(extremas, settings.minsize)
-        positions = position(extremas)
-        frame.mesures = [Mesure(pos) for pos in positions]
-
+        cleanedMesures = rectifyer(mesures, settings.minsize)
+        frame.mesures = cleanedMesures
         if calib:
+            positions = [mes.pos for mes in cleanedMesures]
+            borders = [mes.borders for mes in cleanedMesures]
+            extremas = [mes.extremas for mes in cleanedMesures]
             return positions, borders, extremas, Bduration, Tduration
         else:
             return None
@@ -97,7 +98,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     pas, tol = settings.step, settings.tol
     maxb, minb = settings.maxBrightness, settings.minBrightness
     h, w = image.shape[:2]
-    extremas, borders = [], []
+    mesures, id = [], 0
     s = 0
 
     for j in range(0, h, pas):
@@ -107,9 +108,10 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
 
                 # On vérifie que l'élément étudié n'appartient pas déjà à un repère détecté.
                 element_in = False
-                for obj in extremas:
-                    HorizontalAlignement = obj[1] <= j <= obj[3]
-                    VerticalAlignement = obj[0] <= i <= obj[2]
+                for mes in mesures:
+                    extr = mes.extremas
+                    HorizontalAlignement = extr[1] <= j <= extr[3]
+                    VerticalAlignement = extr[0] <= i <= extr[2]
                     if VerticalAlignement and HorizontalAlignement:
                         element_in = True
 
@@ -124,16 +126,15 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     at_border = False
 
                     Ti = t.time()
-                    res = border_detection(image, depart, object, init_extr, mc, tol, maxb, minb)
+                    res = border_detection(image, depart, object, init_extr, mc, settings)
                     s += t.time() - Ti
 
-                    extremas.append(res[0])
-                    borders.append(res[1])
+                    mesures.append(Mesure(id, res[0], res[1]))
+                    id += 1
 
-    return extremas, borders, s
+    return mesures, s
 
-def border_detection(image: np.array, start: list, obj: list, extr: list, mc: int, tol: float, maxb: int, minb: int) \
-        -> tuple:
+def border_detection(image: np.array, start: list, contour: list, extr: list, mc: int, settings: Settings) -> tuple:
     """
     image : image étudiée.
     start : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
@@ -145,8 +146,8 @@ def border_detection(image: np.array, start: list, obj: list, extr: list, mc: in
     Regroupe tous les pixels appartenant à un même objet (forme blanche ici) dans une liste.
     """
     # On cherche ici à récupérer un encadrement de l'objet
-    if start not in obj:
-        obj.append(start)
+    if start not in contour:
+        contour.append(start)
         if start[0] < extr[0]:
             extr[0] = start[0]
         elif start[1] < extr[1]:
@@ -156,12 +157,12 @@ def border_detection(image: np.array, start: list, obj: list, extr: list, mc: in
         elif start[1] > extr[3]:
             extr[3] = start[1]
 
-    for pixel in get_neighbours(image, start, mc, tol, maxb, minb):
-        if pixel not in obj:
-            border_detection(image, pixel, obj, extr, mc, tol, maxb, minb)
-    return np.array(extr), np.array(obj)
+    for pixel in get_neighbours(image, start, mc, settings):
+        if pixel not in contour:
+            border_detection(image, pixel, contour, extr, mc, settings)
+    return extr, contour
 
-def get_neighbours(image: np.array, pixel: list, mc: int, tol: float, maxb: int, minb: int) -> list:
+def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) -> list:
     """
     image : image étudiée.
     pixel : sous la forme [j,i].
@@ -177,7 +178,9 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float, maxb: int,
     global at_border
     x, y = pixel[0], pixel[1]
     h, w = len(image), len(image[0])
-    view = 3
+    tol = settings.tol
+    maxb, minb = settings.maxBrightness, settings.minBrightness
+    view = settings.view
 
     # On crée une liste des coordonnées des voisins potentiellement intéressants
     neighbours_coordinates = []
@@ -212,37 +215,42 @@ def get_neighbours(image: np.array, pixel: list, mc: int, tol: float, maxb: int,
 
     return L_neighbours
 
-def rectifyer(extremas: dict, minsize: int) -> list:
-    """
-    extremas : dictionaire contenant les coordonnées extremales des repères détectés sur une frame.
-    minsize : Taille minimale acceptée pour un objet.
-    
-    Rectifie quelques erreurs, élimine le bruit.
-    """
-    # On supprime les objets trop petits, probablement issus d'erreurs.
-    new_extremas = []
+def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
 
-    for i in range(len(extremas)):
-        obj = extremas[i]
-        if not (obj[2] - obj[0] < minsize or obj[3] - obj[1] < minsize):
-            new_extremas.append(obj)
+    d = max([max(mes.size) for mes in mesures])
 
-    return new_extremas
+    newMes1 = []
+    dictRectified = {mes: False for mes in mesures}
 
-def position(extremas: list) -> list:
-    """
-    extremas : dictionaire contenant les coordonnées extremales des repères détectés sur une frame.
-    
-    Détermine la position d'un objet à partir des extremas.
-    Renvoie un dictionnaire où les clefs sont les noms des différents objets détectés sur la frame étudiée et les
-    valeurs sont les coordonées du 'centre' de l'objet.
-    """
-    position = []
-    for obj in extremas:
-        x = (obj[0] + obj[2]) / 2
-        y = (obj[1] + obj[3]) / 2
-        position.append([x, y])
-    return position
+    while not all([dictRectified[mes] for mes in mesures]):
+        notRectified = [mes for mes in mesures if not dictRectified[mes]]
+        mes1 = notRectified[0]
+        dictRectified[mes1] = True
+        group = [mes1]
+
+        for mes2 in notRectified:
+            if mes2 != mes1:
+                d2 = distance(mes1.pos, mes2.pos)
+                if d2 <= d:
+                    group.append(mes2)
+                    dictRectified[mes2] = True
+
+        extr = np.array([mes.extremas for mes in group])
+        xmin, ymin = min(extr[:, 0]), min(extr[:, 1])
+        xmax, ymax = max(extr[:, 2]), max(extr[:, 3])
+
+        borders = []
+        for mes in group:
+            borders += mes.borders
+
+        newMes1.append(Mesure(mes1.id, [xmin, ymin, xmax, ymax], borders))
+
+    newMes2 = []
+    for mes in newMes1:
+        if not (mes.size[0] < minsize or mes.size[1] < minsize):
+            newMes2.append(mes)
+
+    return newMes2
 
 
 # Tracking functions
@@ -301,14 +309,15 @@ def distances(pred: list, mesures: list[Mesure], maxdist: int) -> list:
     Calcule les distances entre la position prédite et les positions de chacuns des objets détéctés.
     """
     LDistances = []
-    xp, yp = int(pred[0]), int(pred[1])
     for mes in mesures:
-        xm, ym = mes.pos[0], mes.pos[1]
-        d = ((xp - xm) ** 2 + (yp - ym) ** 2) ** .5
+        d = distance(pred, mes.pos)
         if d > maxdist:
             d = np.inf
         LDistances.append(d)
     return LDistances
+
+def distance(p1, p2):
+    return np.sqrt((p1[0]-p2[0]) ** 2 + (p1[1]-p2[1]) ** 2)
 
 def matching(frame: Frame, M: np.array, res: np.array, mesures: list, markers: list) -> None:
     # On interprète les résultats

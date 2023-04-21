@@ -139,5 +139,5 @@ class Mess:
         self.S_vs3 = '\n3 longueur de référence : '
         self.S_vs4 = '\n4 tolérance : '
         self.I_vs = '\nréglage qui vous semble éroné (0=aucun, 1, 2, 3, 4) : '
-        self.P_vs = '\nvous devez avoir fait une erreur, veuillez réessayer'
+        self.P_vs = '\nvous devez avoir fait une erreur, veuillez réessayer\n'
 mess = Mess()

@@ -43,15 +43,11 @@ class Visu:
         """
         h = len(image)
         w = len(image[0])
-        newIm = []
+        newIm = np.zeros((h, w))
         for j in range(0, h):
-            newLine = []
             for i in range(0, w):
                 if rate_rgb(image[j][i], mc, maxb, minb) > tol:
-                    newLine.append(255)
-                else:
-                    newLine.append(0)
-            newIm.append(newLine)
+                    newIm[j][i] = 255
         return np.uint8(newIm)
 
     @staticmethod
@@ -169,7 +165,7 @@ class Visu:
         mc = video.markerscolor
         scale = video.scale
         tol = video.settings.tol
-        maxb, minb = video.settings.maxBrightness, video.settings.maxBrightness
+        maxb, minb = video.settings.maxBrightness, video.settings.minBrightness
 
         print(mess.B_vis, end='')
         visualisations = []

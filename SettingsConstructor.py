@@ -7,14 +7,14 @@ class Settings(object):
         self.maxPrec = 1e6  # plafond imposé à la limitte de récursion
         self.tol = 40.0  # est réglable lors de l'execution
         self.step = 1  # est automatiquement réglé par le programme
+        self.maxBrightness = 600
+        self.minBrightness = 150
+        self.view = 1
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.maxdist = int(video.Framessize[1] / 20)
         self.minsize = int(video.Framessize[1] / 100)
         self.crosswidth = int(video.Framessize[0] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
-
-        self.maxBrightness = 600
-        self.minBrightness = 150
 
         sys.setrecursionlimit(self.precision)

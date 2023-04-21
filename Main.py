@@ -29,7 +29,6 @@ def cleaner(video: Video, isOK=True) -> None:
 
 try:
     print(mess.B_proc, end='')
-    video = None
 
     # On récupère la vidéo et ses caractéristiques
     video = Video()
