@@ -326,7 +326,7 @@ def distances(pred: list, mesures: list[Mesure], maxdist: int) -> list:
         if d > maxdist:
             d = np.inf
         LDistances.append(d)
-    return LDistances
+    return np.array(LDistances, dtype=object)
 
 def distance(p1: tuple, p2: tuple) -> float:
     return np.sqrt((p1[0]-p2[0]) ** 2 + (p1[1]-p2[1]) ** 2)
