@@ -12,7 +12,7 @@ Il faut avoir intégrer à l'environnement les modules numpy, Opencv, pymediainf
 Lorsque on exécute le programme dans la console de l'IDE un dosssier est créé sur le bureau de l'ordinateur dans lequel il faut glisser la vidéo à étudier (le programme accepte les vidéos au format mp4 ou mov les fichiers qui ne sont pas sous ses formats seront déplacés vers le bureau).
 Pendant le traitement des informations sont transmises à l'utilisateur par le biais de la console.
 À l'issue du traitement de la vidéo les résultats sont stockés dans un dossier sur le bureau. Il est possible de changer l'emplacement des dossiers utilisés dans le dossier Base.py.
-
+Le programme de suivis étant basé sur une implémentation du filtre de Kallman(cf suite), il est nécessaire d'ajuster les coeficients pour obtenir un algorythme le plus performant possible.(Je n'est à ce jour pas trouvé de méthode pour cela)
 
 ## Principe de fonctionnement 
 Cet algorithme est basé sur la couleur des repères visuels : tous les repères doivent être de la même couleur, à savoir rouges, verts ou bleus.
@@ -22,4 +22,3 @@ On balaye la frame jusqu'à tomber sur un pixel au sein duquel le poids relatif 
 On en déduis la position du repère.  
 Le suivis des repères d'une frame à la suivante est basé sur le principe du filtre de Kallman.  
 De manière à ne pas avoir une complexité dépendante de la résolution de la vidéo étudiée, un pas dépendant de la taille des repères visuels est calculé durant la calibration.
-
