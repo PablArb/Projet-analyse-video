@@ -3,7 +3,7 @@ import numpy as np
 
 class KallmanFilter(object):
     # filtre de kalman
-    def __init__(self, dt, point):
+    def __init__(self, dt, point, Qcoeff):
         self.dt = dt
         # Vecteur d'etat initial
         self.E = np.matrix([[point[0]], [point[1]], [0], [0]])
@@ -18,10 +18,11 @@ class KallmanFilter(object):
         self.H = np.matrix([[1, 0, 0, 0],
                             [0, 1, 0, 0]])
 
-        self.Q = np.matrix([[100, 0, 0, 0],
-                            [0, 20, 0, 0],
-                            [0, 0, 100, 0],
-                            [0, 0, 0, 20]])
+        dx, dy, dvx, dvy = Qcoeff
+        self.Q = np.matrix([[dx, 0, 0, 0],
+                            [0, dy, 0, 0],
+                            [0, 0, dvx, 0],
+                            [0, 0, 0, dvy]])
 
         self.R = np.matrix([[1, 0],
                             [0, 1]])

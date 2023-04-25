@@ -70,10 +70,10 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
 
     if isOK:
         Ti = t.time()
-        cleanedMesures = rectifyer(mesures, settings.minsize)
+        cleanedMesures = rectifyer(mesures, settings)
         while [mes.id for mes in cleanedMesures] != [mes.id for mes in mesures]:
             mesures = cleanedMesures
-            cleanedMesures = rectifyer(mesures, settings.minsize)
+            cleanedMesures = rectifyer(mesures, settings)
 
         Tduration += t.time() - Ti
         frame.mesures = cleanedMesures
@@ -220,7 +220,7 @@ def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) ->
 
     return L_neighbours
 
-def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
+def rectifyer(mesures: list[Mesure], settings: Settings) -> list[Mesure]:
     """
     mesures : liste contenats les objets détectés sur la frmae étudiée
     minsize : taille minimum que doit avoir un objet pour ne pas être considéré comme du bruit.
@@ -229,15 +229,15 @@ def rectifyer(mesures: list[Mesure], minsize: int) -> list[Mesure]:
     d'un unique pixel) puis on supprime les mesures considérées comme du bruit.
     """
 
-    # d = max([max(mes.size) for mes in mesures])
-
+    minsize = settings.minsize
+    marge = settings.marge
     newMes1 = []
     dictRectified = {mes: False for mes in mesures}
 
     while not all([dictRectified[mes] for mes in mesures]):
         notRectified = [mes for mes in mesures if not dictRectified[mes]]
         mes1 = notRectified[0]
-        d = max(mes1.size)
+        d = 0.5 * max(mes1.size)
         dictRectified[mes1] = True
         group = [mes1]
 

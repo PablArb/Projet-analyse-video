@@ -141,13 +141,13 @@ class Frame(object):
 
 
 class Object(object):
-    def __init__(self, id, initpos, initframe, dt):
+    def __init__(self, id, initpos, initframe, dt, Qcoeff):
         self.id = id
         self.lastupdate = 0
         self.lastknownpos = initpos
         self.predictions = {initframe: initpos}
         self.positions = {initframe: initpos}
-        self.kf = KallmanFilter(dt, initpos)
+        self.kf = KallmanFilter(dt, initpos, Qcoeff)
         self.status = 'hooked'
 
 

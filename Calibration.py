@@ -45,7 +45,7 @@ def calibration(video: Video, i=0) -> None:
     # Une fois le traitement réalisé on stocke les résultats.
     video.markercount = 0
     for obj in positions:
-        new_obj = Object('obj-' + str(video.markercount), obj, first.id, dt)
+        new_obj = Object('obj-' + str(video.markercount), obj, first.id, dt, settings.Qcoeff)
         first.identifiedObjects.append(new_obj)
         video.markers.append(new_obj)
         video.markercount += 1
