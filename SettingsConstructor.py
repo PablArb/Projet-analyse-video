@@ -2,17 +2,20 @@ import sys
 
 class Settings(object):
     def __init__(self, video):
-        self.modifiables = ('maxPrec', 'tol', 'maxBrightness', 'minBrightness', 'marge', 'view')
+        self.modifiables = ('tol', 'maxBrightness', 'minBrightness', 'marge', 'view')
 
-        self.precision = 1000  # permet de gérer la precision du système
+        self.Qcoeff = (100, 20, 100, 20)  # coefficients de filtre de Kallman
+
+        # paramètres automatiquement réglé par le programme
+        self.precision = 1000  # défini la taille maximale que peut prendre un repère
         self.maxPrec = 1e6  # plafond imposé à la limitte de récursion
-        self.tol = 40.0  # est réglable lors de l'execution
-        self.step = 1  # est automatiquement réglé par le programme
+        self.step = 1  # pas ave lequel on parcourt les frames
 
-        self.maxBrightness = 400
-        self.minBrightness = 120
-        self.marge = 0.5
-        self.Qcoeff = (100, 20, 100, 20)
+        # paramètres réglables lors de l'execution
+        self.cth = 40.0  # taux seuil pour la couleur
+        self.maxBrightness = 500
+        self.minBrightness = 150
+        self.marge = 1
         self.view = 1
 
         # On définit la taille des indicateurs visuels / taille de l'image

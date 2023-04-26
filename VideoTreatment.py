@@ -100,7 +100,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     Detecte les repères présents sur l'image passée en argument.
     """
     global at_border
-    pas, tol = settings.step, settings.tol
+    pas, cth = settings.step, settings.cth
     maxb, minb = settings.maxBrightness, settings.minBrightness
     h, w = image.shape[:2]
     mesures, id = [], 0
@@ -109,7 +109,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     for j in range(0, h, pas):
         for i in range(0, w, pas):
 
-            if rate_rgb(image[j][i], mc, maxb, minb) > tol:
+            if rate_rgb(image[j][i], mc, maxb, minb) > cth:
 
                 # On vérifie que l'élément étudié n'appartient pas déjà à un repère détecté.
                 element_in = False
@@ -183,7 +183,7 @@ def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) ->
     global at_border
     x, y = pixel[0], pixel[1]
     h, w = len(image), len(image[0])
-    tol = settings.tol
+    cth = settings.cth
     maxb, minb = settings.maxBrightness, settings.minBrightness
     view = settings.view
 
@@ -199,7 +199,7 @@ def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) ->
     is_border = False
     outsiders = []
     for n in neighbours_coordinates:
-        if rate_rgb(image[n[1], n[0]], mc, maxb, minb) < tol:
+        if rate_rgb(image[n[1], n[0]], mc, maxb, minb) < cth:
             is_border = True
             outsiders.append(n)
             # Si on n'était pas sur le contour, on y est désormais.
@@ -231,13 +231,18 @@ def rectifyer(mesures: list[Mesure], settings: Settings) -> list[Mesure]:
 
     minsize = settings.minsize
     marge = settings.marge
-    newMes1 = []
-    dictRectified = {mes: False for mes in mesures}
 
-    while not all([dictRectified[mes] for mes in mesures]):
-        notRectified = [mes for mes in mesures if not dictRectified[mes]]
+    newMes1 = []
+    for mes in mesures:
+        if not (mes.size[0] < minsize or mes.size[1] < minsize):
+            newMes1.append(mes)
+
+    newMes2 = []
+    dictRectified = {mes: False for mes in newMes1}
+    while not all([dictRectified[mes] for mes in newMes1]):
+        notRectified = [mes for mes in newMes1 if not dictRectified[mes]]
         mes1 = notRectified[0]
-        d = 0.5 * max(mes1.size)
+        d = marge * max(mes1.size)
         dictRectified[mes1] = True
         group = [mes1]
 
@@ -248,7 +253,7 @@ def rectifyer(mesures: list[Mesure], settings: Settings) -> list[Mesure]:
                     group.append(mes2)
                     dictRectified[mes2] = True
 
-        extr = np.array([mes.extremas for mes in group], dtype=object)
+        extr = np.array([mes.extremas for mes in group])
         xmin, ymin = min(extr[:, 0]), min(extr[:, 1])
         xmax, ymax = max(extr[:, 2]), max(extr[:, 3])
 
@@ -256,12 +261,7 @@ def rectifyer(mesures: list[Mesure], settings: Settings) -> list[Mesure]:
         for mes in group:
             borders += mes.borders
 
-        newMes1.append(Mesure(mes1.id, (xmin, ymin, xmax, ymax), borders))
-
-    newMes2 = []
-    for mes in newMes1:
-        if not (mes.size[0] < minsize or mes.size[1] < minsize):
-            newMes2.append(mes)
+        newMes2.append(Mesure(mes1.id, (xmin, ymin, xmax, ymax), borders))
 
     return newMes2
 

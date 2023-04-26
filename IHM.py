@@ -32,7 +32,7 @@ class Visu:
         return np.uint8(newIm)
 
     @staticmethod
-    def reduced(image: np.array, mc: int, tol: float, maxb: int, minb: int) -> np.array:
+    def reduced(image: np.array, mc: int, cth: float, maxb: int, minb: int) -> np.array:
         """
         mc : markerscolor, couleur des repères de l'image étudiée.
         tol : seuil de détection des couleurs.
@@ -46,7 +46,7 @@ class Visu:
         newIm = np.zeros((h, w))
         for j in range(0, h):
             for i in range(0, w):
-                if rate_rgb(image[j][i], mc, maxb, minb) > tol:
+                if rate_rgb(image[j][i], mc, maxb, minb) > cth:
                     newIm[j][i] = 255
         return np.uint8(newIm)
 
@@ -164,7 +164,7 @@ class Visu:
         cw = video.settings.crosswidth
         mc = video.markerscolor
         scale = video.scale
-        tol = video.settings.tol
+        cth = video.settings.cth
         maxb, minb = video.settings.maxBrightness, video.settings.minBrightness
 
         print(mess.B_vis, end='')
@@ -173,7 +173,7 @@ class Visu:
         color_im = np.copy(frame.array)
         visualisations.append(color_im)
 
-        NB_im = self.reduced(color_im, mc, tol, maxb, minb)
+        NB_im = self.reduced(color_im, mc, cth, maxb, minb)
         visualisations.append(NB_im)
 
         treated_NB = self.detection(NB_im, borders, copy=True)
@@ -364,7 +364,7 @@ class Interact:
         print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
         print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation - 1], end='')
         print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
-        print(mess.S_vs4 + str(100 - settings.tol), end='')
+        print(mess.S_vs4 + str(100 - settings.cth), end='')
         isOk = False
         while not isOk:
             which_L = input(mess.I_vs).split(',')
@@ -480,13 +480,13 @@ class Interact:
         """
         settings = video.settings
         while True:
-            tol = input('Tolérance actuelle : ' + str(100 - settings.tol) + ', implémenter de : ')
+            tol = input('Tolérance actuelle : ' + str(100 - settings.cth) + ', implémenter de : ')
             if tol in self.stoplist:
                 raise Break
             else:
                 try:
                     tol = round(float(tol), 3)
-                    settings.tol -= tol
+                    settings.cth -= tol
                     return None
                 except ValueError:
                     print(mess.P_vs, end='')

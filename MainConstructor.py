@@ -30,6 +30,7 @@ def rate_rgb(pixel: list, c: int, maxBrightness, minBritghtness) -> float:
 class Video(object):
 
     def __init__(self):
+        self.modifiables = ['markerscolor', 'orientation', 'lenref']
 
         self.paths = paths
 
