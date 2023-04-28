@@ -305,7 +305,7 @@ def object_tracker(video: Video, frame: Frame) -> None:
             if obj.lastupdate != 0:
                 video.treatementEvents += f'frame {frame.id}\tobject not found\t{obj.id}\n'
                 obj.positions[frame.id] = [int(pred[0]), int(pred[1])]
-            if obj.lastupdate >= 5:
+            if obj.lastupdate >= 15:
                 obj.status = 'lost'
                 video.treatementEvents += f'frame {frame.id}\tobject lost\t{obj.id}\n'
 
