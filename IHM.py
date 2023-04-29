@@ -7,7 +7,6 @@ import cv2
 import numpy as np
 
 from Base import Break, mess
-from MainConstructor import rate_rgb
 from MainConstructor import Video, Frame
 
 
@@ -29,25 +28,6 @@ class Visu:
             for x in range(w):
                 newLine.append(image[y][x])
             newIm.append(newLine)
-        return np.uint8(newIm)
-
-    @staticmethod
-    def reduced(image: np.array, mc: int, cth: float, maxb: int, minb: int) -> np.array:
-        """
-        mc : markerscolor, couleur des repères de l'image étudiée.
-        tol : seuil de détection des couleurs.
-        definition : taux de réduction de l'image.
-        image : image étudiée.
-
-        Crée un apercu de ce que percoit l'algorythme.
-        """
-        h = len(image)
-        w = len(image[0])
-        newIm = np.zeros((h, w))
-        for j in range(0, h):
-            for i in range(0, w):
-                if rate_rgb(image[j][i], mc, maxb, minb) > cth:
-                    newIm[j][i] = 255
         return np.uint8(newIm)
 
     @staticmethod
@@ -100,7 +80,7 @@ class Visu:
         return np.uint8(image)
 
     @staticmethod
-    def cross_color(image: np.array, pos: list, crosswidth: int, mc, copy=False) -> np.array:
+    def cross_color(image: np.array, pos: list, crosswidth: int, copy=False) -> np.array:
         """
         image : np.array, imaghe sur laquelle on veut ajouter les croix. pos : positions où l'on souhaite tracer les
         croix sous forme [[x, y]] crosswidth : largeur des traits de la croix (quelques pixels) copy : optional,
@@ -119,17 +99,15 @@ class Visu:
             for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
                 for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
                     if 0 <= i < w and 0 <= n < h:
-                        image[n][i] = [0, 0, 0]
-                        image[n][i][mc] = 255
+                        image[n][i] = [0, 255, 0]
             for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
                 for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
                     if 0 <= n < w and 0 <= j < h:
-                        image[j][n] = [0, 0, 0]
-                        image[j][n][mc] = 255
+                        image[j][n] = [0, 255, 0]
         return np.uint8(image)
 
     @staticmethod
-    def scale(image: np.array, scale: float, crosswidth: int, mc: int) -> np.array:
+    def scale(image: np.array, scale: float, crosswidth: int) -> np.array:
         """
         image : image étudiée.
         scale : échelle de la vidéo.
@@ -140,8 +118,7 @@ class Visu:
         """
         h = len(image)
         w = len(image[0])
-        color = [0, 0, 0]
-        color[mc] = 255
+        color = [0, 255, 0]
         for i in range(int(1 / scale)):
             for j in range(crosswidth):
                 image[(j + h - int(h / 20)) % h][(i + int(w / 10)) % w] = color
@@ -162,7 +139,6 @@ class Visu:
     def visusCalib(self, video: Video, frame: Frame, borders: list, extremas: list) -> None:
         rw = video.settings.rectanglewidth
         cw = video.settings.crosswidth
-        mc = video.settings.markerscolor
         scale = video.scale
 
         print(mess.B_vis, end='')
@@ -171,7 +147,6 @@ class Visu:
         color_im = np.copy(frame.array)
         visualisations.append(color_im)
 
-        # NB_im = self.reduced(color_im, mc, cth, maxb, minb)
         NB_im = np.copy(frame.NBarray)*255
         visualisations.append(NB_im)
 
@@ -180,8 +155,8 @@ class Visu:
         visualisations.append(treated_NB)
 
         pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
-        treated_color = self.cross_color(frame.array, pos, cw, (mc+1) % 3, copy=True)
-        treated_color = self.scale(treated_color, scale, cw, mc)
+        treated_color = self.cross_color(frame.array, pos, cw, copy=True)
+        treated_color = self.scale(treated_color, scale, cw)
         visualisations.append(treated_color)
 
         print(mess.S_vis, end='')
@@ -241,7 +216,6 @@ class Download:
         """
 
         crosswidth = video.settings.crosswidth
-        mc = video.settings.markerscolor
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
         fps = video.Framerate
@@ -254,8 +228,8 @@ class Download:
             pred = [obj.predictions[frame.id] for obj in video.markers if frame.id in obj.predictions]
 
             # img = visu.pas(img, pas)
-            img = visu.cross_color(frame.array, pred, crosswidth, (mc + 2) % 3)
-            img = visu.cross_color(img, pos, crosswidth, (mc+1) % 3)
+            img = visu.cross_color(frame.array, pred, crosswidth)
+            img = visu.cross_color(img, pos, crosswidth)
 
             out.write(img)
 
@@ -311,8 +285,6 @@ class Download:
                 if not attr[0] in toAvoid:
                     if attr[0] != 'markerscolor' and attr[0] != 'orientation':
                         line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + str(attr[1]) + '\n'
-                    elif attr[0] == 'markerscolor':
-                        line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + ['blue', 'green', 'red'][attr[1]] + '\n'
                     elif attr[0] == 'orientation':
                         line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + ['landscape', 'portrait'][
                             attr[1] - 1] + '\n'
@@ -335,7 +307,6 @@ class Download:
         """
         Télecharge l'ensemble des frames de l'image séparement
         """
-        mc = video.settings.markerscolor
         video.paths.create_dir('non treated frames')
         video.paths.create_dir('treated frames')
         print('\nSauvegarde des frames en cours ...', end='')
@@ -344,7 +315,7 @@ class Download:
             cv2.imwrite(name, frame.array)
             name = video.paths.TreatedFrames + str(frame.id) + '.jpg'
             crosswidth = video.settings.crosswidth
-            im = visu.cross_color(frame.array, frame.identified_objects, crosswidth, mc)
+            im = visu.cross_color(frame.array, frame.identified_objects, crosswidth)
             cv2.imwrite(name, im)
         print(mess.E_fdl)
         return None
@@ -354,51 +325,6 @@ class Interact:
     # La classe interact regroupe les méthodes qui vont permettre à l'algorythme d'intéragir avec l'utilisateur
     def __init__(self):
         self.stoplist = ['stop', 'quit', 'abandon', 'kill']
-
-    def verif_settings(self, video: Video) -> None:
-        """
-        Éffectue les changements de réglges demandés par l'utilisateur'
-        """
-        settings = video.settings
-        modifiables = settings.modifiables
-
-        print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.settings.markerscolor], end='')
-        print(mess.S_vs2 + ['landscape', 'portrait'][video.settings.orientation - 1], end='')
-        print(mess.S_vs3 + str(video.settings.lenref) + ' cm', end='')
-        print(mess.S_vs4 + str(100 - settings.cth), end='')
-        isOk = False
-        while not isOk:
-            which_L = input(mess.I_vs).split(',')
-            isOk = True
-            for which in which_L:
-                if which in self.stoplist:
-                    raise Break
-
-                try:
-                    which = int(which)
-                    if which in [0, 1, 2, 3, 4]:
-                        if which == 0:
-                            pass
-                        elif which == 1:
-                            print()
-                            self.markerscolor_input(video)
-                        elif which == 2:
-                            print()
-                            self.orientation_input(video)
-                        elif which == 3:
-                            print()
-                            self.ref_input(video)
-                        elif which == 4:
-                            print()
-                            self.tol_input(video)
-                    else:
-                        isOk = False
-                        print(mess.P_vs)
-                except ValueError:
-                    isOk = False
-                    print(mess.P_vs)
-
-        return None
 
     def yn(self, question: str) -> bool:
         """
@@ -419,36 +345,64 @@ class Interact:
             else:
                 print(mess.P_vs)
 
-    def setting_input(self, video: Video, setting, posibilities=None) -> None:
+    def verif_settings(self, video: Video) -> None:
+        """
+        Éffectue les changements de réglges demandés par l'utilisateur'
+        """
+        settings = video.settings
+        modifiables = settings.modifiables
+
+        i = 1
+        for set in modifiables:
+            exec(f'v = settings.{set}')
+            if set != 'orientation':
+                exec("print(f'{i} {set} : ' + str(v))")
+            else:
+                exec("print(f'{i} [paysage, orientation][{v}] : ' + str(v))")
+            i += 1
+
+        isOk = False
+        while not isOk:
+            l = str([j for j in range(1, i)])[1:-1]
+            which_L = input(mess.I_vs + ', ' + l + ')').split(',')
+            isOk = True
+            for which in which_L:
+                if which in self.stoplist:
+                    raise Break
+                try:
+                    which = int(which) - 1
+                    if which in range(1, i):
+                        set = list(modifiables.keys())[which]
+                        if set != 'orientation':
+                            self.setting_input(video, set, modifiables[set])
+                        else:
+                            self.orientation_input(video)
+                        isOk = True
+                    elif which == '0':
+                        isOk = True
+                    else:
+                        isOk = False
+                        print(mess.P_vs)
+                except ValueError:
+                    isOk = False
+                    print(mess.P_vs)
+        return None
+
+    def setting_input(self, video: Video, setting, setType) -> None:
         settings = video.settings
         while True:
-            exec(f"set = input('{setting} actuel(le) : ' + str(settings.{setting}) + 'nouvelle valeur : '")
-            if set in self.stoplist:
-                raise Break
-            else:
-                try:
-                    if posibilities is None:
-                        set2 = float(set)
-                    else:
-                        assert set in posibilities
+            exec(f"sett = input('{setting} actuel(le) : ' + str(settings.{setting}) + ', nouvelle valeur : ')")
+            exec('if sett in self.stoplist: \n              raise Break')
+            try:
+                if setType != 'tuple':
+                    exec(f'set2 = {setType}(sett)')
+                else:
+                    exec("set2 = tuple(int(i) for i in sett[1:-1].split(','))")
+                    exec('assert len(set2) == 2')
 
-                except(ValueError, AssertionError):
-                    print(mess.P_vs, end='')
-
-    def markerscolor_input(self, video: Video) -> None:
-        """
-        Récupère auprès de l'utilisateur la couleur des repères placés sur l'objet étudiée sur la vidéo et assigne cette
-        valeur à l'attribut markerscolor de la vidéo.
-        """
-        while True:
-            c = input(mess.I_mco)
-            if c in ['1', '2', '3']:
-                c = int(c) - 1
-                video.settings.markerscolor = c
+                exec(f"settings.{setting} = set2")
                 return None
-            elif c in self.stoplist:
-                raise Break
-            else:
+            except ValueError:
                 print(mess.P_vs, end='')
 
     def orientation_input(self, video: Video) -> None:
@@ -473,41 +427,6 @@ class Interact:
                 raise Break
             else:
                 print(mess.P_vs, end='')
-
-    def ref_input(self, video: Video) -> None:
-        """
-        Récupère au près de l'utilisateur la distances séparant les deux premiers repères placés sur l'objet étudiée
-        sur la vidéo et assigne cette valeur à l'attribut lenref de la vidéo.
-        """
-        settings = video.settings
-        while True:
-            l = input(mess.I_ref)
-            try:
-                if l in self.stoplist:
-                    raise Break
-                else:
-                    lenref = float(l)
-                    settings.lenref = lenref
-                    return None
-            except ValueError:
-                print(mess.P_vs, end='')
-
-    def tol_input(self, video: Video):
-        """
-        Permet à l'utilisateur de régler la tolérence (poids seuil de la couleur des repères dans chque pixel)
-        """
-        settings = video.settings
-        while True:
-            tol = input('Tolérance actuelle : ' + str(100 - settings.cth) + ', implémenter de : ')
-            if tol in self.stoplist:
-                raise Break
-            else:
-                try:
-                    tol = round(float(tol), 3)
-                    settings.cth -= tol
-                    return None
-                except ValueError:
-                    print(mess.P_vs, end='')
 
     def waiting_time(self, i: int, N: int, Ti: float) -> str:
         """

@@ -11,22 +11,6 @@ from SettingsConstructor import Settings
 from KallmanFilterConstructor import KallmanFilter
 
 
-# Élement central de la detection
-def rate_rgb(pixel: list, c: int, maxBrightness, minBritghtness) -> float:
-    """
-    pixel : élement de l'image d'origine sous la forme [r, g, b].
-    c : 0(rouge), 1(vert) ou 2(bleu).
-
-    Calcul le poids relatif de la composante c du pixel parmis les composantes rgb qui le définissent.
-    """
-    assert c in [0, 1, 2]
-    s = int(pixel[0]) + int(pixel[1]) + int(pixel[2])
-    if maxBrightness > s > minBritghtness:
-        return int(pixel[c]) / s * 100
-    else:
-        return 0.
-
-
 class Video(object):
 
     def __init__(self):
@@ -140,10 +124,8 @@ class Frame(object):
         im = self.array
         imHSV = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
 
-        hueFilt = np.zeros(imHSV[:, :, 0].shape)
-        for hw in settings.hueWindow:
-            hueMin, hueMax = hw
-            hueFilt += (imHSV[:, :, 0] >= hueMin) * (imHSV[:, :, 0] <= hueMax)
+        hueMin, hueMax = settings.hueWindow
+        hueFilt = (imHSV[:, :, 0] >= hueMin) * (imHSV[:, :, 0] <= hueMax)
 
         satMin, satMax = settings.satWindow
         satFilt = (imHSV[:, :, 1] >= satMin) * (imHSV[:, :, 1] <= satMax)

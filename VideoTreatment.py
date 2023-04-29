@@ -20,14 +20,12 @@ def videotreatment(video: Video) -> None:
     """
     frames = video.Frames
     settings = video.settings
-    mc = settings.markerscolor
-
     print()
     Ti, T = t.time(), t.time()
 
     for frame in frames[1:]:  # frame 0 traitée durant l'initialisation
         try:
-            frametreatement(frame, settings, mc)
+            frametreatement(frame, settings)
             object_tracker(video, frame)
         except SettingError:
             raise Break
@@ -47,7 +45,7 @@ def videotreatment(video: Video) -> None:
 
     return None
 
-def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
+def frametreatement(frame: Frame, settings: Settings, calib=False):
     """
     frame : image à traiter (tableau uint8).
     settings : paramètres avec lesquels la frame est traitée.
@@ -61,7 +59,7 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     while not isOK and settings.precision <= settings.maxPrec:
         try:
             Ti = t.time()
-            mesures, Bduration = objects_detection(im, settings, mc)
+            mesures, Bduration = objects_detection(im, settings)
             Tduration = t.time() - Ti
             isOK = True
         except RecursionError:
@@ -91,7 +89,7 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
 
 
 # sub functions
-def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
+def objects_detection(image: np.array, settings: Settings) -> tuple:
     """
     image : frame à traiter en N&B.
     settings : paramètres avec lesquels l'image sera traitée.
@@ -101,7 +99,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     Detecte les repères présents sur l'image passée en argument.
     """
     global at_border
-    pas, cth = settings.step, settings.cth
+    pas = settings.step
     h, w = image.shape[:2]
     mesures, id = [], 0
     s = 0
@@ -131,7 +129,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
                     at_border = False
 
                     Ti = t.time()
-                    extremas, border = border_detection(image, depart, object, init_extr, mc, settings)
+                    extremas, border = border_detection(image, depart, object, init_extr, settings)
                     s += t.time() - Ti
 
                     mesures.append(Mesure(id, extremas, border))
@@ -139,7 +137,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
 
     return mesures, s
 
-def border_detection(image: np.array, start: list, contour: list, extr: list, mc: int, settings: Settings) -> tuple:
+def border_detection(image: np.array, start: list, contour: list, extr: list, settings: Settings) -> tuple:
     """
     image : image étudiée.
     start : pixel duquel on va partir pour 'explorer' notre objet, sous la forme [j,i].
@@ -164,7 +162,7 @@ def border_detection(image: np.array, start: list, contour: list, extr: list, mc
 
     for pixel in get_neighbours(image, start, settings):
         if pixel not in contour:
-            border_detection(image, pixel, contour, extr, mc, settings)
+            border_detection(image, pixel, contour, extr, settings)
     return extr, contour
 
 def get_neighbours(image: np.array, pixel: list, settings: Settings) -> list:

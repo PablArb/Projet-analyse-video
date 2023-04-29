@@ -18,13 +18,11 @@ def calibration(video: Video, i=0) -> None:
 
     settings = video.settings
     first = video.Frames[i]
-    mc = settings.markerscolor
     f = video.Framerate
     dt = 1/f
 
-    settings.detHueWindow()
     try:
-        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, mc, True)
+        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, True)
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
     # l'utilisateur, on gère ici ce problème.
     except SettingError:

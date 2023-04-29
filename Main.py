@@ -32,9 +32,8 @@ try:
 
     # On récupère la vidéo et ses caractéristiques
     video = Video()
-    interact.markerscolor_input(video)
     interact.orientation_input(video)
-    interact.ref_input(video)
+    interact.setting_input(video, 'lenref', 'float')
 
     # On traite la première frame pour vérifier que les réglages sont bons
     isOK = False
