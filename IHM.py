@@ -162,10 +162,8 @@ class Visu:
     def visusCalib(self, video: Video, frame: Frame, borders: list, extremas: list) -> None:
         rw = video.settings.rectanglewidth
         cw = video.settings.crosswidth
-        mc = video.markerscolor
+        mc = video.settings.markerscolor
         scale = video.scale
-        cth = video.settings.cth
-        maxb, minb = video.settings.maxBrightness, video.settings.minBrightness
 
         print(mess.B_vis, end='')
         visualisations = []
@@ -173,7 +171,8 @@ class Visu:
         color_im = np.copy(frame.array)
         visualisations.append(color_im)
 
-        NB_im = self.reduced(color_im, mc, cth, maxb, minb)
+        # NB_im = self.reduced(color_im, mc, cth, maxb, minb)
+        NB_im = np.copy(frame.NBarray)*255
         visualisations.append(NB_im)
 
         treated_NB = self.detection(NB_im, borders, copy=True)
@@ -242,7 +241,7 @@ class Download:
         """
 
         crosswidth = video.settings.crosswidth
-        mc = video.markerscolor
+        mc = video.settings.markerscolor
         path = video.paths.videodl + '/vidéo traitée.mp4'
         ext = cv2.VideoWriter_fourcc(*'mp4v')
         fps = video.Framerate
@@ -336,7 +335,7 @@ class Download:
         """
         Télecharge l'ensemble des frames de l'image séparement
         """
-        mc = video.markerscolor
+        mc = video.settings.markerscolor
         video.paths.create_dir('non treated frames')
         video.paths.create_dir('treated frames')
         print('\nSauvegarde des frames en cours ...', end='')
@@ -361,9 +360,11 @@ class Interact:
         Éffectue les changements de réglges demandés par l'utilisateur'
         """
         settings = video.settings
-        print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.markerscolor], end='')
-        print(mess.S_vs2 + ['landscape', 'portrait'][video.orientation - 1], end='')
-        print(mess.S_vs3 + str(video.lenref) + ' cm', end='')
+        modifiables = settings.modifiables
+
+        print(mess.S_vs1 + ['bleue', 'verte', 'rouge'][video.settings.markerscolor], end='')
+        print(mess.S_vs2 + ['landscape', 'portrait'][video.settings.orientation - 1], end='')
+        print(mess.S_vs3 + str(video.settings.lenref) + ' cm', end='')
         print(mess.S_vs4 + str(100 - settings.cth), end='')
         isOk = False
         while not isOk:
@@ -418,6 +419,22 @@ class Interact:
             else:
                 print(mess.P_vs)
 
+    def setting_input(self, video: Video, setting, posibilities=None) -> None:
+        settings = video.settings
+        while True:
+            exec(f"set = input('{setting} actuel(le) : ' + str(settings.{setting}) + 'nouvelle valeur : '")
+            if set in self.stoplist:
+                raise Break
+            else:
+                try:
+                    if posibilities is None:
+                        set2 = float(set)
+                    else:
+                        assert set in posibilities
+
+                except(ValueError, AssertionError):
+                    print(mess.P_vs, end='')
+
     def markerscolor_input(self, video: Video) -> None:
         """
         Récupère auprès de l'utilisateur la couleur des repères placés sur l'objet étudiée sur la vidéo et assigne cette
@@ -427,7 +444,7 @@ class Interact:
             c = input(mess.I_mco)
             if c in ['1', '2', '3']:
                 c = int(c) - 1
-                video.markerscolor = c
+                video.settings.markerscolor = c
                 return None
             elif c in self.stoplist:
                 raise Break
@@ -450,7 +467,7 @@ class Interact:
                     width = min(Framessize)
                 Framessize = (width, height)
                 video.Framessize = Framessize
-                video.orientation = int(mode)
+                video.settings.orientation = int(mode)
                 return None
             elif mode in self.stoplist:
                 raise Break
@@ -462,6 +479,7 @@ class Interact:
         Récupère au près de l'utilisateur la distances séparant les deux premiers repères placés sur l'objet étudiée
         sur la vidéo et assigne cette valeur à l'attribut lenref de la vidéo.
         """
+        settings = video.settings
         while True:
             l = input(mess.I_ref)
             try:
@@ -469,7 +487,7 @@ class Interact:
                     raise Break
                 else:
                     lenref = float(l)
-                    video.lenref = lenref
+                    settings.lenref = lenref
                     return None
             except ValueError:
                 print(mess.P_vs, end='')

@@ -8,7 +8,7 @@ import numpy as np
 from Base import SettingError, Break
 from Base import mess
 from IHM import interact
-from MainConstructor import Video, Frame, Object, Mesure, rate_rgb
+from MainConstructor import Video, Frame, Object, Mesure
 from SettingsConstructor import Settings
 
 # Main functions
@@ -20,7 +20,7 @@ def videotreatment(video: Video) -> None:
     """
     frames = video.Frames
     settings = video.settings
-    mc = video.markerscolor
+    mc = settings.markerscolor
 
     print()
     Ti, T = t.time(), t.time()
@@ -56,7 +56,8 @@ def frametreatement(frame: Frame, settings: Settings, mc: int, calib=False):
     Traite la frame passée en argument.(renvoie les postions des repères qui y sont detectés)
     """
     isOK = False
-    im = frame.array
+    frame.detNBArray(settings)
+    im = frame.NBarray
     while not isOK and settings.precision <= settings.maxPrec:
         try:
             Ti = t.time()
@@ -101,7 +102,6 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     """
     global at_border
     pas, cth = settings.step, settings.cth
-    maxb, minb = settings.maxBrightness, settings.minBrightness
     h, w = image.shape[:2]
     mesures, id = [], 0
     s = 0
@@ -109,7 +109,7 @@ def objects_detection(image: np.array, settings: Settings, mc: int) -> tuple:
     for j in range(0, h, pas):
         for i in range(0, w, pas):
 
-            if rate_rgb(image[j][i], mc, maxb, minb) > cth:
+            if image[j, i]:
 
                 # On vérifie que l'élément étudié n'appartient pas déjà à un repère détecté.
                 element_in = False
@@ -162,12 +162,12 @@ def border_detection(image: np.array, start: list, contour: list, extr: list, mc
         elif start[1] > extr[3]:
             extr[3] = start[1]
 
-    for pixel in get_neighbours(image, start, mc, settings):
+    for pixel in get_neighbours(image, start, settings):
         if pixel not in contour:
             border_detection(image, pixel, contour, extr, mc, settings)
     return extr, contour
 
-def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) -> list:
+def get_neighbours(image: np.array, pixel: list, settings: Settings) -> list:
     """
     image : image étudiée.
     pixel : sous la forme [j,i].
@@ -183,8 +183,6 @@ def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) ->
     global at_border
     x, y = pixel[0], pixel[1]
     h, w = len(image), len(image[0])
-    cth = settings.cth
-    maxb, minb = settings.maxBrightness, settings.minBrightness
     view = settings.view
 
     # On crée une liste des coordonnées des voisins potentiellement intéressants
@@ -199,7 +197,7 @@ def get_neighbours(image: np.array, pixel: list, mc: int, settings: Settings) ->
     is_border = False
     outsiders = []
     for n in neighbours_coordinates:
-        if rate_rgb(image[n[1], n[0]], mc, maxb, minb) < cth:
+        if not image[n[1], n[0]]:
             is_border = True
             outsiders.append(n)
             # Si on n'était pas sur le contour, on y est désormais.

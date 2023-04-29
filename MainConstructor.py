@@ -30,8 +30,6 @@ def rate_rgb(pixel: list, c: int, maxBrightness, minBritghtness) -> float:
 class Video(object):
 
     def __init__(self):
-        self.modifiables = ['markerscolor', 'orientation', 'lenref']
-
         self.paths = paths
 
         self.id = None  # titre de la vidéo
@@ -39,18 +37,15 @@ class Video(object):
 
         self.Framerate = self.get_framerate()  # nombre de frame par seconde
         self.Framessize = self.get_framessize()  # taille des frames
-        self.Frames = self.get_frames()  # liste contenant les frames de la vidéo
 
-        self.markerscolor = None  # couleur des repères visuels sur la video
-        self.orientation = None  # orientation de la video (paysage ou portrait)
-        self.lenref = None  # longueur de référence associée à la video
+        self.settings = Settings(self)  # réglages associés à la vidéo
+        self.Frames = self.get_frames()  # liste contenant les frames de la vidéo
 
         self.scale = None  # rapport distance sur nombre de pixels
         self.markercount = 0  # nombre de repères détectés sur la vidéo
         self.markers = []
         self.computationDuration = None  # temps mis par l'algorythme pour effectuer le traitement
 
-        self.settings = Settings(self)  # réglages associés à la vidéo
         self.treatementEvents = ''
 
     def videoinput(self) -> None:
@@ -132,14 +127,33 @@ class Video(object):
         print(mess.E_gfs, end='')
         return frames
 
-
 class Frame(object):
     def __init__(self, id, array):
         self.id = id
         self.array = array
+        self.NBarray = None
         self.mesures = []
         self.identifiedObjects = []
 
+    def detNBArray(self, settings) -> None:
+
+        im = self.array
+        imHSV = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
+
+        hueFilt = np.zeros(imHSV[:, :, 0].shape)
+        for hw in settings.hueWindow:
+            hueMin, hueMax = hw
+            hueFilt += (imHSV[:, :, 0] >= hueMin) * (imHSV[:, :, 0] <= hueMax)
+
+        satMin, satMax = settings.satWindow
+        satFilt = (imHSV[:, :, 1] >= satMin) * (imHSV[:, :, 1] <= satMax)
+
+        valMin, valMax = settings.valWindow
+        valFilt = (imHSV[:, :, 2] >= valMin) * (imHSV[:, :, 2] <= valMax)
+
+        imNB = hueFilt * satFilt * valFilt
+        self.NBarray = np.uint8(imNB)
+        return None
 
 class Object(object):
     def __init__(self, id, initpos, initframe, dt, Qcoeff):
@@ -150,7 +164,6 @@ class Object(object):
         self.positions = {initframe: initpos}
         self.kf = KallmanFilter(dt, initpos, Qcoeff)
         self.status = 'hooked'
-
 
 class Mesure(object):
     def __init__(self, id, extr, borders):

@@ -18,10 +18,11 @@ def calibration(video: Video, i=0) -> None:
 
     settings = video.settings
     first = video.Frames[i]
-    mc = video.markerscolor
+    mc = settings.markerscolor
     f = video.Framerate
     dt = 1/f
 
+    settings.detHueWindow()
     try:
         positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, mc, True)
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
@@ -86,7 +87,7 @@ def detScale(video: Video, positions: dict) -> None:
 
     Renvoie l'échelle de la vidéo en cm par nb de pixel.
     """
-    lenref = video.lenref
+    lenref = video.settings.lenref
     if len(positions) >= 2:
         a = positions[-1]
         b = positions[-2]
