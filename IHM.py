@@ -80,7 +80,7 @@ class Visu:
         return np.uint8(image)
 
     @staticmethod
-    def cross_color(image: np.array, pos: list, crosswidth: int, copy=False) -> np.array:
+    def cross_color(image: np.array, pos: list, crosswidth: int, c, copy=False) -> np.array:
         """
         image : np.array, imaghe sur laquelle on veut ajouter les croix. pos : positions où l'on souhaite tracer les
         croix sous forme [[x, y]] crosswidth : largeur des traits de la croix (quelques pixels) copy : optional,
@@ -99,11 +99,13 @@ class Visu:
             for i in range(x - crosswidth * 10, x + crosswidth * 10 + 1):
                 for n in range(y - int(crosswidth / 2), y + int(crosswidth / 2) + 1):
                     if 0 <= i < w and 0 <= n < h:
-                        image[n][i] = [0, 255, 0]
+                        image[n][i] = [0, 0, 0]
+                        image[n][i][c] = 255
             for j in range(y - crosswidth * 10, y + crosswidth * 10 + 1):
                 for n in range(x - int(crosswidth / 2), x + int(crosswidth / 2) + 1):
                     if 0 <= n < w and 0 <= j < h:
-                        image[j][n] = [0, 255, 0]
+                        image[j][n] = [0, 0, 0]
+                        image[j][n][c] = 255
         return np.uint8(image)
 
     @staticmethod
@@ -155,7 +157,7 @@ class Visu:
         visualisations.append(treated_NB)
 
         pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
-        treated_color = self.cross_color(frame.array, pos, cw, copy=True)
+        treated_color = self.cross_color(frame.array, pos, cw, 0, copy=True)
         treated_color = self.scale(treated_color, scale, cw)
         visualisations.append(treated_color)
 
@@ -228,8 +230,8 @@ class Download:
             pred = [obj.predictions[frame.id] for obj in video.markers if frame.id in obj.predictions]
 
             # img = visu.pas(img, pas)
-            img = visu.cross_color(frame.array, pred, crosswidth)
-            img = visu.cross_color(img, pos, crosswidth)
+            img = visu.cross_color(frame.array, pred, crosswidth, 0)
+            img = visu.cross_color(img, pos, crosswidth, 2)
 
             out.write(img)
 
@@ -279,11 +281,11 @@ class Download:
                 doc.write(line)
 
         doc.write('\n-------VIDEO--------\n')
-        toAvoid = ['markers', 'paths', 'treatementEvents', 'Frames', 'settings']
+        toAvoid = ['markers', 'paths', 'treatementEvents', 'Frames', 'settings', 'modifiables']
         for attr in inspect.getmembers(video):
             if attr[0][0] != '_' and not inspect.ismethod(attr[1]):
                 if not attr[0] in toAvoid:
-                    if attr[0] != 'markerscolor' and attr[0] != 'orientation':
+                    if attr[0] != 'orientation':
                         line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + str(attr[1]) + '\n'
                     elif attr[0] == 'orientation':
                         line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + ['landscape', 'portrait'][
@@ -315,7 +317,7 @@ class Download:
             cv2.imwrite(name, frame.array)
             name = video.paths.TreatedFrames + str(frame.id) + '.jpg'
             crosswidth = video.settings.crosswidth
-            im = visu.cross_color(frame.array, frame.identified_objects, crosswidth)
+            im = visu.cross_color(frame.array, frame.identified_objects, crosswidth, 0)
             cv2.imwrite(name, im)
         print(mess.E_fdl)
         return None
@@ -356,9 +358,9 @@ class Interact:
         for set in modifiables:
             exec(f'v = settings.{set}')
             if set != 'orientation':
-                exec("print(f'{i} {set} : ' + str(v))")
+                exec(f"print('{i} {set} : ' + str(v))")
             else:
-                exec("print(f'{i} [paysage, orientation][{v}] : ' + str(v))")
+                exec(f"print('{i} format : ' + ['paysage', 'portrait'][v])")
             i += 1
 
         isOk = False
@@ -370,15 +372,15 @@ class Interact:
                 if which in self.stoplist:
                     raise Break
                 try:
-                    which = int(which) - 1
+                    which = int(which)
                     if which in range(1, i):
-                        set = list(modifiables.keys())[which]
+                        set = list(modifiables.keys())[which-1]
                         if set != 'orientation':
                             self.setting_input(video, set, modifiables[set])
                         else:
                             self.orientation_input(video)
                         isOk = True
-                    elif which == '0':
+                    elif which == 0:
                         isOk = True
                     else:
                         isOk = False
@@ -402,7 +404,7 @@ class Interact:
 
                 exec(f"settings.{setting} = set2")
                 return None
-            except ValueError:
+            except (ValueError, AssertionError):
                 print(mess.P_vs, end='')
 
     def orientation_input(self, video: Video) -> None:
@@ -421,7 +423,7 @@ class Interact:
                     width = min(Framessize)
                 Framessize = (width, height)
                 video.Framessize = Framessize
-                video.settings.orientation = int(mode)
+                video.settings.orientation = int(mode) - 1
                 return None
             elif mode in self.stoplist:
                 raise Break

@@ -50,17 +50,21 @@ def frametreatement(frame: Frame, settings: Settings, calib=False):
     frame : image à traiter (tableau uint8).
     settings : paramètres avec lesquels la frame est traitée.
     mc : markerscolor, couleur des repères sur la frame étudiée
+
     
     Traite la frame passée en argument.(renvoie les postions des repères qui y sont detectés)
     """
     isOK = False
+
+    Ti = t.time()
     frame.detNBArray(settings)
+    Tduration = t.time()-Ti
     im = frame.NBarray
     while not isOK and settings.precision <= settings.maxPrec:
         try:
             Ti = t.time()
             mesures, Bduration = objects_detection(im, settings)
-            Tduration = t.time() - Ti
+            Tduration += t.time() - Ti
             isOK = True
         except RecursionError:
             print(mess.P_rec, end='')
@@ -73,8 +77,8 @@ def frametreatement(frame: Frame, settings: Settings, calib=False):
         while [mes.id for mes in cleanedMesures] != [mes.id for mes in mesures]:
             mesures = cleanedMesures
             cleanedMesures = rectifyer(mesures, settings)
-
         Tduration += t.time() - Ti
+
         frame.mesures = cleanedMesures
         if calib:
             positions = [mes.pos for mes in cleanedMesures]

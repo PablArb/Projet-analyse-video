@@ -13,11 +13,13 @@ class Settings(object):
         self.maxPrec = 1e6  # plafond imposé à la limitte de récursion
         self.step = 1  # pas ave lequel on parcourt les frames
 
-        # paramètres réglables lors de l'execution
+        # paramètres renseignés par l'utilisateur
         self.orientation = None  # orientation de la video (paysage ou portrait)
         self.lenref = None  # longueur de référence associée à la video
-        self.hueWindow = (40, 80)
-        self.satWindow = (25, 255)
+
+        # paramètres réglés par défaut, peuvent être ajusté durant l'éxécution
+        self.hueWindow = (45, 80)
+        self.satWindow = (35, 255)
         self.valWindow = (80, 150)
         self.marge = 1  #
         self.view = 1  # rayon du champ de vision de l'algorythme de parcours de graphe en nb de pixel
