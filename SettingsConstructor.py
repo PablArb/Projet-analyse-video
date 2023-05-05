@@ -20,7 +20,7 @@ class Settings(object):
         # paramètres réglés par défaut, peuvent être ajusté durant l'éxécution
         self.hueWindow = (45, 80)
         self.satWindow = (35, 255)
-        self.valWindow = (80, 150)
+        self.valWindow = (60, 150)
         self.marge = 1  #
         self.view = 1  # rayon du champ de vision de l'algorythme de parcours de graphe en nb de pixel
 

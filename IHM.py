@@ -366,7 +366,7 @@ class Interact:
         isOk = False
         while not isOk:
             l = str([j for j in range(1, i)])[1:-1]
-            which_L = input(mess.I_vs + ', ' + l + ')').split(',')
+            which_L = input(mess.I_vs + ', ' + l + ') : ').split(',')
             isOk = True
             for which in which_L:
                 if which in self.stoplist:
