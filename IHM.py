@@ -270,11 +270,12 @@ class Download:
         doc.write('------SETTINGS------\n')
         for attr in inspect.getmembers(settings):
             if attr[0][0] != '_' and not inspect.ismethod(attr[1]):
-                line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + str(attr[1]) + '\n'
-                doc.write(line)
+                if attr[0][0] != 'modifaibles':
+                    line = attr[0] + ' ' * (19 - len(attr[0])) + ' : ' + str(attr[1]) + '\n'
+                    doc.write(line)
 
         doc.write('\n-------VIDEO--------\n')
-        toAvoid = ['markers', 'paths', 'treatementEvents', 'Frames', 'settings', 'modifiables']
+        toAvoid = ['markers', 'paths', 'treatementEvents', 'Frames', 'settings']
         for attr in inspect.getmembers(video):
             if attr[0][0] != '_' and not inspect.ismethod(attr[1]):
                 if not attr[0] in toAvoid:
