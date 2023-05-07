@@ -1,4 +1,4 @@
-import sys
+from Modules import sys
 
 class Settings(object):
     def __init__(self, video):
@@ -24,7 +24,7 @@ class Settings(object):
         self.marge = 1  #
         self.view = 1  # rayon du champ de vision de l'algorythme de parcours de graphe en nb de pixel
 
-        self.Qcoeff = (100, 5, 100, 5)  # coefficients de filtre de Kallman
+        self.Qcoeff = (100, 1, 100, 1)  # coefficients de filtre de Kallman
 
         # On définit la taille des indicateurs visuels / taille de l'image
         self.maxdist = int(video.Framessize[1] / 20)

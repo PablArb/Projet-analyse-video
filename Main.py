@@ -1,6 +1,4 @@
-import shutil as sht
-import sys
-
+from Modules import sht, sys
 from Base import Break
 from Base import mess
 from IHM import download, interact

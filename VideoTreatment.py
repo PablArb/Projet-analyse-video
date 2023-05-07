@@ -1,10 +1,4 @@
-import sys
-import time as t
-
-# modules supplémentaires
-import numpy as np
-
-# fichiers propres au projet
+from Modules import np, sys, t
 from Base import SettingError, Break
 from Base import mess
 from IHM import interact

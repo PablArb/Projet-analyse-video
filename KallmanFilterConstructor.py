@@ -1,5 +1,4 @@
-import numpy as np
-
+from Modules import np
 
 class KallmanFilter(object):
     # filtre de kalman

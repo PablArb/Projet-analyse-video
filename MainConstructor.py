@@ -1,11 +1,4 @@
-import os
-import time as t
-import shutil as sht
-
-import pymediainfo as mi
-import numpy as np
-import cv2
-
+from Modules import os, t, sht, mi, np, cv2
 from Base import paths, mess
 from SettingsConstructor import Settings
 from KallmanFilterConstructor import KallmanFilter

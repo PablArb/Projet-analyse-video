@@ -1,11 +1,4 @@
-import csv
-import inspect
-import time as t
-import shutil as sht
-
-import cv2
-import numpy as np
-
+from Modules import csv, inspect, t, sht, cv2, np
 from Base import Break, mess
 from MainConstructor import Video, Frame
 

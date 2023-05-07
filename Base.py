@@ -1,6 +1,4 @@
-import os
-import shutil as sht
-import getpass as gp
+from Modules import os, sht, gp
 
 
 # définition des exceptions utiles

@@ -1,5 +1,4 @@
-import sys
-
+from Modules import sys
 from Base import SettingError
 from Base import mess
 from IHM import visu, interact
