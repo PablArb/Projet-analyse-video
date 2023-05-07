@@ -2,7 +2,7 @@ from Modules import sys
 from Base import SettingError
 from Base import mess
 from IHM import visu, interact
-from MainConstructor import Video, Object
+from MainConstructor import Video, Frame, Object
 from VideoTreatment import frametreatement
 
 
@@ -12,18 +12,18 @@ def calibration(video: Video, i=0) -> None:
 
     Permet de vérifier le bon réglage de l'ensemble des paramètres.
     """
-    # On va dans un premier temps traiter la première frame de la video.
+    
     print(mess.B_cal, end='')
 
     settings = video.settings
     first = video.Frames[i]
-    f = video.Framerate
-    dt = 1/f
 
-    try:
-        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, True)
+    # On va dans un premier temps traiter la première frame de la video.
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
     # l'utilisateur, on gère ici ce problème.
+    try:
+        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, True)
+
     except SettingError:
         print(mess.P_set, end='')
         interact.verif_settings(video)
@@ -33,27 +33,19 @@ def calibration(video: Video, i=0) -> None:
 
     detPas(video, extremas)
     detScale(video, positions)
-
-    swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
-    videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames) * 1.3
-    formatedDur = interact.time_formater(videoDur)
-    # On multiplie la durée par un léger facteur de manière à obtenir une dirée de traitement finale plus faible
-    # que celle évaluée ici (ça fait plaisir à l'utilisateur).
-
-    # Une fois le traitement réalisé on stocke les résultats.
-    video.markercount = 0
-    for obj in positions:
-        new_obj = Object('obj-' + str(video.markercount), obj, first.id, dt, settings.Qcoeff)
-        first.identifiedObjects.append(new_obj)
-        video.markers.append(new_obj)
-        video.markercount += 1
+    initialize(video, first, positions)
 
     print(mess.E_cal, end='')
 
     # On crée maintenant les visuels à partir des résultats.
     visu.visusCalib(video, first, borders, extremas)
 
+    swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
+    videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames) * 2  # Pour l'ensemble de la vidéo
+    formatedDur = interact.time_formater(videoDur)
+
     print(mess.S_dur + str(formatedDur), end='')
+
     return None
 
 
@@ -94,6 +86,19 @@ def detScale(video: Video, positions: dict) -> None:
     else:
         scale = 1
     video.scale = scale
+    return None
+
+
+def initialize(video: Video, initFrame: Frame, positions) -> None:
+    Qcoeff = video.settings.Qcoeff
+    dt = 1 / video.Framerate
+
+    video.markercount = 0
+    for obj in positions:
+        new_obj = Object('obj-' + str(video.markercount), obj, initFrame.id, dt, Qcoeff)
+        initFrame.identifiedObjects.append(new_obj)
+        video.markers.append(new_obj)
+        video.markercount += 1
     return None
 
 
