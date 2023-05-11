@@ -1,4 +1,4 @@
-from Modules import csv, inspect, t, sht, cv2, np
+from Modules import csv, inspect, t, sht, cv2, np, tk
 from Base import Break, mess
 from MainConstructor import Video, Frame
 
