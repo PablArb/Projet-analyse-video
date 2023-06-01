@@ -9,8 +9,8 @@ class CalibDisplay(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.buttonMenu = ButtonMenu().Layout
-        self.image = ImageDisplay().Layout
+        self.buttonMenu = ButtonMenu()
+        self.image = ImageDisplay()
 
         self.initUI()
 
@@ -19,8 +19,8 @@ class CalibDisplay(QWidget):
 
         # create horizontal layout to display grid layout and image side by side
         main_layout = QGridLayout()
-        main_layout.addLayout(self.buttonMenu, 0, 0)
-        main_layout.addLayout(self.image, 0, 1)
+        main_layout.addLayout(self.buttonMenu.Layout, 0, 0)
+        main_layout.addLayout(self.image.Layout, 0, 1)
         
         # set the main layout for the widget
         self.setLayout(main_layout)
@@ -35,5 +35,6 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     x = CalibDisplay()
+    CalibDisplay.buttonMenu.button1.clicked.connect(lambda : CalibDisplay.image.changeTo())
     sys.exit(app.exec_())
 

@@ -142,12 +142,12 @@ class Visu:
         color_im = np.copy(frame.array)
         visualisations.append(color_im)
 
-        NB_im = np.copy(frame.NBarray)*255
-        visualisations.append(NB_im)
+        # NB_im = np.copy(frame.NBarray)*255
+        # visualisations.append(NB_im)
 
-        treated_NB = self.detection(NB_im, borders, copy=True)
-        treated_NB = self.rectangle_NB(treated_NB, extremas, rw)
-        visualisations.append(treated_NB)
+        # treated_NB = self.detection(NB_im, borders, copy=True)
+        # treated_NB = self.rectangle_NB(treated_NB, extremas, rw)
+        # visualisations.append(treated_NB)
 
         pos = [obj.positions[frame.id] for obj in frame.identifiedObjects]
         treated_color = self.cross_color(frame.array, pos, cw, 0, copy=True)

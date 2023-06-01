@@ -18,9 +18,9 @@ class Settings(object):
         self.lenref = None  # longueur de référence associée à la video
 
         # paramètres réglés par défaut, peuvent être ajusté durant l'éxécution
-        self.hueWindow = (45, 80)
-        self.satWindow = (35, 255)
-        self.valWindow = (60, 150)
+        self.hueWindow = (40, 95)
+        self.satWindow = (80, 255)
+        self.valWindow = (50, 255)
         self.marge = 1  #
         self.view = 1  # rayon du champ de vision de l'algorythme de parcours de graphe en nb de pixel
 

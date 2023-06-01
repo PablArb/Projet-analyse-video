@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QVBoxLayout, QLabel
 from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtCore import QByteArray
 
 
 class ButtonMenu(QWidget):
@@ -12,60 +13,58 @@ class ButtonMenu(QWidget):
     def createLayout(self):
 
         # create grid layout for menu
-        menu_grid = QGridLayout()
+        self.menu_grid = QGridLayout()
 
         # create buttons
-        button1 = QPushButton('Button 1')
-        button2 = QPushButton('Button 2')
-        button3 = QPushButton('Button 3')
-        button4 = QPushButton('Button 4')
-        button5 = QPushButton('Button 5')
-
+        self.button1 = QPushButton('Next', self)
         # add buttons to grid
-        menu_grid.addWidget(button1, 0, 0)
-        menu_grid.addWidget(button2, 0, 1)
-        menu_grid.addWidget(button3, 1, 0)
-        menu_grid.addWidget(button4, 1, 1)
-        menu_grid.addWidget(button5, 2, 0, 1, 2)  # span two columns
+        self.menu_grid.addWidget(self.button1, 0, 0)
 
         # create vertical layout for menu
-        menu_layout = QVBoxLayout()
-        menu_layout.addLayout(menu_grid)
-        self.Layout = menu_layout
+        self.Layout = QVBoxLayout()
+        self.Layout.addLayout(self.menu_grid)
 
 
 class ImageDisplay(QWidget):
 
-    def __init__(self):
+    def __init__(self, image):
         super().__init__()
 
-        self.createLayout()
+        self.createLayout(image)
 
-    def createLayout(self):
-        label = QLabel()
+    def createLayout(self, image):
+        self.label = QLabel()
         # create a QPixmap object from the image file
-        pixmap = QPixmap('/Users/pabloarb/Desktop/TIPE/python - mesure/Projet-analyse-video/sides/fonctionels/test.png')
-        self.pixmap = pixmap
+        self.pixmap =  QPixmap(QByteArray(image))
         # resize the pixmap
-        scaled_pixmap = pixmap.scaled(360, 640)
-        self.scaled_pixmap = scaled_pixmap
+        self.scaled_pixmap = self.pixmap.scaled(360, 640)
         # set the scaled pixmap as the image for the label
-        label.setPixmap(scaled_pixmap)
+        self.label.setPixmap(self.scaled_pixmap)
 
-        label.mousePressEvent = self.getPixelValue
+        self.label.mousePressEvent = self.getPixelValue
 
         # create vertical layout for image
-        image_layout = QVBoxLayout()
-        image_layout.addWidget(label)
-        self.Layout = image_layout
+        self.Layout = QVBoxLayout()
+        self.Layout.addWidget(self.label)
+
+    def changeTo(self, image):
+        self.pixmap = QPixmap(QByteArray(image))
+        self.label.setPixmap(self.pixmap)
 
     def getPixelValue(self, event):
         # get the position of the mouse click relative to the label
         position = event.pos()
 
+        xcoeff = self.pixmap.height()//self.scaled_pixmap.height()
+        ycoeff = self.pixmap.width()//self.scaled_pixmap.width()
+
+        x, y = position.x(), position.y()
+        xim, yim = x * xcoeff, y * ycoeff
+
         # get the pixel value at the clicked position
-        pixel_value = self.scaled_pixmap.toImage().pixel(position.x(), position.y())
+        pixel_value = self.scaled_pixmap.toImage().pixel(x, y)
 
         # print the RGB values of the pixel
         r, g, b, _ = QColor(pixel_value).getRgb()
-        print(f'Pixel value: {r}, {g}, {b}')
+        print(f'Pixel value: x:{x}, y:{y}, r:{r}, g:{g}, b:{b}')
+        return (xim, yim), (r, g, b)
