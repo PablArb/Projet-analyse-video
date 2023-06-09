@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QVBoxLayout, QLabel
-from PyQt5.QtGui import QPixmap, QColor
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QByteArray
 
 
-class ButtonMenu(QWidget):
+class CalibButtonMenu(QWidget):
 
     def __init__(self):
         super().__init__()
@@ -25,46 +25,27 @@ class ButtonMenu(QWidget):
         self.Layout.addLayout(self.menu_grid)
 
 
-class ImageDisplay(QWidget):
+class CalibImageDisplay(QWidget):
 
-    def __init__(self, image):
+    def __init__(self, image, getPixelValue):
         super().__init__()
+        self.drawnmarkers = []
+        self.createLayout(image, getPixelValue)
 
-        self.createLayout(image)
-
-    def createLayout(self, image):
+    def createLayout(self, image, getPixelValue):
         self.label = QLabel()
-        # create a QPixmap object from the image file
-        self.pixmap =  QPixmap(QByteArray(image))
-        # resize the pixmap
-        self.scaled_pixmap = self.pixmap.scaled(360, 640)
-        # set the scaled pixmap as the image for the label
-        self.label.setPixmap(self.scaled_pixmap)
+        self.label.setPixmap(image)
+        self.label.mousePressEvent = getPixelValue
 
-        self.label.mousePressEvent = self.getPixelValue
-
-        # create vertical layout for image
         self.Layout = QVBoxLayout()
         self.Layout.addWidget(self.label)
 
-    def changeTo(self, image):
+    def update(self, image):
         self.pixmap = QPixmap(QByteArray(image))
         self.label.setPixmap(self.pixmap)
 
-    def getPixelValue(self, event):
-        # get the position of the mouse click relative to the label
-        position = event.pos()
-
-        xcoeff = self.pixmap.height()//self.scaled_pixmap.height()
-        ycoeff = self.pixmap.width()//self.scaled_pixmap.width()
-
-        x, y = position.x(), position.y()
-        xim, yim = x * xcoeff, y * ycoeff
-
-        # get the pixel value at the clicked position
-        pixel_value = self.scaled_pixmap.toImage().pixel(x, y)
-
-        # print the RGB values of the pixel
-        r, g, b, _ = QColor(pixel_value).getRgb()
-        print(f'Pixel value: x:{x}, y:{y}, r:{r}, g:{g}, b:{b}')
-        return (xim, yim), (r, g, b)
+    def drawIndicators(self, image, indicators):
+        for ind in indicators :
+            if not ind in self.drawIndicators :
+                new_image = image  # temporary
+        return new_image

@@ -32,4 +32,6 @@ class Settings(object):
         self.crosswidth = int(video.Framessize[0] / 500)
         self.rectanglewidth = int(video.Framessize[1] / 1250)
 
+        self.calibWindowSize = (360, 640)
+
         sys.setrecursionlimit(self.precision)
