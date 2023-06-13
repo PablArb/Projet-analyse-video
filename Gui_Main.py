@@ -1,25 +1,28 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout
-from PyQt5.QtGui import QPixmap, QColor
+from Modules import np
+from Modules import cv2
+from PyQt5.QtWidgets import QWidget, QGridLayout
+from PyQt5.QtGui import QPixmap, QColor, QImage
 from Gui_ElementsConstructor import CalibButtonMenu, CalibImageDisplay
-from MainConstructor import Video
+from SettingsConstructor import Settings
+from MainConstructor import Frame
+from VisualIdicatorsConstructor import drawPinnedMarkersIndicators
 
 
 
 class CalibDisplay(QWidget):
 
-    def __init__(self, video:Video):
+    def __init__(self, image: np.array, settings: Settings):
         super().__init__()
 
-        settings = video.settings
-        Windsize = settings.calibWindowSize
+        self.size = settings.calibWindowSize
+
         self.pinnedMarkers = []
+        self.r = settings.pinnedMarkersIndicatorRadius
 
-        self.pixmap = QPixmap('/Users/pabloarb/Desktop/TIPE/python - mesure/Projet-analyse-video/sides/fonctionels/test.png')
-        self.scaled_pixmap = self.pixmap.scaled(Windsize[0], Windsize[1])
-
+        self.npimage = image
+        self.pixmap = self.imageFormater(self.npimage, self.size)
         self.buttonMenu = CalibButtonMenu()
-        self.imageDisplay = CalibImageDisplay(self.scaled_pixmap, self.getPixelValue)
+        self.imageDisplay = CalibImageDisplay(self.pixmap, self.getPixelValue)
 
         self.initUI()
 
@@ -40,36 +43,53 @@ class CalibDisplay(QWidget):
 
         self.show()
     
+    def imageFormater (self, image: np.array, size: tuple) -> QPixmap:
+        qimage = self.ndarrayToQimage(image)
+        pixmap = QPixmap.fromImage(QImage(qimage))
+        scaled_pixmap = pixmap.scaled(size[0], size[1])
+        return scaled_pixmap
+
+    def ndarrayToQimage(self, image):
+        rgbIm = np.copy(image[..., ::-1])
+        height, width, channels = rgbIm.shape
+        bytes_per_line = channels * width
+        qimage = QImage(rgbIm.data, width, height, bytes_per_line, QImage.Format_RGB888)
+        return qimage
+
     def getPixelValue(self, event):
 
         # get the position of the mouse click relative to the label
         position = event.pos()
 
-        xcoeff = self.pixmap.height()//self.scaled_pixmap.height()
-        ycoeff = self.pixmap.width()//self.scaled_pixmap.width()
+        xcoeff = self.npimage.shape[0]//self.pixmap.height()
+        ycoeff = self.npimage.shape[1]//self.pixmap.width()
 
         x, y = position.x(), position.y()
-        pixel_value = self.scaled_pixmap.toImage().pixel(x, y)
+        pixel_value = self.pixmap.toImage().pixel(x, y)
         r, g, b, _ = QColor(pixel_value).getRgb()
 
-        self.pinnedMarkers.append(ProvMarker((x * xcoeff, y * ycoeff), (r, g, b)))
+        self.pinnedMarkers.append(ProvMarker((x * xcoeff, y * ycoeff), [r, g, b]))
         # calcul de la nouvelle image avec le marker puis mise a jour sur le display
 
+        newIm = drawPinnedMarkersIndicators(self.npimage, self.pinnedMarkers, self.r)
+        self.pixmap = self.imageFormater(newIm, self.size)
+        self.imageDisplay.update(self.pixmap)
 
         # print the RGB values of the pixel
         print(f'Pixel value: x:{x}, y:{y}, r:{r}, g:{g}, b:{b}')
+
 
 
 class ProvMarker(object):
     def __init__(self, coord, val):
         self.coordinates = coord
         self.RGBvalue = val
+        self.BGRvalue = cv2.cvtColor(np.uint8([[self.RGBvalue]]), cv2.COLOR_RGB2BGR)[0][0]
+        self.HSVvalue = cv2.cvtColor(np.uint8([[self.BGRvalue]]), cv2.COLOR_BGR2HSV)[0][0]
 
 
-
-if __name__ == '__main__':
-    from Main import video
-    app = QApplication(sys.argv)
-    CalibDisplay(video)
-    sys.exit(app.exec_())
-
+# if __name__ == '__main__':
+#     app = QApplication(sys.argv)
+#     video = Video()
+#     CalibDisplay(video)
+#     app.exec_()

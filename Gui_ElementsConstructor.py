@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QVBoxLayout, QLabel
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import QByteArray
+from Modules import np
 
 
 class CalibButtonMenu(QWidget):
@@ -40,12 +41,5 @@ class CalibImageDisplay(QWidget):
         self.Layout = QVBoxLayout()
         self.Layout.addWidget(self.label)
 
-    def update(self, image):
-        self.pixmap = QPixmap(QByteArray(image))
-        self.label.setPixmap(self.pixmap)
-
-    def drawIndicators(self, image, indicators):
-        for ind in indicators :
-            if not ind in self.drawIndicators :
-                new_image = image  # temporary
-        return new_image
+    def update(self, image: QPixmap):
+        self.label.setPixmap(image)

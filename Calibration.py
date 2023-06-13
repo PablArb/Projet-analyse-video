@@ -4,6 +4,7 @@ from Base import mess
 from IHM import visu, interact
 from MainConstructor import Video, Frame, Object
 from VideoTreatment import frametreatement
+from Gui_Main import CalibDisplay
 
 
 def calibration(video: Video, i=0) -> None:
@@ -17,6 +18,8 @@ def calibration(video: Video, i=0) -> None:
 
     settings = video.settings
     first = video.Frames[i]
+
+    CalibDisplay(first.array, settings)
 
     # On va dans un premier temps traiter la première frame de la video.
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
@@ -38,7 +41,7 @@ def calibration(video: Video, i=0) -> None:
     print(mess.E_cal, end='')
 
     # On crée maintenant les visuels à partir des résultats.
-    visu.visusCalib(video, first, borders, extremas)
+    # visu.visusCalib(video, first, borders, extremas)
 
     swipDur = Tdur - Bdur  # durée nécessaire au balayage de chaque image
     videoDur = (swipDur / (settings.step ** 2) + Bdur) * len(video.Frames) * 2  # Pour l'ensemble de la vidéo

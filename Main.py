@@ -5,6 +5,7 @@ from IHM import download, interact
 from MainConstructor import Video
 from Calibration import calibration, reboot
 from VideoTreatment import videotreatment
+from PyQt5.QtWidgets import QApplication
 
 
 def cleaner(video: Video, isOK=True) -> None:
@@ -25,36 +26,41 @@ def cleaner(video: Video, isOK=True) -> None:
     return None
 
 
-try:
-    print(mess.B_proc, end='')
+if __name__ == '__main__':
+    try:
+        app = QApplication(sys.argv)
 
-    # On récupère la vidéo et ses caractéristiques
-    video = Video()
-    interact.orientation_input(video)
-    interact.setting_input(video, 'lenref', 'float')
+        print(mess.B_proc, end='')
 
-    # On traite la première frame pour vérifier que les réglages sont bons
-    isOK = False
-    while not isOK:
-        # Tant que le traitement n'est pas satisfaisant on recommence cette étape
-        calibration(video)
-        if interact.yn(mess.I_val):
-            isOK = True
-        else:
-            # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les paramètres.
-            interact.verif_settings(video)
-            reboot(video)
-    # Une fois que tout est bon on traite la vidéo.
-    videotreatment(video)
-    # On télécharge les résultats.
-    download.reboot(video)
-    download.data(video)
+        # On récupère la vidéo et ses caractéristiques
+        video = Video()
+        interact.orientation_input(video)
+        interact.setting_input(video, 'lenref', 'float')
 
-    if interact.yn(mess.I_dlr):
-        download.results(video)
-    cleaner(video)
-    print(mess.E_proc)
+        # On traite la première frame pour vérifier que les réglages sont bons
+        isOK = False
+        while not isOK:
+            # Tant que le traitement n'est pas satisfaisant on recommence cette étape
+            calibration(video)
+            if interact.yn(mess.I_val):
+                isOK = True
+            else:
+                # lorsque le traitement n'est pas satisfaisant, il est proposé de modifier les paramètres.
+                interact.verif_settings(video)
+                reboot(video)
+        
+        # Une fois que tout est bon on traite la vidéo.
+        videotreatment(video)
+        
+        # On télécharge les résultats.
+        download.reboot(video)
+        download.data(video)
 
-except (KeyboardInterrupt, Break):
-    cleaner(video, isOK=False)
-    print(mess.E_proc)
+        if interact.yn(mess.I_dlr):
+            download.results(video)
+        cleaner(video)
+        print(mess.E_proc)
+
+    except (KeyboardInterrupt, Break):
+        cleaner(video, isOK=False)
+        print(mess.E_proc)

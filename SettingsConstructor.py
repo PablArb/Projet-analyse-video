@@ -27,11 +27,12 @@ class Settings(object):
         self.Qcoeff = (100, 1, 100, 1)  # coefficients de filtre de Kallman
 
         # On définit la taille des indicateurs visuels / taille de l'image
-        self.maxdist = int(video.Framessize[1] / 20)
-        self.minsize = int(video.Framessize[1] / 100)
-        self.crosswidth = int(video.Framessize[0] / 500)
-        self.rectanglewidth = int(video.Framessize[1] / 1250)
+        self.maxdist = video.Framessize[1] // 20
+        self.minsize = video.Framessize[1] // 100
+        self.crosswidth = video.Framessize[0] // 500
+        self.rectanglewidth = video.Framessize[1] // 1250
 
         self.calibWindowSize = (360, 640)
+        self.pinnedMarkersIndicatorRadius = video.Framessize[1] // 100
 
         sys.setrecursionlimit(self.precision)
