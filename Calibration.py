@@ -1,42 +1,45 @@
 from Modules import sys
 from Base import SettingError
 from Base import mess
-from IHM import visu, interact
+from IHM import interact
 from MainConstructor import Video, Frame, Object
 from VideoTreatment import frametreatement
 from Gui_Main import CalibDisplay
+from Modules import t
 
 
-def calibration(video: Video, i=0) -> None:
+def calibration(video: Video, TSpecs, i=0) -> None:
     """
     video : vidéo à traiter.
 
     Permet de vérifier le bon réglage de l'ensemble des paramètres.
     """
     
-    print(mess.B_cal, end='')
+    # print(mess.B_cal, end='')
 
-    settings = video.settings
+    settings = TSpecs.settings
     first = video.Frames[i]
 
-    CalibDisplay(first.array, settings)
+    input = CalibDisplay(first.array, TSpecs)
+    provMarkers = input.userInputDone()
 
     # On va dans un premier temps traiter la première frame de la video.
     # On n'est pas assuré de la capacité de l'algorithme à traiter l'image avec les paramètres entrés par
     # l'utilisateur, on gère ici ce problème.
-    try:
-        positions, borders, extremas, Bdur, Tdur = frametreatement(first, settings, True)
 
+    try:
+        positions, _, extremas, Bdur, Tdur = frametreatement(first, settings, True)
+        print('traitement de la premier frame ok')
     except SettingError:
         print(mess.P_set, end='')
-        interact.verif_settings(video)
+        interact.verif_settings(settings)
         reboot(video)
         calibration(video)
         return None
 
-    detPas(video, extremas)
-    detScale(video, positions)
-    initialize(video, first, positions)
+    detPas(TSpecs, extremas)
+    detScale(TSpecs, positions)
+    initialize(video, TSpecs, first, positions)
 
     print(mess.E_cal, end='')
 
@@ -52,7 +55,7 @@ def calibration(video: Video, i=0) -> None:
     return None
 
 
-def detPas(video: Video, extr: dict) -> None:
+def detPas(TSpecs, extr: dict) -> None:
     """
     video : vidéo étudiée.
     extr : {0: [xmin, ymin, xmax, ymax], 1: ... }, dictionaire où chaque clef correspond à un repère, la valeure qui lui
@@ -68,18 +71,18 @@ def detPas(video: Video, extr: dict) -> None:
             mini = el[2] - el[0]
         if el[3] - el[1] < mini:
             mini = el[3] - el[1]
-    video.settings.step = mini // 2
+    TSpecs.settings.step = mini // 2
     return None
 
 
-def detScale(video: Video, positions: dict) -> None:
+def detScale(TSpecs, positions: dict) -> None:
     """
     positions : dictionaire contenant les positions de chaque repère sur une des frames.
     lenref : longeur de reférance sur laquelle on s'appuie pour définir l'échelle.
 
     Renvoie l'échelle de la vidéo en cm par nb de pixel.
     """
-    lenref = video.settings.lenref
+    lenref = TSpecs.settings.lenref
     if len(positions) >= 2:
         a = positions[-1]
         b = positions[-2]
@@ -88,12 +91,12 @@ def detScale(video: Video, positions: dict) -> None:
 
     else:
         scale = 1
-    video.scale = scale
+    TSpecs.scale = scale
     return None
 
 
-def initialize(video: Video, initFrame: Frame, positions) -> None:
-    Qcoeff = video.settings.Qcoeff
+def initialize(video: Video, TSpecs, initFrame: Frame, positions) -> None:
+    Qcoeff = TSpecs.settings.Qcoeff
     dt = 1 / video.Framerate
 
     video.markercount = 0

@@ -1,6 +1,7 @@
 from Modules import csv, inspect, t, sht, cv2, np, tk
 from Base import Break, mess
 from MainConstructor import Video, Frame
+from SettingsConstructor import Settings
 
 
 class Visu:
@@ -341,11 +342,10 @@ class Interact:
             else:
                 print(mess.P_vs)
 
-    def verif_settings(self, video: Video) -> None:
+    def verif_settings(self, settings: Settings) -> None:
         """
         Éffectue les changements de réglges demandés par l'utilisateur'
         """
-        settings = video.settings
         modifiables = settings.modifiables
 
         i = 1
@@ -369,10 +369,7 @@ class Interact:
                     which = int(which)
                     if which in range(1, i):
                         set = list(modifiables.keys())[which-1]
-                        if set != 'orientation':
-                            self.setting_input(video, set, modifiables[set])
-                        else:
-                            self.orientation_input(video)
+                        self.setting_input(video, set, modifiables[set])
                         isOk = True
                     elif which == 0:
                         isOk = True
@@ -384,8 +381,7 @@ class Interact:
                     print(mess.P_vs)
         return None
 
-    def setting_input(self, video: Video, setting, setType) -> None:
-        settings = video.settings
+    def setting_input(self, settings: Settings, setting: str, setType: str) -> None:
         while True:
             exec(f"sett = input('{setting} actuel(le) : ' + str(settings.{setting}) + ', nouvelle valeur : ')")
             exec('if sett in self.stoplist: \n              raise Break')

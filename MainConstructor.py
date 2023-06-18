@@ -2,11 +2,12 @@ from Modules import os, t, sht, mi, np, cv2
 from Base import paths, mess
 from SettingsConstructor import Settings
 from KallmanFilterConstructor import KallmanFilter
+from TreatementSpecs import TreatementSpecs
 
 
 class Video(object):
 
-    def __init__(self):
+    def __init__(self, Tspecs: TreatementSpecs):
         self.paths = paths
 
         self.id = None  # titre de la vidéo
@@ -14,14 +15,14 @@ class Video(object):
 
         self.Framerate = self.get_framerate()  # nombre de frame par seconde
         self.Framessize = self.get_framessize()  # taille des frames
-
-        self.settings = Settings(self)  # réglages associés à la vidéo
         self.Frames = self.get_frames()  # liste contenant les frames de la vidéo
 
         self.scale = None  # rapport distance sur nombre de pixels
         self.markercount = 0  # nombre de repères détectés sur la vidéo
         self.markers = []
         self.computationDuration = None  # temps mis par l'algorythme pour effectuer le traitement
+
+        self.detSettings(Tspecs)
 
         self.treatementEvents = ''
 
@@ -103,6 +104,15 @@ class Video(object):
         cv2.destroyAllWindows()
         print(mess.E_gfs, end='')
         return frames
+    
+    def detSettings(self, Tspecs):
+        Tspecs.settings.maxdist = self.Framessize[1] // 20
+        Tspecs.settings.minsize = self.Framessize[1] // 100
+        Tspecs.settings.crosswidth = self.Framessize[0] // 500
+        Tspecs.settings.rectanglewidth = self.Framessize[1] // 1250
+        Tspecs.settings.pinnedMarkersIndicatorRadius = self.Framessize[1] // 120
+
+
 
 class Frame(object):
     def __init__(self, id, array):
@@ -130,6 +140,8 @@ class Frame(object):
         self.NBarray = np.uint8(imNB)
         return None
 
+
+
 class Object(object):
     def __init__(self, id, initpos, initframe, dt, Qcoeff):
         self.id = id
@@ -139,6 +151,8 @@ class Object(object):
         self.positions = {initframe: initpos}
         self.kf = KallmanFilter(dt, initpos, Qcoeff)
         self.status = 'hooked'
+
+
 
 class Mesure(object):
     def __init__(self, id, extr, borders):

@@ -1,7 +1,7 @@
 from Modules import sys
 
 class Settings(object):
-    def __init__(self, video):
+    def __init__(self):
         self.modifiables = {
                             'orientation': 'int',
                             'lenref': 'float', 'marge': 'int', 'view': 'int',
@@ -14,7 +14,6 @@ class Settings(object):
         self.step = 1  # pas ave lequel on parcourt les frames
 
         # paramètres renseignés par l'utilisateur
-        self.orientation = None  # orientation de la video (paysage ou portrait)
         self.lenref = None  # longueur de référence associée à la video
 
         # paramètres réglés par défaut, peuvent être ajusté durant l'éxécution
@@ -27,12 +26,12 @@ class Settings(object):
         self.Qcoeff = (100, 1, 100, 1)  # coefficients de filtre de Kallman
 
         # On définit la taille des indicateurs visuels / taille de l'image
-        self.maxdist = video.Framessize[1] // 20
-        self.minsize = video.Framessize[1] // 100
-        self.crosswidth = video.Framessize[0] // 500
-        self.rectanglewidth = video.Framessize[1] // 1250
+        self.maxdist = None
+        self.minsize = None
+        self.crosswidth = None
+        self.rectanglewidth = None
 
         self.calibWindowSize = (360, 640)
-        self.pinnedMarkersIndicatorRadius = video.Framessize[1] // 100
+        self.pinnedMarkersIndicatorRadius = None
 
         sys.setrecursionlimit(self.precision)

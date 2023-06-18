@@ -17,13 +17,17 @@ class CalibButtonMenu(QWidget):
         self.menu_grid = QGridLayout()
 
         # create buttons
-        self.button1 = QPushButton('Next', self)
+        self.markersPinnFinishedButton = QPushButton('étape terminée', self)
         # add buttons to grid
-        self.menu_grid.addWidget(self.button1, 0, 0)
+        self.menu_grid.addWidget(self.markersPinnFinishedButton, 0, 0)
 
         # create vertical layout for menu
         self.Layout = QVBoxLayout()
         self.Layout.addLayout(self.menu_grid)
+
+    def markersPinnFinishedUpdate(self, status):
+        status.markersPinnFinished = True
+        return None
 
 
 class CalibImageDisplay(QWidget):

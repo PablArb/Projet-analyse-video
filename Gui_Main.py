@@ -1,19 +1,19 @@
 from Modules import np
 from Modules import cv2
-from PyQt5.QtWidgets import QWidget, QGridLayout
+from PyQt5.QtWidgets import QWidget, QGridLayout, QDialog
 from PyQt5.QtGui import QPixmap, QColor, QImage
 from Gui_ElementsConstructor import CalibButtonMenu, CalibImageDisplay
-from SettingsConstructor import Settings
-from MainConstructor import Frame
 from VisualIdicatorsConstructor import drawPinnedMarkersIndicators
 
 
 
-class CalibDisplay(QWidget):
+class CalibDisplay(QDialog):
 
-    def __init__(self, image: np.array, settings: Settings):
+    def __init__(self, image: np.array, Tspecs):
         super().__init__()
 
+        settings = Tspecs.settings
+        self.status = Tspecs.status
         self.size = settings.calibWindowSize
 
         self.pinnedMarkers = []
@@ -33,19 +33,19 @@ class CalibDisplay(QWidget):
         main_layout.addLayout(self.buttonMenu.Layout, 0, 0)
         main_layout.addLayout(self.imageDisplay.Layout, 0, 1)
 
-        self.buttonMenu.button1.clicked.connect(lambda : self.imageDisplay.update())
-        
+        # self.buttonMenu.markersPinnFinishedButton.clicked.connect(lambda : self.buttonMenu.markersPinnFinishedUpdate(self.status))
+        self.buttonMenu.markersPinnFinishedButton.clicked.connect(self.accept)
+
         # set the main layout for the widget
         self.setLayout(main_layout)
 
         # set window size and title
         self.setWindowTitle('test')
-
-        self.show()
+        self.setModal(True)
     
     def imageFormater (self, image: np.array, size: tuple) -> QPixmap:
         qimage = self.ndarrayToQimage(image)
-        pixmap = QPixmap.fromImage(QImage(qimage))
+        pixmap = QPixmap.fromImage(qimage)
         scaled_pixmap = pixmap.scaled(size[0], size[1])
         return scaled_pixmap
 
@@ -57,7 +57,6 @@ class CalibDisplay(QWidget):
         return qimage
 
     def getPixelValue(self, event):
-
         # get the position of the mouse click relative to the label
         position = event.pos()
 
@@ -75,10 +74,12 @@ class CalibDisplay(QWidget):
         self.pixmap = self.imageFormater(newIm, self.size)
         self.imageDisplay.update(self.pixmap)
 
-        # print the RGB values of the pixel
-        print(f'Pixel value: x:{x}, y:{y}, r:{r}, g:{g}, b:{b}')
-
-
+    def userInputDone(self):
+        if self.exec_() == QDialog.Accepted:
+            self.buttonMenu.markersPinnFinishedUpdate(self.status)
+            return self.pinnedMarkers
+        else:
+            return None 
 
 class ProvMarker(object):
     def __init__(self, coord, val):
@@ -86,10 +87,3 @@ class ProvMarker(object):
         self.RGBvalue = val
         self.BGRvalue = cv2.cvtColor(np.uint8([[self.RGBvalue]]), cv2.COLOR_RGB2BGR)[0][0]
         self.HSVvalue = cv2.cvtColor(np.uint8([[self.BGRvalue]]), cv2.COLOR_BGR2HSV)[0][0]
-
-
-# if __name__ == '__main__':
-#     app = QApplication(sys.argv)
-#     video = Video()
-#     CalibDisplay(video)
-#     app.exec_()

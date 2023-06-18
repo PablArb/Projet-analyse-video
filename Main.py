@@ -6,6 +6,8 @@ from MainConstructor import Video
 from Calibration import calibration, reboot
 from VideoTreatment import videotreatment
 from PyQt5.QtWidgets import QApplication
+from TreatementSpecs import TreatementSpecs
+from Gui_Main import CalibDisplay
 
 
 def cleaner(video: Video, isOK=True) -> None:
@@ -28,20 +30,22 @@ def cleaner(video: Video, isOK=True) -> None:
 
 if __name__ == '__main__':
     try:
+        treatementSpecs = TreatementSpecs()
+
         app = QApplication(sys.argv)
 
         print(mess.B_proc, end='')
 
         # On récupère la vidéo et ses caractéristiques
-        video = Video()
-        interact.orientation_input(video)
-        interact.setting_input(video, 'lenref', 'float')
+        video = Video(treatementSpecs)
+        interact.setting_input(treatementSpecs.settings, 'lenref', 'float')
 
         # On traite la première frame pour vérifier que les réglages sont bons
         isOK = False
         while not isOK:
             # Tant que le traitement n'est pas satisfaisant on recommence cette étape
-            calibration(video)
+            CalibDisplay(video.Frames[0].array, treatementSpecs)
+            calibration(video, treatementSpecs)
             if interact.yn(mess.I_val):
                 isOK = True
             else:
