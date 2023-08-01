@@ -2,12 +2,12 @@ from Modules import os, t, sht, mi, np, cv2
 from Base import paths, mess
 from SettingsConstructor import Settings
 from KallmanFilterConstructor import KallmanFilter
-from TreatementSpecs import TreatementSpecs
+from TreatementSpecs import Treatement_specs
 
 
 class Video(object):
 
-    def __init__(self, Tspecs: TreatementSpecs):
+    def __init__(self, Tspecs: Treatement_specs):
         self.paths = paths
 
         self.id = None  # titre de la vidéo

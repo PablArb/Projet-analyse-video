@@ -1,8 +1,8 @@
 from SettingsConstructor import Settings
-from ExecutionStatus import Status
+# from ExecutionStatus import Status
 
 
-class TreatementSpecs(object):
+class Treatement_specs(object):
     def __init__(self):
         self.settings = Settings()
-        self.status = Status()
+        # self.status = Status()
